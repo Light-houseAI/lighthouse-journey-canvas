@@ -361,17 +361,19 @@ const BEHAVIOR_PATTERNS: BehaviorPattern[] = [
 
 /**
  * Zod schema for LLM output validation
+ * NOTE: Schema is intentionally flexible with defaults to handle various LLM response formats.
+ * Empty arrays and fallback values prevent parsing failures when LLM returns partial/empty data.
  */
 const featureAdoptionTipsSchema = z.object({
   tips: z.array(z.object({
-    toolName: z.string().describe('The tool name (must be from user toolbox)'),
-    featureName: z.string().describe('The specific feature name'),
-    triggerOrShortcut: z.string().describe('How to activate the feature (shortcut, command, etc.)'),
-    message: z.string().describe('Friendly, non-intrusive tip message for the user'),
-    addressesPattern: z.string().describe('What workflow pattern this addresses'),
-    estimatedSavingsSeconds: z.number().describe('Estimated time saved per use'),
-    confidence: z.number().min(0).max(1).describe('Confidence score'),
-  })).max(3),
+    toolName: z.string().default('unknown').describe('The tool name (must be from user toolbox)'),
+    featureName: z.string().default('unknown').describe('The specific feature name'),
+    triggerOrShortcut: z.string().default('').describe('How to activate the feature (shortcut, command, etc.)'),
+    message: z.string().default('').describe('Friendly, non-intrusive tip message for the user'),
+    addressesPattern: z.string().default('').describe('What workflow pattern this addresses'),
+    estimatedSavingsSeconds: z.number().default(0).describe('Estimated time saved per use'),
+    confidence: z.number().min(0).max(1).catch(0.5).describe('Confidence score'),
+  })).max(3).default([]), // Default to empty array if missing or malformed
 });
 
 // ============================================================================
@@ -664,15 +666,16 @@ If no steps would clearly benefit from a feature, return an empty tips array - d
       'A5 feature adoption tips generation timed out'
     );
 
-    const tips: FeatureAdoptionTip[] = response.content.tips.map((tip) => ({
+    const rawTips = response.content.tips || [];
+    const tips: FeatureAdoptionTip[] = rawTips.map((tip) => ({
       tipId: `tip-${uuidv4().slice(0, 8)}`,
-      toolName: tip.toolName,
-      featureName: tip.featureName,
-      triggerOrShortcut: tip.triggerOrShortcut,
-      message: tip.message,
-      addressesPattern: tip.addressesPattern,
-      estimatedSavingsSeconds: tip.estimatedSavingsSeconds,
-      confidence: tip.confidence,
+      toolName: tip.toolName || 'unknown',
+      featureName: tip.featureName || 'unknown',
+      triggerOrShortcut: tip.triggerOrShortcut || '',
+      message: tip.message || '',
+      addressesPattern: tip.addressesPattern || '',
+      estimatedSavingsSeconds: tip.estimatedSavingsSeconds || 0,
+      confidence: typeof tip.confidence === 'number' ? tip.confidence : 0.5,
       affectedWorkflowIds: state.userEvidence?.workflows.map(w => w.workflowId) || [],
     }));
 

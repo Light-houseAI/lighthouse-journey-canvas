@@ -326,6 +326,90 @@ export interface Diagnostics {
   overallEfficiencyScore: number; // 0-100
   confidence: number;
   analysisTimestamp: string;
+  /** Effectiveness analysis: step-by-step quality critique (optional, added when requested) */
+  effectivenessAnalysis?: EffectivenessAnalysis;
+}
+
+// ============================================================================
+// EFFECTIVENESS ANALYSIS TYPES (A2 Extension)
+// ============================================================================
+
+/**
+ * Step-level effectiveness analysis
+ * Evaluates the QUALITY and OUTCOME of what the user did at each step
+ */
+export interface StepEffectivenessAnalysis {
+  /** Reference to the original step */
+  stepId: string;
+  /** What the user actually did (factual description) */
+  whatUserDid: string;
+  /** Quality assessment of this step (poor/fair/good/excellent) */
+  qualityRating: 'poor' | 'fair' | 'good' | 'excellent';
+  /** What the user could have done differently for better outcome */
+  couldHaveDoneDifferently: string;
+  /** Why the alternative would have been better */
+  whyBetter: string;
+  /** Confidence in this assessment (0-1) */
+  confidence: number;
+}
+
+/**
+ * Activity the user should have done but didn't
+ * Identifies gaps in the workflow based on best practices
+ */
+export interface MissedActivity {
+  /** Unique identifier */
+  id: string;
+  /** What activity was missed */
+  activity: string;
+  /** Where in the workflow it should have occurred (after which stepId, or "before_start", "at_end") */
+  shouldOccurAfter: string;
+  /** Why this activity matters */
+  whyImportant: string;
+  /** Impact of missing this activity (low/medium/high) */
+  impactLevel: 'low' | 'medium' | 'high';
+  /** Concrete recommendation for what to do */
+  recommendation: string;
+  /** Confidence in this assessment (0-1) */
+  confidence: number;
+}
+
+/**
+ * Content quality critique
+ * Evaluates the quality of outputs/decisions made during the workflow
+ */
+export interface ContentQualityCritique {
+  /** Aspect being critiqued (e.g., "research depth", "decision quality", "output completeness") */
+  aspect: string;
+  /** Current state/quality observed */
+  observation: string;
+  /** Rating (poor/fair/good/excellent) */
+  rating: 'poor' | 'fair' | 'good' | 'excellent';
+  /** Specific improvement suggestion */
+  improvementSuggestion: string;
+  /** Evidence supporting this critique */
+  evidence: string[];
+}
+
+/**
+ * Overall effectiveness analysis
+ * Combines step-by-step quality analysis, missed activities, and content critique
+ */
+export interface EffectivenessAnalysis {
+  /** Step-by-step quality analysis */
+  stepAnalysis: StepEffectivenessAnalysis[];
+  /** Activities the user should have done but didn't */
+  missedActivities: MissedActivity[];
+  /** Content/output quality critique */
+  contentCritiques: ContentQualityCritique[];
+  /** Overall effectiveness score (0-100) - distinct from efficiency score */
+  overallEffectivenessScore: number;
+  /** Summary of key effectiveness insights */
+  effectivenessSummary: string;
+  /** Top 3 priorities for improving effectiveness */
+  topPriorities: string[];
+  /** Analysis timestamp */
+  analysisTimestamp: string;
 }
 
 // ============================================================================

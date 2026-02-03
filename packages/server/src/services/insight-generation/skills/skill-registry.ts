@@ -78,6 +78,7 @@ export const INTENT_TO_SKILLS: Record<QueryIntent, SkillId[]> = {
     'compare_with_peers',
     'discover_underused_features',
     'search_web_best_practices',
+    'search_company_docs', // Added: Internal docs may have relevant procedures
   ],
   OPTIMIZATION: [
     'retrieve_user_workflows',
@@ -85,6 +86,7 @@ export const INTENT_TO_SKILLS: Record<QueryIntent, SkillId[]> = {
     'compare_with_peers',
     'discover_underused_features',
     'search_web_best_practices',
+    'search_company_docs', // Added: Company-specific best practices
   ],
   COMPARISON: [
     'retrieve_user_workflows',
@@ -100,6 +102,7 @@ export const INTENT_TO_SKILLS: Record<QueryIntent, SkillId[]> = {
     'retrieve_user_workflows',
     'compare_with_peers',
     'search_web_best_practices',
+    'search_company_docs', // Added: Internal training/onboarding docs
     'discover_underused_features',
   ],
   PATTERN: [
@@ -118,6 +121,7 @@ export const INTENT_TO_SKILLS: Record<QueryIntent, SkillId[]> = {
     'analyze_workflow_efficiency',
     'discover_underused_features',
     'search_web_best_practices',
+    'search_company_docs', // Added: Internal tool guides
     'compare_with_peers',
   ],
   TOOL_INTEGRATION: [
@@ -133,6 +137,7 @@ export const INTENT_TO_SKILLS: Record<QueryIntent, SkillId[]> = {
     'compare_with_peers',
     'discover_underused_features',
     'search_web_best_practices',
+    'search_company_docs', // Added: Fallback source
   ],
 };
 

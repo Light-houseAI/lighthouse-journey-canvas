@@ -25,10 +25,14 @@ import type {
   CritiqueResult,
   CritiqueIssue,
   RepetitiveWorkflowPattern,
+  EffectivenessAnalysis,
+  StepEffectivenessAnalysis,
+  MissedActivity,
+  ContentQualityCritique,
 } from '../types.js';
 import { z } from 'zod';
 import { ConcurrencyLimiter, withRetry, isRateLimitError, withTimeout, TimeoutError } from '../../../core/retry-utils.js';
-import { A2_JUDGE_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
+// Note: A2_JUDGE_SYSTEM_PROMPT is defined locally in this file with specialized few-shot examples
 
 // LLM call timeout constants
 const LLM_PER_ATTEMPT_TIMEOUT_MS = 60000; // 60 seconds per attempt
@@ -48,6 +52,8 @@ export interface JudgeGraphDeps {
 }
 
 // LLM Output Schemas
+// NOTE: Schemas are intentionally flexible to handle various LLM response formats.
+// Empty arrays and default values prevent parsing failures when LLM returns partial data.
 const inefficiencyAnalysisSchema = z.object({
   inefficiencies: z.array(
     z.object({
@@ -62,16 +68,16 @@ const inefficiencyAnalysisSchema = z.object({
         'longcut_path',
         'repetitive_workflow',  // Cross-session repetitive patterns
         'other',
-      ]),
-      description: z.string(),
-      stepIds: z.array(z.string()),
-      estimatedWastedSeconds: z.number(),
-      confidence: z.number().min(0).max(1),
-      evidence: z.array(z.string()),
+      ]).catch('other'), // Fallback to 'other' for unknown types
+      description: z.string().default('No description provided'),
+      stepIds: z.array(z.string()).default([]), // Default to empty array
+      estimatedWastedSeconds: z.number().default(0),
+      confidence: z.number().min(0).max(1).catch(0.5), // Default to medium confidence
+      evidence: z.array(z.string()).default([]), // Default to empty array
       /** For longcut_path: the shorter alternative that exists (empty string if N/A) */
       shorterAlternative: z.string().optional().default(''),
     })
-  ),
+  ).default([]), // Default to empty array if missing
 });
 
 const opportunityAnalysisSchema = z.object({
@@ -86,19 +92,19 @@ const opportunityAnalysisSchema = z.object({
         'claude_code_integration',
         'tool_feature_optimization',
         'shortcut_available',
-      ]),
-      description: z.string(),
-      inefficiencyId: z.string(),
-      estimatedSavingsSeconds: z.number(),
-      suggestedTool: z.string().optional().default(''), // Optional - only relevant for tool_switch
-      claudeCodeApplicable: z.boolean(),
-      confidence: z.number().min(0).max(1),
+      ]).catch('automation'), // Fallback for unknown types
+      description: z.string().default('No description provided'),
+      inefficiencyId: z.string().default(''), // May be empty for general opportunities
+      estimatedSavingsSeconds: z.number().default(0),
+      suggestedTool: z.string().optional().default(''),
+      claudeCodeApplicable: z.boolean().default(false),
+      confidence: z.number().min(0).max(1).catch(0.5), // Default to medium confidence
       /** For tool_feature_optimization: the specific feature to use (empty string if N/A) */
       featureSuggestion: z.string().optional().default(''),
       /** For shortcut_available: the exact shortcut/command that replaces multiple steps (empty string if N/A) */
       shortcutCommand: z.string().optional().default(''),
     })
-  ),
+  ).default([]), // Default to empty array if missing
 });
 
 const metricsAnalysisSchema = z.object({
@@ -112,6 +118,45 @@ const metricsAnalysisSchema = z.object({
   workflowTagDistribution: z.record(z.number()),
   averageStepDuration: z.number(),
   overallEfficiencyScore: z.number().min(0).max(100),
+});
+
+// ============================================================================
+// EFFECTIVENESS ANALYSIS SCHEMAS (Step-by-step quality critique)
+// ============================================================================
+
+const stepEffectivenessSchema = z.object({
+  stepId: z.string(),
+  whatUserDid: z.string(),
+  qualityRating: z.enum(['poor', 'fair', 'good', 'excellent']),
+  couldHaveDoneDifferently: z.string(),
+  whyBetter: z.string(),
+  confidence: z.number().min(0).max(1),
+});
+
+const missedActivitySchema = z.object({
+  activity: z.string(),
+  shouldOccurAfter: z.string(),
+  whyImportant: z.string(),
+  impactLevel: z.enum(['low', 'medium', 'high']),
+  recommendation: z.string(),
+  confidence: z.number().min(0).max(1),
+});
+
+const contentCritiqueSchema = z.object({
+  aspect: z.string(),
+  observation: z.string(),
+  rating: z.enum(['poor', 'fair', 'good', 'excellent']),
+  improvementSuggestion: z.string(),
+  evidence: z.array(z.string()),
+});
+
+const effectivenessAnalysisSchema = z.object({
+  stepAnalysis: z.array(stepEffectivenessSchema),
+  missedActivities: z.array(missedActivitySchema),
+  contentCritiques: z.array(contentCritiqueSchema),
+  overallEffectivenessScore: z.number().min(0).max(100),
+  effectivenessSummary: z.string(),
+  topPriorities: z.array(z.string()).max(3),
 });
 
 // ============================================================================
@@ -285,6 +330,24 @@ async function diagnoseUserWorkflows(
       opportunityCount: primaryDiagnostics.opportunities.length,
       efficiencyScore: primaryDiagnostics.overallEfficiencyScore,
     });
+
+    // ENHANCEMENT: Add EFFECTIVENESS analysis (quality and outcomes, not just efficiency)
+    // This provides step-by-step quality critique, missed activities, and content quality assessment
+    const effectivenessAnalysis = await analyzeWorkflowEffectiveness(
+      state.userEvidence.workflows,
+      state.query,
+      llmProvider,
+      logger
+    );
+
+    if (effectivenessAnalysis) {
+      primaryDiagnostics.effectivenessAnalysis = effectivenessAnalysis;
+      logger.info('A2: Effectiveness analysis added', {
+        stepAnalysisCount: effectivenessAnalysis.stepAnalysis.length,
+        missedActivitiesCount: effectivenessAnalysis.missedActivities.length,
+        effectivenessScore: effectivenessAnalysis.overallEffectivenessScore,
+      });
+    }
 
     // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
     if (process.env.INSIGHT_DEBUG === 'true') {
@@ -901,13 +964,15 @@ ${A2_JUDGE_FINAL_CHECKLIST}`,
       )
     );
 
+    const rawInefficiencies = response.content.inefficiencies || [];
+
     logger.info('A2: Batched inefficiency identification complete', {
       workflowCount: workflows.length,
       durationMs: Date.now() - llmStartTime,
-      inefficiencyCount: response.content.inefficiencies.length,
+      inefficiencyCount: rawInefficiencies.length,
     });
 
-    const inefficiencies = response.content.inefficiencies.map((ineff: any) => ({
+    const inefficiencies = rawInefficiencies.map((ineff: any) => ({
       id: `ineff-${uuidv4().slice(0, 8)}`,
       workflowId: workflows[0].workflowId || 'aggregated',
       stepIds: ineff.stepIds,
@@ -1041,13 +1106,15 @@ ${A2_JUDGE_FINAL_CHECKLIST}`,
       )
     );
 
+    const rawOpportunities = response.content.opportunities || [];
+
     logger.info('A2: Batched opportunity identification complete', {
       workflowCount: workflows.length,
       durationMs: Date.now() - llmStartTime,
-      opportunityCount: response.content.opportunities.length,
+      opportunityCount: rawOpportunities.length,
     });
 
-    const opportunities = response.content.opportunities.map((opp: any) => ({
+    const opportunities = rawOpportunities.map((opp: any) => ({
       id: `opp-${uuidv4().slice(0, 8)}`,
       inefficiencyId: opp.inefficiencyId,
       type: opp.type as OpportunityType,
@@ -1385,12 +1452,15 @@ ${A2_JUDGE_FINAL_CHECKLIST}`,
       )
     );
 
+    const rawInefficiencies = response.content.inefficiencies || [];
+
     logger.info('A2: Inefficiency identification LLM call completed', {
       workflowId: workflow.workflowId,
       durationMs: Date.now() - llmStartTime,
+      inefficiencyCount: rawInefficiencies.length,
     });
 
-    const inefficiencies = response.content.inefficiencies.map((ineff: any) => ({
+    const inefficiencies = rawInefficiencies.map((ineff: any) => ({
       id: `ineff-${uuidv4().slice(0, 8)}`,
       workflowId: workflow.workflowId,
       stepIds: ineff.stepIds,
@@ -2205,12 +2275,15 @@ ${A2_JUDGE_FINAL_CHECKLIST}`,
       )
     );
 
+    const rawOpportunities = response.content.opportunities || [];
+
     logger.info('A2: Opportunity identification LLM call completed', {
       workflowId: workflow.workflowId,
       durationMs: Date.now() - llmStartTime,
+      opportunityCount: rawOpportunities.length,
     });
 
-    const opportunities = response.content.opportunities.map((opp: any) => ({
+    const opportunities = rawOpportunities.map((opp: any) => ({
       id: `opp-${uuidv4().slice(0, 8)}`,
       inefficiencyId: opp.inefficiencyId,
       type: opp.type as OpportunityType,
@@ -2372,4 +2445,235 @@ function createEmptyDiagnostics(): Diagnostics {
     confidence: 0,
     analysisTimestamp: new Date().toISOString(),
   };
+}
+
+// ============================================================================
+// EFFECTIVENESS ANALYSIS (Step-by-step quality critique)
+// ============================================================================
+
+/**
+ * System prompt for effectiveness analysis
+ * Focuses on QUALITY and OUTCOMES, not just efficiency/time
+ */
+const EFFECTIVENESS_ANALYSIS_SYSTEM_PROMPT = `
+You are an EFFECTIVENESS ANALYST specializing in workflow QUALITY and OUTCOME assessment.
+
+**YOUR ROLE IS DISTINCT FROM EFFICIENCY ANALYSIS:**
+- EFFICIENCY = doing things FASTER (time savings, shortcuts, automation)
+- EFFECTIVENESS = doing the RIGHT things BETTER (quality, completeness, decision-making)
+
+You evaluate:
+1. **Step Quality**: Was each step done well? Could it have been done better?
+2. **Missing Activities**: What should the user have done but didn't?
+3. **Content Quality**: How good are the outputs/decisions made?
+
+---
+
+## EFFECTIVENESS EVALUATION FRAMEWORK
+
+### Step Quality Assessment
+For each step, evaluate:
+- **What they did**: Factual description from step data
+- **Quality Rating**: poor/fair/good/excellent
+- **Better Alternative**: What could improve the OUTCOME (not speed)
+- **Why Better**: Concrete benefit of the alternative
+
+### Quality Ratings Guide
+| Rating | Criteria |
+|--------|----------|
+| excellent | Step shows best-practice approach, thorough execution, high-quality output |
+| good | Step is adequate, achieves goal, minor improvements possible |
+| fair | Step achieves basic goal but has notable gaps or shortcuts |
+| poor | Step is incomplete, low quality, or misses the point |
+
+### Missing Activities Detection
+Look for activities that SHOULD have occurred based on the workflow intent:
+- **Research gaps**: Did they skip necessary background research?
+- **Validation gaps**: Did they skip testing/verification?
+- **Documentation gaps**: Did they skip documenting decisions?
+- **Planning gaps**: Did they dive in without planning?
+- **Review gaps**: Did they skip self-review before completion?
+
+### Content Quality Critique
+Evaluate the QUALITY of outputs, not just their existence:
+- **Research depth**: How thorough was information gathering?
+- **Decision quality**: Were decisions well-reasoned?
+- **Output completeness**: Is the work product complete?
+- **Attention to detail**: Were edge cases considered?
+
+---
+
+## ANTI-HALLUCINATION RULES
+
+1. **Only reference actual step data** - don't invent activities
+2. **Use evidence-based ratings** - cite specific observations
+3. **Be constructive** - focus on improvements, not criticism
+4. **Consider context** - some "gaps" are intentional trade-offs
+5. **Distinguish speculation from observation** - use qualifiers
+
+---
+
+## OUTPUT QUALITY STANDARDS
+
+- **stepAnalysis**: Analyze up to 10 most significant steps
+- **missedActivities**: 3-5 high-impact missing activities max
+- **contentCritiques**: 2-4 key quality observations
+- **effectivenessSummary**: 2-3 sentences capturing key insights
+- **topPriorities**: Exactly 3 actionable priorities
+`;
+
+/**
+ * Analyze workflow effectiveness (quality and outcomes)
+ * Complements efficiency analysis with quality-focused evaluation
+ */
+async function analyzeWorkflowEffectiveness(
+  workflows: any[],
+  query: string,
+  llmProvider: LLMProvider,
+  logger: Logger
+): Promise<EffectivenessAnalysis | null> {
+  if (workflows.length === 0) {
+    return null;
+  }
+
+  logger.info('A2: Starting effectiveness analysis', {
+    workflowCount: workflows.length,
+  });
+
+  // Build workflow summary for effectiveness analysis
+  const workflowSummaries = workflows.map((workflow, wIndex) => {
+    const steps = workflow.steps || [];
+    const stepSummary = steps
+      .slice(0, 15)
+      .map(
+        (s: any, i: number) =>
+          `  ${i + 1}. [${s.stepId || `step-${i}`}] ${s.app || s.tool}: ${s.description || 'No description'} (${s.durationSeconds || 0}s)`
+      )
+      .join('\n');
+
+    return `
+### Workflow ${wIndex + 1}: ${workflow.name || workflow.title || 'Unnamed'}
+**Intent**: ${workflow.intent || 'Unknown'}
+**Approach**: ${workflow.approach || 'Unknown'}
+**Summary**: ${workflow.summary || 'No summary'}
+
+**Steps:**
+${stepSummary}`;
+  }).join('\n');
+
+  try {
+    const llmStartTime = Date.now();
+
+    const response = await gpt4oConcurrencyLimiter.run(() =>
+      withRetry(
+        () => llmProvider.generateStructuredResponse(
+          [
+            {
+              role: 'system',
+              content: EFFECTIVENESS_ANALYSIS_SYSTEM_PROMPT,
+            },
+            {
+              role: 'user',
+              content: `Analyze the EFFECTIVENESS (quality and outcomes) of these workflows.
+
+User Query: "${query}"
+
+---
+
+## WORKFLOW DATA
+
+${workflowSummaries}
+
+---
+
+## YOUR TASK
+
+Provide a comprehensive EFFECTIVENESS analysis:
+
+1. **Step Analysis**: For each significant step, evaluate:
+   - What the user did (factual)
+   - Quality rating (poor/fair/good/excellent)
+   - What they could have done differently for BETTER OUTCOMES
+   - Why the alternative is better
+
+2. **Missed Activities**: Identify 3-5 activities the user SHOULD have done but didn't:
+   - Research, validation, documentation, planning, or review gaps
+   - Where in the workflow it should have occurred
+   - Why it matters and what to do about it
+
+3. **Content Quality Critique**: Evaluate 2-4 aspects of output quality:
+   - Research depth, decision quality, completeness, attention to detail
+   - Specific observations with evidence
+   - Improvement suggestions
+
+4. **Overall Assessment**:
+   - Effectiveness score (0-100, where 100 = excellent quality outcomes)
+   - Summary of key effectiveness insights
+   - Top 3 priorities for improving effectiveness
+
+REMEMBER: Focus on QUALITY and OUTCOMES, not speed/efficiency.`,
+            },
+          ],
+          effectivenessAnalysisSchema
+        ),
+        {
+          maxRetries: 2,
+          baseDelayMs: 2000,
+          perAttemptTimeoutMs: LLM_PER_ATTEMPT_TIMEOUT_MS,
+          totalTimeoutMs: LLM_TOTAL_TIMEOUT_MS,
+          onRetry: (error, attempt, delayMs) => {
+            logger.warn('A2: Retrying effectiveness analysis', {
+              attempt,
+              delayMs,
+              error: error?.message || String(error),
+            });
+          },
+        }
+      )
+    );
+
+    logger.info('A2: Effectiveness analysis complete', {
+      durationMs: Date.now() - llmStartTime,
+      stepAnalysisCount: response.content.stepAnalysis.length,
+      missedActivitiesCount: response.content.missedActivities.length,
+      effectivenessScore: response.content.overallEffectivenessScore,
+    });
+
+    // Convert to typed response with IDs
+    const effectivenessAnalysis: EffectivenessAnalysis = {
+      stepAnalysis: response.content.stepAnalysis.map((s: any) => ({
+        stepId: s.stepId,
+        whatUserDid: s.whatUserDid,
+        qualityRating: s.qualityRating,
+        couldHaveDoneDifferently: s.couldHaveDoneDifferently,
+        whyBetter: s.whyBetter,
+        confidence: s.confidence,
+      })),
+      missedActivities: response.content.missedActivities.map((m: any) => ({
+        id: `missed-${uuidv4().slice(0, 8)}`,
+        activity: m.activity,
+        shouldOccurAfter: m.shouldOccurAfter,
+        whyImportant: m.whyImportant,
+        impactLevel: m.impactLevel,
+        recommendation: m.recommendation,
+        confidence: m.confidence,
+      })),
+      contentCritiques: response.content.contentCritiques.map((c: any) => ({
+        aspect: c.aspect,
+        observation: c.observation,
+        rating: c.rating,
+        improvementSuggestion: c.improvementSuggestion,
+        evidence: c.evidence,
+      })),
+      overallEffectivenessScore: response.content.overallEffectivenessScore,
+      effectivenessSummary: response.content.effectivenessSummary,
+      topPriorities: response.content.topPriorities,
+      analysisTimestamp: new Date().toISOString(),
+    };
+
+    return effectivenessAnalysis;
+  } catch (err) {
+    logger.error('A2: Failed to analyze effectiveness', err instanceof Error ? err : new Error(String(err)));
+    return null;
+  }
 }

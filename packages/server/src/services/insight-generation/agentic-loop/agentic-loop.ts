@@ -1044,6 +1044,50 @@ ${workflowDetails}`;
     sections.push(`IMPROVEMENT OPPORTUNITIES [Source: Workflow Analysis]:\n${oppSummary}`);
   }
 
+  // A2: EFFECTIVENESS ANALYSIS (Step-by-step quality critique)
+  if (state.userDiagnostics?.effectivenessAnalysis) {
+    const eff = state.userDiagnostics.effectivenessAnalysis;
+    const effectivenessParts: string[] = [];
+
+    // Overall summary
+    effectivenessParts.push(`**Overall Effectiveness Score**: ${eff.overallEffectivenessScore}/100`);
+    effectivenessParts.push(`**Summary**: ${eff.effectivenessSummary}`);
+
+    // Top priorities
+    if (eff.topPriorities && eff.topPriorities.length > 0) {
+      effectivenessParts.push(`\n**Top Priorities for Improvement**:\n${eff.topPriorities.map((p, i) => `${i + 1}. ${p}`).join('\n')}`);
+    }
+
+    // Step-by-step quality analysis
+    if (eff.stepAnalysis && eff.stepAnalysis.length > 0) {
+      const stepDetails = eff.stepAnalysis.slice(0, 5).map(s => {
+        const rating = s.qualityRating.toUpperCase();
+        return `- **[${s.stepId}]** ${s.whatUserDid}\n    Quality: ${rating}\n    Could improve: ${s.couldHaveDoneDifferently}\n    Why better: ${s.whyBetter}`;
+      }).join('\n');
+      effectivenessParts.push(`\n**Step-by-Step Quality Analysis**:\n${stepDetails}`);
+    }
+
+    // Missed activities
+    if (eff.missedActivities && eff.missedActivities.length > 0) {
+      const missedDetails = eff.missedActivities.map(m => {
+        const impact = m.impactLevel.toUpperCase();
+        return `- **${m.activity}** (Impact: ${impact})\n    When: After ${m.shouldOccurAfter}\n    Why important: ${m.whyImportant}\n    Recommendation: ${m.recommendation}`;
+      }).join('\n');
+      effectivenessParts.push(`\n**Activities You Missed**:\n${missedDetails}`);
+    }
+
+    // Content quality critiques
+    if (eff.contentCritiques && eff.contentCritiques.length > 0) {
+      const critiqueDetails = eff.contentCritiques.map(c => {
+        const rating = c.rating.toUpperCase();
+        return `- **${c.aspect}** (${rating}): ${c.observation}\n    Suggestion: ${c.improvementSuggestion}`;
+      }).join('\n');
+      effectivenessParts.push(`\n**Content Quality Observations**:\n${critiqueDetails}`);
+    }
+
+    sections.push(`EFFECTIVENESS ANALYSIS [Source: Quality Assessment]:\nThis evaluates the QUALITY and OUTCOMES of your work, not just efficiency:\n\n${effectivenessParts.join('\n')}`);
+  }
+
   // A5: Feature Adoption Tips
   if (state.featureAdoptionTips && state.featureAdoptionTips.length > 0) {
     const tipsSummary = state.featureAdoptionTips

@@ -78,15 +78,18 @@ RULE 6: Terminate when: (a) recommended skills exhausted, OR (b) sufficient data
 SECTION 4: TERMINATION DECISION MATRIX
 ================================================================================
 
-| Intent            | Terminate When                                      |
-|-------------------|-----------------------------------------------------|
-| EXPLORATION       | Have userEvidence (any workflow data)               |
-| DIAGNOSTIC        | Have userEvidence + diagnostics                     |
-| OPTIMIZATION      | Have userEvidence + diagnostics + any optimization  |
-| COMPARISON        | Have userEvidence + peer comparison data            |
-| TOOL_INTEGRATION  | Have web search results                             |
-| FEATURE_DISCOVERY | Have userEvidence + feature tips                    |
-| GENERAL           | Have userEvidence + at least one optimization plan  |
+| Intent            | Terminate When                                                |
+|-------------------|---------------------------------------------------------------|
+| EXPLORATION       | Have userEvidence (any workflow data)                         |
+| DIAGNOSTIC        | Have userEvidence + diagnostics + feature tips (A5)           |
+| OPTIMIZATION      | Have userEvidence + diagnostics + optimization + feature tips |
+| COMPARISON        | Have userEvidence + peer comparison data                      |
+| TOOL_INTEGRATION  | Have web search results                                       |
+| FEATURE_DISCOVERY | Have userEvidence + feature tips                              |
+| GENERAL           | Have userEvidence + optimization plan + feature tips          |
+
+**IMPORTANT**: For DIAGNOSTIC/OPTIMIZATION/GENERAL, you MUST invoke discover_underused_features
+before terminating, even if you have diagnostics and optimizations.
 
 ================================================================================
 SECTION 5: FEW-SHOT EXAMPLES
@@ -156,7 +159,26 @@ Correct Output:
   "terminationReason": "EXPLORATION satisfied per termination matrix"
 }
 
-### EXAMPLE 5: Skill prerequisites not met
+### EXAMPLE 5: Must invoke A5 before terminating OPTIMIZATION query
+Input State:
+- Query: "How can I optimize my coding workflow?"
+- Intent: OPTIMIZATION
+- Iteration: 3
+- Used skills: [retrieve_user_workflows, analyze_workflow_efficiency, compare_with_peers]
+- Has user evidence: true
+- Has diagnostics: true
+- Has optimization plan: true
+- Has feature tips: false
+
+Correct Output:
+{
+  "thought": "OPTIMIZATION query. Matrix says: need userEvidence + diagnostics + optimization + feature tips. I have all EXCEPT feature tips. MUST invoke discover_underused_features before terminating.",
+  "shouldTerminate": false,
+  "skillToInvoke": "discover_underused_features",
+  "skillInput": { "query": "coding workflow feature tips" }
+}
+
+### EXAMPLE 6: Skill prerequisites not met
 Input State:
 - Query: "How do I compare to others?"
 - Intent: COMPARISON
@@ -177,10 +199,15 @@ Correct Output:
 SECTION 6: NEGATIVE EXAMPLES (common mistakes to avoid)
 ================================================================================
 
-### WRONG: Terminating too early
+### WRONG: Terminating too early (missing diagnostics)
 Input: Intent=DIAGNOSTIC, hasUserEvidence=true, hasDiagnostics=false
 WRONG Output: { "shouldTerminate": true, "terminationReason": "Have user data" }
 WHY WRONG: DIAGNOSTIC requires diagnostics per matrix. hasUserEvidence alone is insufficient.
+
+### WRONG: Terminating OPTIMIZATION without feature tips
+Input: Intent=OPTIMIZATION, hasUserEvidence=true, hasDiagnostics=true, hasOptimization=true, hasFeatureTips=false
+WRONG Output: { "shouldTerminate": true, "terminationReason": "Have diagnostics and optimization" }
+WHY WRONG: OPTIMIZATION requires feature tips per matrix. Must invoke discover_underused_features first.
 
 ### WRONG: Invoking unavailable skill
 Input: availableSkills=[retrieve_user_workflows, search_web_best_practices]
@@ -225,6 +252,7 @@ CURRENT DECISION CONTEXT
 - hasUserEvidence: {hasUserEvidence}
 - hasDiagnostics: {hasDiagnostics}
 - hasOptimizationPlans: {hasOptimizationPlans}
+- hasFeatureTips: {hasFeatureTips}
 - hasConversationMemory: {hasConversationMemory}
 
 ## LAST OBSERVATION (result from previous skill)
@@ -488,12 +516,30 @@ function ruleBasedReasoning(
     }
   }
 
-  // For optimization/diagnostic queries, need analysis and some optimizations
-  if (hasBasicAnalysis && hasOptimizations) {
+  // For optimization/diagnostic queries, need analysis, optimizations, AND feature tips
+  // FIX: Previously terminated too early before A5 (discover_underused_features) could run
+  const hasFeatureTips = state.featureAdoptionTips && state.featureAdoptionTips.length > 0;
+  const featureSkillUsed = usedSkillsSet.has('discover_underused_features');
+  const featureSkillAvailable = availableSkillIds.includes('discover_underused_features');
+
+  // Only terminate if we have feature tips OR the feature skill has been used/is unavailable
+  const featureAnalysisComplete = hasFeatureTips || featureSkillUsed || !featureSkillAvailable;
+
+  if (hasBasicAnalysis && hasOptimizations && featureAnalysisComplete) {
     return {
-      thought: 'Have diagnostics and optimization recommendations. Ready to generate response.',
+      thought: 'Have diagnostics, optimization recommendations, and feature tips. Ready to generate response.',
       shouldTerminate: true,
       terminationReason: 'Sufficient data gathered for comprehensive response',
+    };
+  }
+
+  // If we have basic analysis but haven't run feature discovery yet, run it
+  if (hasBasicAnalysis && hasOptimizations && !featureSkillUsed && featureSkillAvailable) {
+    return {
+      thought: 'Have diagnostics and optimizations. Still need to check for underused features before terminating.',
+      shouldTerminate: false,
+      skillToInvoke: 'discover_underused_features',
+      skillInput: { query: state.query },
     };
   }
 
@@ -558,6 +604,9 @@ async function llmBasedReasoning(
         !!state.peerOptimizationPlan ||
         !!state.webOptimizationPlan ||
         !!state.companyOptimizationPlan
+      ))
+      .replace('{hasFeatureTips}', String(
+        !!(state.featureAdoptionTips && state.featureAdoptionTips.length > 0)
       ))
       .replace('{hasConversationMemory}', String(!!state.conversationMemory))
       .replace('{lastObservation}', lastObservation)
@@ -631,6 +680,7 @@ export function buildPromptsForTest(params: {
   hasUserEvidence: boolean;
   hasDiagnostics: boolean;
   hasOptimizationPlans: boolean;
+  hasFeatureTips: boolean;
   hasConversationMemory: boolean;
   lastObservation: string;
   availableSkills: string[];
@@ -647,6 +697,7 @@ export function buildPromptsForTest(params: {
     .replace('{hasUserEvidence}', String(params.hasUserEvidence))
     .replace('{hasDiagnostics}', String(params.hasDiagnostics))
     .replace('{hasOptimizationPlans}', String(params.hasOptimizationPlans))
+    .replace('{hasFeatureTips}', String(params.hasFeatureTips))
     .replace('{hasConversationMemory}', String(params.hasConversationMemory))
     .replace('{lastObservation}', params.lastObservation)
     .replace('{availableSkills}', params.availableSkills.join(', ') || 'none');
