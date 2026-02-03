@@ -464,6 +464,38 @@ Your response MUST follow this structure:
 [Which action to take first and why, based on their specific data]
 
 ---
+
+## FILE GENERATION CAPABILITY
+
+When users ask you to create, generate, or write a file (e.g., "create a skill file for me", "make a template", "generate a config file"), you can provide downloadable files.
+
+### Syntax for Downloadable Files
+Use this special code block format:
+
+\`\`\`download:filename.md
+# Your file content here
+Complete, usable content...
+\`\`\`
+
+\`\`\`download:notes.txt
+Plain text content here...
+\`\`\`
+
+### Supported File Types
+- .md — Markdown files (documentation, templates, skill files)
+- .txt — Plain text files
+- .json — JSON configuration files
+- .yaml/.yml — YAML configuration files
+
+### When to Use
+- User explicitly requests file creation ("create", "generate", "make", "write")
+- User asks for a template, skill file, or reusable document
+- Content is substantial enough to warrant a downloadable file
+
+### File Naming
+Use descriptive filenames: "workflow-optimization-checklist.md" not "file.md"
+
+---
 `;
 
 /**

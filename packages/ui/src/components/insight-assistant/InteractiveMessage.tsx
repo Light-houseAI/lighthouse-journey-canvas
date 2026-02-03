@@ -26,6 +26,8 @@ import {
 import type { RetrievedSource } from '../../services/workflow-api';
 import type { InsightGenerationResult, OptimizationBlock, FeatureAdoptionTip } from '../../services/insight-assistant-api';
 import { OptimizationBlockDetailsModal } from './OptimizationBlockDetailsModal';
+import { DownloadFileBlock } from './DownloadFileBlock';
+import { parseDownloadableFiles, type ParsedDownloadFile } from '../../utils/download-file-parser';
 
 /**
  * Keywords that indicate an efficiency/optimization-focused query
@@ -466,9 +468,12 @@ export function InteractiveMessage({
   const [sourcesExpanded, setSourcesExpanded] = useState(false);
   const [selectedBlock, setSelectedBlock] = useState<OptimizationBlock | null>(null);
 
-  // Parse content for special sections (metrics, tips, warnings)
+  // Parse content for special sections (metrics, tips, warnings, downloadable files)
   // Only show efficiency-related cards if the query is about efficiency/optimization
-  const { mainContent, hasMetrics, showEfficiencyCards } = useMemo(() => {
+  const { mainContent, hasMetrics, showEfficiencyCards, downloadableFiles } = useMemo(() => {
+    // Parse downloadable files from content
+    const { cleanContent, downloadableFiles } = parseDownloadableFiles(content);
+
     // Check if content contains metrics-style data
     const hasMetrics = insightResult?.executiveSummary != null;
     // Check if there are optimization blocks (backend did the analysis)
@@ -484,7 +489,7 @@ export function InteractiveMessage({
       insightResult.executiveSummary.claudeCodeInsertionPoints.length > 0
     );
     const showEfficiencyCards = (isEfficiencyRelatedQuery(insightResult?.query) && hasMeaningfulMetrics) || hasOptimizationBlocks;
-    return { mainContent: content, hasMetrics, showEfficiencyCards };
+    return { mainContent: cleanContent, hasMetrics, showEfficiencyCards, downloadableFiles };
   }, [content, insightResult]);
 
   // User messages get simpler styling
@@ -579,6 +584,21 @@ export function InteractiveMessage({
                 </ul>
               </CollapsibleSection>
             )}
+          </div>
+        )}
+
+        {/* Downloadable Files */}
+        {downloadableFiles.length > 0 && (
+          <div className="mb-4 space-y-3">
+            {downloadableFiles.map((file, idx) => (
+              <DownloadFileBlock
+                key={`${file.filename}-${idx}`}
+                filename={file.filename}
+                content={file.content}
+                mimeType={file.mimeType}
+                language={file.language}
+              />
+            ))}
           </div>
         )}
 
