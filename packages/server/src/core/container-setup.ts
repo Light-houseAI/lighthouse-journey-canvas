@@ -464,6 +464,7 @@ export class Container {
             personaService,
             memoryService,
             graphService,
+            enableContextStitching: process.env.ENABLE_CONTEXT_STITCHING !== 'false', // Default to true
           });
         }).singleton(),
         // Company Documents Services (RAG document processing)

@@ -62,6 +62,8 @@ export interface AgenticLoopDeps {
   perplexityApiKey?: string;
   modelConfig?: Partial<InsightModelConfiguration>;
   agenticConfig?: Partial<AgenticLoopConfig>;
+  /** Enable cross-session context stitching in retrieval */
+  enableContextStitching?: boolean;
 }
 
 // ============================================================================
@@ -125,6 +127,7 @@ async function actionNode(
     companyDocsEnabled: deps.companyDocsEnabled,
     perplexityApiKey: deps.perplexityApiKey,
     modelConfig: deps.modelConfig,
+    enableContextStitching: deps.enableContextStitching,
   };
 
   try {
