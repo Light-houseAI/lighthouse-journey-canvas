@@ -35,6 +35,9 @@ import { reasoningNode, routeAfterReasoning } from './reasoning.js';
 import { createSkillRegistry, getSkill, executeSkillWithTimeout } from '../skills/skill-registry.js';
 import { AGENTIC_MAX_ITERATIONS, DEFAULT_AGENTIC_CONFIG, type AgenticLoopConfig } from '../types.js';
 import { extractToolNames, validateToolInResults, generateUnknownToolResponse } from '../utils/tool-validator.js';
+import { identifyResponseGaps, regenerateWithGapFixes, type ValidatorGraphDeps } from '../graphs/validator-graph.js';
+import { BLOG_GENERATION_SYSTEM_PROMPT } from '../prompts/blog-system-prompt.js';
+import { PROGRESS_UPDATE_SYSTEM_PROMPT } from '../prompts/progressupdate-system-prompt.js';
 
 // ============================================================================
 // TYPES
@@ -312,9 +315,103 @@ async function terminateNode(
   try {
     const response = await generateFinalResponse(state, responseLLMProvider, logger);
 
+    // =========================================================================
+    // A6 VALIDATION LOOP: Recursive validation to catch response gaps
+    // =========================================================================
+    const MAX_VALIDATION_ITERATIONS = 3;
+    let validatedAnswer = response.userQueryAnswer;
+    let validationIterationCount = 0;
+
+    // Prepare user workflows for validation context
+    const userWorkflows = state.userEvidence?.workflows || [];
+
+    // Only run validation if we have an answer and workflows to validate against
+    if (validatedAnswer && userWorkflows.length > 0) {
+      const validatorDeps: ValidatorGraphDeps = {
+        logger,
+        llmProvider: responseLLMProvider,
+      };
+
+      logger.info('A6: Starting response validation', {
+        answerLength: validatedAnswer.length,
+        workflowCount: userWorkflows.length,
+      });
+
+      // Recursive validation loop
+      while (validationIterationCount < MAX_VALIDATION_ITERATIONS) {
+        validationIterationCount++;
+
+        try {
+          // Phase 1: Identify gaps
+          const gaps = await identifyResponseGaps(validatedAnswer, userWorkflows, validatorDeps);
+
+          logger.info(`A6: Validation iteration ${validationIterationCount}`, {
+            gapsFound: gaps.length,
+            gapTypes: gaps.map(g => g.type),
+          });
+
+          // No gaps found - validation passed
+          if (gaps.length === 0) {
+            logger.info('A6: Validation passed - no gaps found', {
+              iterations: validationIterationCount,
+            });
+            break;
+          }
+
+          // Phase 2: Regenerate with gap fixes
+          logger.info('A6: Improving response to fix gaps', {
+            gapCount: gaps.length,
+            iteration: validationIterationCount,
+          });
+
+          validatedAnswer = await regenerateWithGapFixes(
+            validatedAnswer,
+            gaps,
+            userWorkflows,
+            validatorDeps
+          );
+
+          logger.info('A6: Response improved', {
+            newAnswerLength: validatedAnswer.length,
+            iteration: validationIterationCount,
+          });
+        } catch (validationError) {
+          logger.warn('A6: Validation iteration failed, continuing with current answer', {
+            error: validationError instanceof Error ? validationError.message : String(validationError),
+            iteration: validationIterationCount,
+          });
+          break;
+        }
+      }
+
+      logger.info('A6: Validation loop complete', {
+        iterations: validationIterationCount,
+        originalLength: response.userQueryAnswer.length,
+        finalLength: validatedAnswer.length,
+      });
+    } else {
+      logger.info('A6: Skipping validation (no answer or workflows)');
+    }
+
+    // Strip internal FIXED comments from the final answer (these are for debugging, not for users)
+    const cleanedAnswer = validatedAnswer.replace(/<!--\s*FIXED:.*?-->\s*/g, '');
+
+    if (cleanedAnswer.length !== validatedAnswer.length) {
+      logger.info('A6: Stripped FIXED comments from final answer', {
+        before: validatedAnswer.length,
+        after: cleanedAnswer.length,
+      });
+    }
+
+    // Update response with validated answer
+    const validatedResponse = {
+      ...response,
+      userQueryAnswer: cleanedAnswer,
+    };
+
     return {
-      finalResult: response,
-      userQueryAnswer: response.userQueryAnswer,
+      finalResult: validatedResponse,
+      userQueryAnswer: validatedResponse.userQueryAnswer,
       status: 'completed',
       progress: 100,
       completedAt: new Date().toISOString(),
@@ -1373,6 +1470,19 @@ Generate your response now. Remember:
 - If data is limited, acknowledge this honestly rather than fabricating
 `;
 
+  // Select appropriate system prompt based on intent
+  // BLOG_CREATION uses the specialized blog generation prompt
+  // PROGRESS_UPDATE uses the specialized progress update prompt
+  // All other intents use the standard response agent prompt
+  let systemPrompt: string;
+  if (intent === 'BLOG_CREATION') {
+    systemPrompt = BLOG_GENERATION_SYSTEM_PROMPT;
+  } else if (intent === 'PROGRESS_UPDATE') {
+    systemPrompt = PROGRESS_UPDATE_SYSTEM_PROMPT;
+  } else {
+    systemPrompt = RESPONSE_AGENT_SYSTEM_PROMPT;
+  }
+
   logger.info('Generating final response with enhanced prompt framework', {
     intent,
     contextLength: aggregatedContext.length,
@@ -1382,10 +1492,12 @@ Generate your response now. Remember:
     hasFeatureTips: (state.featureAdoptionTips?.length || 0) > 0,
     hasUrlContent,
     promptFramework: 'fact-disambiguation-v1',
+    usingBlogPrompt: intent === 'BLOG_CREATION',
+    usingProgressUpdatePrompt: intent === 'PROGRESS_UPDATE',
   });
 
   const response = await llmProvider.generateText([
-    { role: 'system', content: RESPONSE_AGENT_SYSTEM_PROMPT },
+    { role: 'system', content: systemPrompt },
     { role: 'user', content: prompt },
   ]);
 
@@ -1827,6 +1939,83 @@ The user wants to become more proficient with a specific tool.
 ✅ DO reference their current usage patterns
 ✅ DO provide exact commands and navigation paths`;
 
+    case 'BLOG_CREATION':
+      return `**INTENT: BLOG CREATION**
+The user wants to create a blog post or article based on their workflow data.
+
+**REQUIRED APPROACH:**
+1. Analyze the workflow data as a documentary narrative
+2. Identify all applications and tools used chronologically
+3. Trace the user's journey through their work session
+4. Extract key content, decisions, and outcomes
+5. Note any AI tool usage and human-AI collaboration patterns
+6. Generate an engaging, professional blog post
+
+**OUTPUT STRUCTURE:**
+- Engaging title based on workflow content
+- Opening hook with session context (duration, date)
+- Chronological narrative of the workflow
+- Tool ecosystem analysis
+- AI integration observations (if applicable)
+- Key insights and takeaways
+- Forward-looking conclusion
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT invent activities not in the workflow data
+❌ DO NOT fabricate timestamps or durations
+❌ DO NOT assume user intent without evidence
+❌ DO NOT create fictional quotes or content
+✅ DO use actual session names, times, and tools
+✅ DO quote visible content from workflow steps
+✅ DO maintain journalistic accuracy while being engaging
+✅ DO acknowledge when data is incomplete`;
+
+    case 'PROGRESS_UPDATE':
+      return `**INTENT: PROGRESS UPDATE**
+The user wants to create a weekly progress update report based on their workflow data.
+
+**REQUIRED APPROACH:**
+1. Write a flowing narrative analysis of the workflow data (NO step headers)
+2. Identify all applications and tools used
+3. Extract key activities with timestamps
+4. Identify key themes and deliverables
+5. Synthesize into a structured progress report
+
+**CRITICAL FORMAT RULES:**
+❌ DO NOT use "Step 1:", "Step 2:", "Step 3:" headers
+❌ DO NOT write "My Step-by-Step Analysis Process" as a section
+❌ DO NOT use numbered step format in the analysis
+✅ DO write analysis as natural flowing paragraphs
+
+**OUTPUT STRUCTURE:**
+- Flowing narrative analysis (2-3 paragraphs, no headers)
+- Summary section
+- Key Accomplishments (numbered)
+- Tools & Platforms Utilized (table)
+- Collaboration & Communication
+- AI Integration Observations (if applicable)
+- Upcoming Priorities
+- Workflow Insights (strengths, areas for improvement)
+- Generate ONE downloadable .md file
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT fabricate activities not in the workflow data
+❌ DO NOT invent timestamps, durations, or outcomes
+❌ DO NOT assume the user's intent without evidence
+❌ DO NOT create fictional meetings, documents, or communications
+❌ DO NOT make up tool features or integrations
+✅ DO reference actual session data
+✅ DO use specific timestamps when available
+✅ DO quote visible content accurately
+✅ DO acknowledge uncertainty appropriately
+✅ DO distinguish between observed facts and inferences
+
+**FILE GENERATION (MANDATORY):**
+Generate ONLY ONE downloadable markdown file:
+\`\`\`download:weekly-progress-YYYY-MM-DD.md
+[Report content only - NOT the analysis narrative]
+\`\`\``;
+
     default:
       return `**INTENT: GENERAL**
 This is a general query. Apply the standard evidence-grounded response approach.
@@ -1866,6 +2055,8 @@ function getIntentDescription(intent: string): string {
     TOOL_MASTERY: 'User wants to master a specific tool',
     LEARNING: 'User wants to learn best practices',
     PATTERN: 'User wants to understand their patterns',
+    BLOG_CREATION: 'User wants to create a blog post from their workflow',
+    PROGRESS_UPDATE: 'User wants to create a weekly progress update report from their workflow',
     GENERAL: 'General productivity query',
   };
   return descriptions[intent] || 'General query';

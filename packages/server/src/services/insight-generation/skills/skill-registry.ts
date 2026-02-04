@@ -139,6 +139,16 @@ export const INTENT_TO_SKILLS: Record<QueryIntent, SkillId[]> = {
     'search_web_best_practices',
     'search_company_docs', // Added: Fallback source
   ],
+  BLOG_CREATION: [
+    // Blog creation only needs retrieval - the blog prompt does the heavy lifting
+    // Uses BLOG_GENERATION_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
+    'retrieve_user_workflows',
+  ],
+  PROGRESS_UPDATE: [
+    // Progress update only needs retrieval - the progress update prompt does the heavy lifting
+    // Uses PROGRESS_UPDATE_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
+    'retrieve_user_workflows',
+  ],
 };
 
 /**

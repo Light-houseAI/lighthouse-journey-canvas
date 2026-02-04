@@ -1,0 +1,172 @@
+================================================================================
+WEEKLY PROGRESS UPDATE SYSTEM PROMPT
+================================================================================
+
+This document describes the system prompt used for generating weekly progress
+update reports from user workflow data.
+
+================================================================================
+OVERVIEW
+================================================================================
+
+The Weekly Progress Update System Prompt transforms raw workflow session data
+(screen recordings, activity logs, timestamps, screenshots) into comprehensive
+weekly progress update reports.
+
+================================================================================
+ROUTING LOGIC
+================================================================================
+
+Query Type                                          | System Prompt Used
+----------------------------------------------------|-----------------------------
+Efficiency, speed, performance, productivity,       | ANSWER_GENERATION_SYSTEM_PROMPT
+workflow optimization                               | (existing)
+----------------------------------------------------|-----------------------------
+Weekly progress update, progress report,            | PROGRESS_UPDATE_SYSTEM_PROMPT
+status report, weekly summary                       | (new)
+
+EXAMPLE QUERIES THAT ROUTE TO PROGRESS UPDATE PROMPT:
+- "Create a weekly progress update"
+- "Write a progress report from my workflow"
+- "Generate a weekly status report"
+- "What did I accomplish this week?"
+- "Summarize my work as a report"
+- "Create a status update"
+- "Weekly standup report"
+- "Structure my weekly update"
+
+EXAMPLE QUERIES THAT ROUTE TO OPTIMIZATION PROMPT:
+- "How can I improve my efficiency?"
+- "Make my workflow faster"
+- "Optimize my productivity"
+- "Where am I wasting time?"
+- "How can I speed up my work?"
+
+================================================================================
+KEY FEATURES
+================================================================================
+
+1. FLOWING NARRATIVE ANALYSIS
+   - Analysis is written as natural flowing paragraphs
+   - NO "Step 1:", "Step 2:" headers
+   - Builds trust by showing the analysis process conversationally
+
+2. SINGLE FILE OUTPUT
+   - Generates ONLY ONE downloadable markdown file
+   - No separate .txt file generated
+   - File contains only the final report, not the analysis
+
+3. EVIDENCE-BASED REPORTING
+   - Anti-hallucination rules
+   - References actual session data
+   - Uses specific timestamps when available
+
+================================================================================
+OUTPUT FORMAT
+================================================================================
+
+ANALYSIS NARRATIVE (in response text):
+--------------------------------------
+I analyzed your workflow data from [date]. The sessions cover approximately
+[duration] of work across [tools]. Tracing the chronological activity, you
+began with [activity] around [time], then transitioned to [next activity].
+The primary tools identified include [tool list]. Key themes that emerged
+include [themes].
+
+DOWNLOADABLE REPORT FILE:
+-------------------------
+```download:weekly-progress-YYYY-MM-DD.md
+# Weekly Progress Update Report
+
+**Week of [DATE RANGE]**
+
+## Summary
+[Executive summary]
+
+## Key Accomplishments
+[Numbered accomplishments]
+
+## Tools & Platforms Utilized
+[Table format]
+
+## Collaboration & Communication
+[List of collaboration activities]
+
+## AI Integration Observations
+[If applicable]
+
+## Upcoming Priorities
+[Numbered priorities]
+
+## Workflow Insights
+[Strengths and areas for improvement]
+```
+
+================================================================================
+CRITICAL FORMAT RULES
+================================================================================
+
+DO NOT:
+- Use "Step 1:", "Step 2:", "Step 3:" headers
+- Write "My Step-by-Step Analysis Process" as a section
+- Use numbered step format in the analysis
+- Generate multiple files (only ONE .md file)
+
+DO:
+- Write analysis as natural flowing paragraphs
+- Generate only one downloadable markdown file
+- Put the analysis narrative in the response text
+- Put only the final report in the downloadable file
+
+================================================================================
+IMPLEMENTATION FILES
+================================================================================
+
+File                              | Purpose
+----------------------------------|------------------------------------------
+progressupdate-system-prompt.ts   | TypeScript module exporting the prompt
+progressupdate-system-prompt.md   | Markdown documentation file
+progressupdate-system-prompt.txt  | This plain text version
+query-classifier.ts               | Updated with PROGRESS_UPDATE intent routing
+
+================================================================================
+EXAMPLE OUTPUT
+================================================================================
+
+ANALYSIS NARRATIVE (shown to user):
+-----------------------------------
+I analyzed your workflow data from January 29, 2026. This session log captures
+approximately 9 minutes of activity across multiple applications. The primary
+tools identified include Google Chrome for research, Granola for AI-assisted
+note-taking, Google Slides for presentation editing, and Google Calendar for
+scheduling.
+
+Tracing the chronological flow, the session began at 3:47 PM with research in
+Chrome, viewing a flowchart about workflow value creation. By 3:48 PM, the focus
+shifted to Granola for reviewing session summaries. From 3:49 PM to 3:52 PM,
+intensive work occurred in Google Slides on a presentation titled "High-Impact
+Placement Tactics." The session concluded around 3:56 PM with collaboration
+activities including sharing the presentation and scheduling a meeting.
+
+Key themes that emerged include student job placement strategy development,
+AI-driven workflow optimization research, and team collaboration through shared
+documents and scheduled meetings.
+
+DOWNLOADABLE FILE:
+------------------
+```download:weekly-progress-2026-01-29.md
+# Weekly Progress Update Report
+
+**Week of January 27, 2026 - January 29, 2026**
+
+## Summary
+
+This week focused on developing strategic recommendations for student job
+placement improvements...
+
+[Report continues...]
+```
+
+================================================================================
+END OF DOCUMENT
+================================================================================

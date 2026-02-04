@@ -36,6 +36,8 @@ export type QueryIntent =
   | 'FEATURE_DISCOVERY' // Discover underused features → A1→A2→A5
   | 'TOOL_MASTERY'      // Master specific tool → A1→A2→A5
   | 'TOOL_INTEGRATION'  // Integrate/use/add a tool → A4-Web priority (web search first)
+  | 'BLOG_CREATION'     // Create blog/article from workflow → A1 only, uses blog prompt
+  | 'PROGRESS_UPDATE'   // Create weekly progress update report → A1 only, uses progress update prompt
   | 'GENERAL';          // Fallback for unclear queries
 
 /**
@@ -166,6 +168,8 @@ const INTENT_PATTERNS: Record<QueryIntent, RegExp[]> = {
   EXPLORATION: [
     /\b(show|list|display|what)\s+(me\s+)?(my\s+)?(sessions?|workflows?|work)/i,
     /\bwhat\s+(did|have)\s+i\s+(work|do|accomplish)/i,
+    // "Show me what I worked on" / "What I worked on yesterday"
+    /\b(show\s+me\s+)?what\s+i\s+worked\s+on/i,
     /\bsummar(y|ize)/i,
     /\b(overview|recap|review)\s+(of\s+)?(my\s+)?work/i,
     /\btell\s+me\s+about/i,
@@ -225,6 +229,52 @@ const INTENT_PATTERNS: Record<QueryIntent, RegExp[]> = {
     /\b\w+\s+(integration|plugin|extension|addon|add-on)/i,
     // "Set up X" / "Configure X"
     /\b(set\s*up|configure|install)\s+\w+/i,
+  ],
+  BLOG_CREATION: [
+    // "Create/write/generate a blog/article"
+    /\b(create|write|generate|make|draft)\s+(an?\s+)?(blog|article|post|story)/i,
+    // "Blog/article about/from my workflow"
+    /\b(blog|article|post)\s+(about|from|based\s+on)\s+(my\s+)?(workflow|session|work)/i,
+    // "Turn my workflow into a blog/an article"
+    /\bturn\s+(my\s+)?(workflow|session|work)\s+into\s+(an?\s+)?(blog|article|story|post)/i,
+    // "Convert/transform workflow to blog"
+    /\b(convert|transform)\s+(my\s+)?(workflow|session)\s+(to|into)\s+(an?\s+)?(blog|article)/i,
+    // "Write about/up my workflow"
+    /\bwrite\s+(about|up)\s+(my\s+)?(workflow|session|productivity|work)/i,
+    // "Blog about/from/based on"
+    /\bblog\s+(about|from|based\s+on)\s+/i,
+    // "Narrative of my workflow"
+    /\bnarrative\s+(of|about|from)\s+(my\s+)?(workflow|session|work)/i,
+    // "Create content from my session"
+    /\b(create|generate)\s+(content|post)\s+(from|based\s+on)\s+(my\s+)?(workflow|session)/i,
+    // "Document my workflow as a blog"
+    /\bdocument\s+(my\s+)?(workflow|session)\s+(as|into)\s+(an?\s+)?(blog|article)/i,
+  ],
+  PROGRESS_UPDATE: [
+    // "Create/write/generate a weekly progress update/report"
+    /\b(create|write|generate|make|draft)\s+(an?\s+)?(weekly\s+)?(progress\s+)?(update|report)/i,
+    // "Weekly update/report"
+    /\b(weekly|daily|monthly)\s+(progress\s+)?(update|report|summary)/i,
+    // "Progress report/update from my workflow"
+    /\b(progress\s+)?(report|update)\s+(from|based\s+on|about)\s+(my\s+)?(workflow|session|work)/i,
+    // "Turn my workflow into a progress report"
+    /\bturn\s+(my\s+)?(workflow|session|work)\s+into\s+(an?\s+)?(progress\s+)?(report|update)/i,
+    // "Summarize my work/week as a report"
+    /\bsummar(ize|y)\s+(my\s+)?(work|week|activities?)\s+(as|into)\s+(an?\s+)?(report|update)/i,
+    // "What did I accomplish this week"
+    /\bwhat\s+(did|have)\s+i\s+(accomplish|achieve|complete|do)\s+(this|last)\s+(week|month)/i,
+    // "Create a status report"
+    /\b(create|write|generate)\s+(an?\s+)?(status|activity|work)\s+(report|update|summary)/i,
+    // "Weekly standup/status update"
+    /\b(weekly|daily)\s+(standup|status)\s+(update|report|summary)/i,
+    // "Generate progress summary"
+    /\b(generate|create)\s+(progress|weekly|work)\s+(summary|overview)/i,
+    // "Report on my activities"
+    /\breport\s+(on|about)\s+(my\s+)?(activities?|work|accomplishments?)/i,
+    // "Structure my weekly update"
+    /\bstructure\s+(my\s+)?(weekly|progress)\s+(update|report)/i,
+    // "Format as progress report"
+    /\bformat\s+(as|into)\s+(an?\s+)?(progress|weekly)\s+(report|update)/i,
   ],
   GENERAL: [], // Fallback
 };
@@ -690,6 +740,22 @@ function determineRouting(
       includePeerComparison = false;  // Peers unlikely to help with new tool integration
       includeWebSearch = true;        // PRIMARY source
       includeFeatureAdoption = true;  // May have relevant feature tips
+      break;
+    case 'BLOG_CREATION':
+      // Blog creation only needs retrieval - the blog prompt does the heavy lifting
+      // Uses BLOG_GENERATION_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
+      agentsToRun = ['A1_RETRIEVAL'];
+      includePeerComparison = false;  // No peer comparison for blog
+      includeWebSearch = false;       // No web search for blog
+      includeFeatureAdoption = false; // No feature tips for blog
+      break;
+    case 'PROGRESS_UPDATE':
+      // Progress update only needs retrieval - the progress update prompt does the heavy lifting
+      // Uses PROGRESS_UPDATE_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
+      agentsToRun = ['A1_RETRIEVAL'];
+      includePeerComparison = false;  // No peer comparison for progress report
+      includeWebSearch = false;       // No web search for progress report
+      includeFeatureAdoption = false; // No feature tips for progress report
       break;
     case 'GENERAL':
     default:
