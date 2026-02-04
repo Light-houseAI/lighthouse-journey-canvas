@@ -449,6 +449,7 @@ export class Container {
           insightGenerationJobRepository,
           personaService,
           memoryService,
+          graphService,
         }) => {
           return new InsightGenerationService({
             logger,
@@ -462,6 +463,7 @@ export class Container {
             companyDocsEnabled: process.env.COMPANY_DOCS_ENABLED !== 'false', // Default to true
             personaService,
             memoryService,
+            graphService,
           });
         }).singleton(),
         // Company Documents Services (RAG document processing)
