@@ -1,15 +1,9 @@
-import { Button } from '@journey/components';
 import logoImage from '../../assets/images/logo.png';
 import WaitlistForm from './WaitlistForm';
 import WorkflowComparison from './WorkflowComparison';
 
-interface KramaLandingPageProps {
-  onSignIn: () => void;
-  onSignUp: () => void;
-}
-
-// Header Component
-function Header({ onSignIn, onSignUp }: { onSignIn: () => void; onSignUp: () => void }) {
+// Header Component - Clean header with just the logo
+function Header() {
   return (
     <header className="bg-krama-background py-4 px-6 border-b border-krama-border">
       <div className="container mx-auto flex items-center justify-between">
@@ -25,22 +19,6 @@ function Header({ onSignIn, onSignUp }: { onSignIn: () => void; onSignUp: () => 
           >
             Krama
           </span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={onSignIn}
-            variant="ghost"
-            className="text-sm text-krama-primary hover:bg-krama-primary/10"
-          >
-            Sign in
-          </Button>
-          <Button
-            onClick={onSignUp}
-            className="text-sm border border-krama-primary text-krama-primary rounded-md px-4 py-2 hover:bg-krama-primary/10 transition-colors"
-          >
-            Sign up
-          </Button>
         </div>
       </div>
     </header>
@@ -227,10 +205,10 @@ function Footer() {
 }
 
 // Main Landing Page Component
-export default function KramaLandingPage({ onSignIn, onSignUp }: KramaLandingPageProps) {
+export default function KramaLandingPage() {
   return (
     <div className="min-h-screen bg-krama-background">
-      <Header onSignIn={onSignIn} onSignUp={onSignUp} />
+      <Header />
       <HeroSection />
       <FeaturesSection />
       <CTASection />

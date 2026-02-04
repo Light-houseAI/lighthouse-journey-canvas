@@ -11,7 +11,7 @@ type UnauthenticatedView = 'landing' | 'blog' | 'signin' | 'signup' | 'join';
 /**
  * UnauthenticatedApp - Handles display for non-authenticated users
  * Shows landing page by default, with navigation to auth flow and blog
- * Supports URL-based routing for /join (invite code signup)
+ * Supports URL-based routing for /join, /sign-in, /sign-up
  */
 export function UnauthenticatedApp() {
   const [currentView, setCurrentView] = useState<UnauthenticatedView>(() => {
@@ -19,8 +19,8 @@ export function UnauthenticatedApp() {
     const path = window.location.pathname;
     if (path === '/join') return 'join';
     if (path === '/blog') return 'blog';
-    if (path === '/signin') return 'signin';
-    if (path === '/signup') return 'signup';
+    if (path === '/signin' || path === '/sign-in') return 'signin';
+    if (path === '/signup' || path === '/sign-up') return 'signup';
     return 'landing';
   });
   const [inviteCode, setInviteCode] = useState<string>('');
@@ -44,12 +44,7 @@ export function UnauthenticatedApp() {
 
   // Show Krama landing page for krama-ai.com domain
   if (currentView === 'landing' && isKramaDomain) {
-    return (
-      <KramaLandingPage
-        onSignIn={() => setCurrentView('signin')}
-        onSignUp={() => setCurrentView('signup')}
-      />
-    );
+    return <KramaLandingPage />;
   }
 
   // Show original landing page for light-houseai.com domain
