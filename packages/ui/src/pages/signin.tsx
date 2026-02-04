@@ -52,6 +52,8 @@ export default function SignIn({ onSwitchToSignUp }: SignInProps) {
         title: 'Welcome back! 🚀',
         description: "You've signed in successfully.",
       });
+      // Redirect to home page after successful login
+      window.location.href = '/';
     } catch (error) {
       toast({
         title: 'Sign in failed',

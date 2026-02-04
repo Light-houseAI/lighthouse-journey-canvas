@@ -149,7 +149,8 @@ export default function SignUp({ onSwitchToSignIn, inviteCode: initialInviteCode
         title: 'Account created!',
         description: "Welcome! Let's get you set up.",
       });
-      // No navigation needed - App.tsx will automatically show the right component
+      // Redirect to home page after successful registration
+      window.location.href = '/';
     } catch (error) {
       console.error('❌ [SIGNUP] Registration failed:', error);
       toast({
