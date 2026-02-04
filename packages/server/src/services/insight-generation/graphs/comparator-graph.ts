@@ -1359,9 +1359,90 @@ function createHeuristicTransformations(
     }
   }
 
+  // Strategy 3: Statistical workflow analysis (works even without A2 output)
+  // This ensures recommendations when A2 completely fails or returns no inefficiencies
+  if (transformations.length === 0 && userWorkflow.steps.length > 0) {
+    logger.info('A3: Using statistical workflow analysis (no A2 inefficiencies available)');
+
+    // 3a: Find steps with above-average duration (potential optimization targets)
+    const avgStepDuration = userWorkflow.steps.reduce((sum, s) => sum + s.durationSeconds, 0) / userWorkflow.steps.length;
+    const longSteps = userWorkflow.steps.filter(s => s.durationSeconds > avgStepDuration * 1.5);
+
+    if (longSteps.length > 0) {
+      const longestStep = longSteps.sort((a, b) => b.durationSeconds - a.durationSeconds)[0];
+      const appName = longestStep.app || 'Time-Intensive';
+      const stepDescription = longestStep.description || longestStep.stepSummary || 'completing this task';
+      const durationMinutes = Math.round(longestStep.durationSeconds / 60);
+      const avgMinutes = Math.round(avgStepDuration / 60);
+
+      // Generate app-specific optimization tips
+      const appSpecificTips: Record<string, string> = {
+        'Google Chrome': 'Use keyboard shortcuts like Cmd/Ctrl+L (address bar), Cmd/Ctrl+T (new tab), and Cmd/Ctrl+W (close tab) to navigate faster',
+        'Terminal': 'Use Ctrl+R for history search, tab completion, and consider shell aliases for common commands',
+        'Slack': 'Use Cmd/Ctrl+K for quick switching between channels and DMs',
+        'Electron': 'Check if the AI assistant supports keyboard shortcuts for common actions',
+        'Finder': 'Use Cmd+Shift+G for Go to Folder, and Cmd+Space for Spotlight search',
+        'Notes': 'Use Cmd+N for new note and consider using a dedicated note-taking app with better organization',
+      };
+
+      const tip = appSpecificTips[appName] || `Look for keyboard shortcuts and automation opportunities in ${appName}`;
+
+      transformations.push({
+        title: `Optimize ${appName} Step`,
+        rationale: `In your "${userWorkflow.title}" workflow, "${stepDescription}" took ${durationMinutes} minute${durationMinutes !== 1 ? 's' : ''}, significantly above your average of ${avgMinutes} minute${avgMinutes !== 1 ? 's' : ''} per step`,
+        currentStepIds: [longestStep.stepId],
+        optimizedDescription: tip,
+        estimatedDurationSeconds: Math.round(longestStep.durationSeconds * 0.7),
+        tool: appName,
+        timeSavedSeconds: Math.round(longestStep.durationSeconds * 0.3),
+        confidence: 0.35,
+      });
+    }
+
+    // 3b: Detect context switching (frequent app changes)
+    const appSequence = userWorkflow.steps.map(s => s.app);
+    let contextSwitches = 0;
+    for (let i = 1; i < appSequence.length; i++) {
+      if (appSequence[i] !== appSequence[i - 1]) contextSwitches++;
+    }
+
+    const uniqueApps = new Set(appSequence).size;
+    const switchRatio = contextSwitches / Math.max(1, userWorkflow.steps.length);
+    if (switchRatio > 0.5 && uniqueApps > 2) {
+      transformations.push({
+        title: 'Reduce Context Switching',
+        rationale: `You switched between ${uniqueApps} different apps ${contextSwitches} times, which can reduce focus and efficiency`,
+        currentStepIds: userWorkflow.steps.slice(0, 5).map(s => s.stepId),
+        optimizedDescription: 'Try batching similar tasks together to maintain focus',
+        estimatedDurationSeconds: 0,
+        tool: 'Workflow organization',
+        timeSavedSeconds: Math.round(userWorkflow.steps.reduce((sum, s) => sum + s.durationSeconds, 0) * 0.1),
+        confidence: 0.4,
+      });
+    }
+
+    // 3c: Compare total workflow time with peer (if significant difference)
+    const userTotalTime = userWorkflow.steps.reduce((sum, s) => sum + s.durationSeconds, 0);
+    const peerTotalTime = peerWorkflow.steps.reduce((sum, s) => sum + s.durationSeconds, 0);
+
+    if (peerTotalTime > 0 && userTotalTime > peerTotalTime * 1.3) {
+      transformations.push({
+        title: 'Workflow Takes Longer Than Peers',
+        rationale: `Your workflow took ${Math.round(userTotalTime / 60)} minutes vs peer average of ${Math.round(peerTotalTime / 60)} minutes`,
+        currentStepIds: userWorkflow.steps.map(s => s.stepId),
+        optimizedDescription: 'Review peer patterns for efficiency opportunities',
+        estimatedDurationSeconds: peerTotalTime,
+        tool: 'General optimization',
+        timeSavedSeconds: userTotalTime - peerTotalTime,
+        confidence: 0.3,
+      });
+    }
+  }
+
   logger.info('A3: Created heuristic transformations', {
     count: transformations.length,
     sources: transformations.map((t) => t.rationale.slice(0, 50)),
+    usedStatisticalFallback: userDiagnostics?.inefficiencies?.length === 0 || !userDiagnostics,
   });
 
   return transformations;

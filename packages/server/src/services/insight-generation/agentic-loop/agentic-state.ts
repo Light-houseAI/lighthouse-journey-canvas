@@ -250,6 +250,14 @@ export function createInitialAgenticState(params: {
     userQueryAnswer: null,
     finalResult: null,
 
+    // A6 Validator output
+    generatedAnswer: null,
+    identifiedGaps: null,
+    validationPassed: false,
+    validationIterationCount: 0,
+    validationResult: null,
+    userWorkflows: null,
+
     // Control flow
     currentStage: 'agentic_initializing',
     status: 'pending',

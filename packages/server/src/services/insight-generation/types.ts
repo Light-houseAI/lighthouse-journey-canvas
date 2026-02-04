@@ -10,6 +10,67 @@
  */
 
 // ============================================================================
+// BOTTLENECK TYPES (for A6 Validator)
+// ============================================================================
+
+/**
+ * Bottleneck type classification for workflow friction analysis
+ */
+export type BottleneckType = 'interpretation' | 'execution' | 'recall' | 'decision';
+
+/**
+ * Bottleneck type descriptions for reference
+ */
+export const BOTTLENECK_DESCRIPTIONS = {
+  interpretation: 'User struggles to understand what they\'re looking at (long pauses, repeated reading)',
+  execution: 'User knows what to do but doing it is tedious (repetitive actions, copy-paste)',
+  recall: 'User can\'t find/remember commands, files, or locations (history searching, tab-switching)',
+  decision: 'User is uncertain which path to take (pausing, backtracking, consulting references)',
+} as const;
+
+/**
+ * Gap types identified by the A6 Validator
+ */
+export type GapType =
+  | 'SHORTCUT_WITHOUT_COGNITIVE_PAIRING'
+  | 'METRIC_WITHOUT_METHODOLOGY'
+  | 'BOTTLENECK_MISMATCH'
+  | 'MISSING_ARTIFACT'
+  | 'RECURSIVE_HYPOCRISY'
+  | 'GENERIC_RECOMMENDATION';
+
+/**
+ * Gap severity levels
+ */
+export type GapSeverity = 'critical' | 'high' | 'medium' | 'low';
+
+/**
+ * Identified gap in a response
+ */
+export interface IdentifiedGap {
+  id: string;
+  type: GapType;
+  location: string;
+  description: string;
+  severity: GapSeverity;
+  evidence: string;
+}
+
+/**
+ * Artifact types for mandatory artifact generation
+ */
+export type ArtifactType = 'checklist' | 'template' | 'script' | 'decision_framework';
+
+/**
+ * Generated artifact in response
+ */
+export interface GeneratedArtifact {
+  type: ArtifactType;
+  title: string;
+  content: string;
+}
+
+// ============================================================================
 // QUALITY THRESHOLDS
 // ============================================================================
 
@@ -67,6 +128,14 @@ export interface UserStep {
   agenticPattern?: string;
   /** V2: Number of raw actions clustered into this semantic step */
   rawActionCount?: number;
+  /**
+   * Bottleneck type classification for validation
+   * - interpretation: User struggles to understand what they're looking at
+   * - execution: User knows what to do but doing it is tedious
+   * - recall: User can't find/remember commands, files, or locations
+   * - decision: User is uncertain which path to take
+   */
+  bottleneckType?: 'interpretation' | 'execution' | 'recall' | 'decision';
   /** Additional metadata from accessibility capture */
   metadata?: {
     windowTitle?: string;

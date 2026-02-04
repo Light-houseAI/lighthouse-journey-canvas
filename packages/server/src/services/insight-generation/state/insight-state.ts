@@ -321,6 +321,57 @@ export const InsightStateAnnotation = Annotation.Root({
   }),
 
   // -------------------------------------------------------------------------
+  // A6 VALIDATOR OUTPUT (Recursive Validation Loop)
+  // -------------------------------------------------------------------------
+
+  /** Generated answer that will be validated (alias for userQueryAnswer in validation context) */
+  generatedAnswer: Annotation<string | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  /** Gaps identified in the generated response */
+  identifiedGaps: Annotation<Array<{
+    id: string;
+    type: string;
+    location: string;
+    description: string;
+    severity: string;
+    evidence: string;
+  }> | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  /** Whether the response passed validation (no gaps remaining) */
+  validationPassed: Annotation<boolean>({
+    reducer: (_, b) => b,
+    default: () => false,
+  }),
+
+  /** Number of validation loop iterations */
+  validationIterationCount: Annotation<number>({
+    reducer: (_, b) => b,
+    default: () => 0,
+  }),
+
+  /** Final validation result */
+  validationResult: Annotation<{
+    gaps: Array<{ id: string; type: string; location: string; description: string; severity: string; evidence: string }>;
+    passed: boolean;
+    iterationCount: number;
+  } | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  /** User workflows being analyzed (for validation context) */
+  userWorkflows: Annotation<unknown[] | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  // -------------------------------------------------------------------------
   // CONTROL FLOW
   // -------------------------------------------------------------------------
 
@@ -478,6 +529,14 @@ export function createInitialState(params: {
     mergedPlan: null,
     userQueryAnswer: null,
     finalResult: null,
+
+    // A6 Validator output
+    generatedAnswer: null,
+    identifiedGaps: null,
+    validationPassed: false,
+    validationIterationCount: 0,
+    validationResult: null,
+    userWorkflows: null,
 
     // Control flow
     currentStage: 'initializing',

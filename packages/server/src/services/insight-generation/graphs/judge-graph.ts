@@ -331,6 +331,17 @@ async function diagnoseUserWorkflows(
       efficiencyScore: primaryDiagnostics.overallEfficiencyScore,
     });
 
+    // Log warning if A2 produced no inefficiencies (may indicate LLM schema failure)
+    // This helps debug cascade failures where A3 heuristic fallback also returns 0
+    if (primaryDiagnostics.inefficiencies.length === 0) {
+      logger.warn('A2: No inefficiencies detected - A3 will use statistical fallback', {
+        workflowCount: state.userEvidence.workflows.length,
+        totalSteps: state.userEvidence.totalStepCount,
+        queryLength: state.query.length,
+        possibleCause: 'LLM schema failure, empty workflow, or genuinely efficient workflow',
+      });
+    }
+
     // ENHANCEMENT: Add EFFECTIVENESS analysis (quality and outcomes, not just efficiency)
     // This provides step-by-step quality critique, missed activities, and content quality assessment
     const effectivenessAnalysis = await analyzeWorkflowEffectiveness(
@@ -549,40 +560,69 @@ async function critiqueDiagnostics(
 
     // Check 2: Opportunities reference valid inefficiencies
     // AUTO-FIX: Remove orphaned opportunities instead of retrying
+    // EXCEPTION: If inefficiencies array is empty (likely due to LLM failure), keep opportunities
+    // that have valid stepIds as they can still provide value
     const validInefficiencyIds = new Set(userDiagnostics.inefficiencies.map(i => i.id));
     const orphanedOpportunityIds: string[] = [];
 
-    for (const opportunity of userDiagnostics.opportunities) {
-      if (!validInefficiencyIds.has(opportunity.inefficiencyId)) {
-        orphanedOpportunityIds.push(opportunity.id);
-      }
-    }
+    // If we have 0 inefficiencies but have opportunities, this likely indicates
+    // the batched inefficiency LLM call failed. Keep opportunities with valid stepIds.
+    const inefficiencyDetectionFailed = userDiagnostics.inefficiencies.length === 0 &&
+                                         userDiagnostics.opportunities.length > 0;
 
-    if (orphanedOpportunityIds.length > 0) {
-      // Auto-fix: Remove orphaned opportunities instead of triggering retry
-      const originalCount = userDiagnostics.opportunities.length;
-      userDiagnostics = {
-        ...userDiagnostics,
-        opportunities: userDiagnostics.opportunities.filter(
-          o => !orphanedOpportunityIds.includes(o.id)
-        ),
-      };
-      wasAutoFixed = true;
-
-      logger.info('A2: Auto-fixed orphaned opportunities', {
-        removedCount: orphanedOpportunityIds.length,
-        originalCount,
-        remainingCount: userDiagnostics.opportunities.length,
-        removedIds: orphanedOpportunityIds,
+    if (inefficiencyDetectionFailed) {
+      // When inefficiency detection fails, keep ALL opportunities since they still contain
+      // valuable data (suggestedTool, description, estimatedSavingsSeconds) that downstream
+      // agents (A3, orchestrator) can use to generate meaningful recommendations
+      logger.warn('A2: Inefficiency detection likely failed (0 inefficiencies, >0 opportunities). Keeping all opportunities.', {
+        opportunityCount: userDiagnostics.opportunities.length,
+        inefficiencyCount: 0,
+        opportunityTypes: userDiagnostics.opportunities.map(o => o.type),
+        note: 'Opportunities still contain valuable suggestedTool and estimatedSavingsSeconds data',
       });
 
-      // Log as warning instead of error (since we fixed it)
+      // Don't remove any opportunities - they still contain useful information
       issues.push({
         type: 'auto_fixed',
-        description: `Removed ${orphanedOpportunityIds.length} opportunity(ies) referencing non-existent inefficiencies`,
+        description: `Inefficiency detection failed; kept ${userDiagnostics.opportunities.length} opportunities without linked inefficiencies`,
         severity: 'warning',
-        affectedIds: orphanedOpportunityIds,
+        affectedIds: [],
       });
+      wasAutoFixed = true;
+    } else {
+      // Normal case: Check for orphaned opportunities
+      for (const opportunity of userDiagnostics.opportunities) {
+        if (!validInefficiencyIds.has(opportunity.inefficiencyId)) {
+          orphanedOpportunityIds.push(opportunity.id);
+        }
+      }
+
+      if (orphanedOpportunityIds.length > 0) {
+        // Auto-fix: Remove orphaned opportunities instead of triggering retry
+        const originalCount = userDiagnostics.opportunities.length;
+        userDiagnostics = {
+          ...userDiagnostics,
+          opportunities: userDiagnostics.opportunities.filter(
+            o => !orphanedOpportunityIds.includes(o.id)
+          ),
+        };
+        wasAutoFixed = true;
+
+        logger.info('A2: Auto-fixed orphaned opportunities', {
+          removedCount: orphanedOpportunityIds.length,
+          originalCount,
+          remainingCount: userDiagnostics.opportunities.length,
+          removedIds: orphanedOpportunityIds,
+        });
+
+        // Log as warning instead of error (since we fixed it)
+        issues.push({
+          type: 'auto_fixed',
+          description: `Removed ${orphanedOpportunityIds.length} opportunity(ies) referencing non-existent inefficiencies`,
+          severity: 'warning',
+          affectedIds: orphanedOpportunityIds,
+        });
+      }
     }
 
     // Check 3: Avoid generic advice (use LLM to check)

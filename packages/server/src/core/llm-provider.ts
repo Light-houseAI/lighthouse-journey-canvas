@@ -20,6 +20,8 @@ export interface LLMResponse<T = string> {
     completionTokens: number;
     totalTokens: number;
   };
+  /** Reason the model stopped generating. 'length' indicates truncation. */
+  finishReason?: 'stop' | 'length' | 'content-filter' | 'tool-calls' | 'error' | 'other' | 'unknown';
 }
 
 export interface LLMProvider {
@@ -66,7 +68,7 @@ export class AISDKLLMProvider implements LLMProvider {
 
   constructor(config: LLMConfig) {
     this.defaultTemperature = config.temperature ?? 0.7;
-    this.defaultMaxTokens = config.maxTokens ?? 5000; // Increased from 2000 to prevent truncation
+    this.defaultMaxTokens = config.maxTokens ?? 8000; // Increased to prevent truncation with Gemini 3
     this.providerName = config.provider;
     this.modelName = config.model;
 
@@ -201,6 +203,7 @@ export class AISDKLLMProvider implements LLMProvider {
         return {
           content: result.text,
           usage,
+          finishReason: result.finishReason as LLMResponse['finishReason'],
         };
       },
       this.retryOptions
@@ -224,21 +227,54 @@ export class AISDKLLMProvider implements LLMProvider {
     const startTime = Date.now();
 
     // Default repair function to handle common JSON issues from LLMs
-    const defaultRepairText = async ({ text }: { text: string; error: any }): Promise<string> => {
+    const defaultRepairText = async ({ text, error }: { text: string; error: any }): Promise<string> => {
+      // Log the repair attempt for debugging
+      console.log('Attempting to repair LLM response', {
+        textLength: text.length,
+        error: error?.message || String(error),
+      });
+
       // Try to extract JSON from markdown code blocks
       const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (jsonMatch) {
         return jsonMatch[1].trim();
       }
 
-      // Find the start of JSON (first { character)
-      const jsonStart = text.indexOf('{');
+      // Find the start of JSON (first { or [ character)
+      const jsonStartBrace = text.indexOf('{');
+      const jsonStartBracket = text.indexOf('[');
+      let jsonStart = -1;
+      if (jsonStartBrace >= 0 && jsonStartBracket >= 0) {
+        jsonStart = Math.min(jsonStartBrace, jsonStartBracket);
+      } else if (jsonStartBrace >= 0) {
+        jsonStart = jsonStartBrace;
+      } else if (jsonStartBracket >= 0) {
+        jsonStart = jsonStartBracket;
+      }
+
       if (jsonStart === -1) {
         return text;
       }
 
-      // Extract from the first { to the end of the text
+      // Extract from the first { or [ to the end of the text
       let json = text.slice(jsonStart);
+
+      // Remove trailing garbage characters (non-JSON characters after the last } or ])
+      // This handles cases like `},\n.\n` where there's a stray `.` character
+      const lastBrace = json.lastIndexOf('}');
+      const lastBracket = json.lastIndexOf(']');
+      const lastValidChar = Math.max(lastBrace, lastBracket);
+      if (lastValidChar > 0) {
+        // Check if there's garbage after the last valid JSON character
+        const afterLastValid = json.slice(lastValidChar + 1).trim();
+        if (afterLastValid && !/^[,\s]*$/.test(afterLastValid)) {
+          // There's non-whitespace/comma garbage after the last brace/bracket
+          json = json.slice(0, lastValidChar + 1);
+        }
+      }
+
+      // Remove trailing commas before closing braces/brackets (common LLM error)
+      json = json.replace(/,\s*([\]}])/g, '$1');
 
       // Count brackets to determine what needs closing
       const openBrackets = (json.match(/\[/g) || []).length;
@@ -251,6 +287,11 @@ export class AISDKLLMProvider implements LLMProvider {
       if (quoteCount % 2 !== 0) {
         // Odd number of quotes - close the string
         json += '"';
+      }
+
+      // If there's an incomplete property (like `"foo": ` with no value), add empty string
+      if (/:\s*$/.test(json.trim())) {
+        json = json.trim() + '""';
       }
 
       // Close unclosed arrays first (inner structures)

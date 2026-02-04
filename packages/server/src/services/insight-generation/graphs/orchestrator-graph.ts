@@ -38,6 +38,12 @@ import { createComparatorGraph, type ComparatorGraphDeps } from './comparator-gr
 import { createWebBestPracticesGraph, type WebBestPracticesGraphDeps } from './web-best-practices-graph.js';
 import { createCompanyDocsGraph, type CompanyDocsGraphDeps } from './company-docs-graph.js';
 import { createFeatureAdoptionGraph, type FeatureAdoptionGraphDeps } from './feature-adoption-graph.js';
+import {
+  createValidatorGraph,
+  type ValidatorGraphDeps,
+  identifyResponseGaps,
+  regenerateWithGapFixes,
+} from './validator-graph.js';
 import { ANSWER_GENERATION_SYSTEM_PROMPT, FOLLOW_UP_QUESTIONS_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
 import {
   createAgentLLMProvider,
@@ -775,6 +781,106 @@ async function executeDownstreamAgents(
   };
 }
 
+// ============================================================================
+// A6 VALIDATION LOOP
+// ============================================================================
+
+const MAX_VALIDATION_ITERATIONS = 3;
+
+/**
+ * Node: Execute A6 Validator - Recursive validation loop
+ *
+ * This runs AFTER merge_and_finalize to validate the generated answer:
+ * 1. Identify gaps (shortcuts without cognitive pairing, metrics without methodology, etc.)
+ * 2. Improve response to fix gaps
+ * 3. Validate improvements
+ * 4. Loop until no gaps remain or max iterations reached
+ */
+async function executeValidationLoop(
+  state: InsightState,
+  deps: OrchestratorGraphDeps
+): Promise<Partial<InsightState>> {
+  const { logger, llmProvider } = deps;
+
+  logger.info('A6: Starting validation loop');
+
+  // Skip validation if no answer to validate
+  const answerToValidate = state.userQueryAnswer;
+  if (!answerToValidate) {
+    logger.warn('A6: No answer to validate, skipping');
+    return {
+      validationPassed: true,
+      validationIterationCount: 0,
+      generatedAnswer: null,
+    };
+  }
+
+  // Prepare validator dependencies
+  const validatorDeps: ValidatorGraphDeps = {
+    logger,
+    llmProvider,
+  };
+
+  // Extract user workflows for context
+  const userWorkflows = state.userEvidence?.workflows || [];
+
+  let currentAnswer = answerToValidate;
+  let iterationCount = 0;
+  let allGapsFixed = false;
+
+  // Run validation loop
+  while (iterationCount < MAX_VALIDATION_ITERATIONS && !allGapsFixed) {
+    iterationCount++;
+    logger.info(`A6: Validation iteration ${iterationCount}`);
+
+    // Phase 1: Identify gaps
+    const gaps = await identifyResponseGaps(currentAnswer, userWorkflows, validatorDeps);
+
+    logger.info(`A6: Found ${gaps.length} gaps`, {
+      gapTypes: gaps.map((g) => g.type),
+    });
+
+    // If no gaps, we're done
+    if (gaps.length === 0) {
+      allGapsFixed = true;
+      break;
+    }
+
+    // Phase 2: Improve response to fix gaps
+    currentAnswer = await regenerateWithGapFixes(
+      currentAnswer,
+      gaps,
+      userWorkflows,
+      validatorDeps
+    );
+
+    logger.info('A6: Response improved, re-validating');
+  }
+
+  logger.info('A6: Validation loop complete', {
+    iterations: iterationCount,
+    passed: allGapsFixed,
+  });
+
+  // Update the final result with the validated answer
+  const updatedFinalResult = state.finalResult
+    ? {
+        ...state.finalResult,
+        userQueryAnswer: currentAnswer,
+      }
+    : null;
+
+  return {
+    generatedAnswer: currentAnswer,
+    userQueryAnswer: currentAnswer,
+    validationPassed: allGapsFixed,
+    validationIterationCount: iterationCount,
+    finalResult: updatedFinalResult,
+    currentStage: 'validation_complete',
+    progress: 100,
+  };
+}
+
 /**
  * Node: Merge results and apply quality thresholds
  */
@@ -1044,6 +1150,8 @@ export function createOrchestratorGraph(deps: OrchestratorGraphDeps) {
     .addNode('make_routing_decision', (state) => makeRoutingDecision(state, deps))
     .addNode('execute_downstream', (state) => executeDownstreamAgents(state, deps))
     .addNode('merge_and_finalize', (state) => mergeAndFinalize(state, deps))
+    // A6 Validator: Recursive validation loop
+    .addNode('validate_response', (state) => executeValidationLoop(state, deps))
 
     // Define edges
     .addEdge('__start__', 'execute_a1')
@@ -1060,7 +1168,9 @@ export function createOrchestratorGraph(deps: OrchestratorGraphDeps) {
       skip_downstream: 'merge_and_finalize',
     })
     .addEdge('execute_downstream', 'merge_and_finalize')
-    .addEdge('merge_and_finalize', END);
+    // Run validation after merge_and_finalize, before END
+    .addEdge('merge_and_finalize', 'validate_response')
+    .addEdge('validate_response', END);
 
   return graph.compile();
 }

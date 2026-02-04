@@ -143,6 +143,14 @@ interface AggregatedWorkflowData {
   totalDurationSeconds: number;
   /** Recent workflow summaries for context */
   recentWorkflowSummaries: string[];
+  /** Recent workflows with full metadata for workflow-specific suggestions */
+  recentWorkflows: Array<{
+    name: string;
+    tools: string[];
+    outcome: string;
+    durationSeconds: number;
+    timestamp: Date;
+  }>;
 }
 
 // ============================================================================
@@ -406,7 +414,8 @@ export class PersonaSuggestionService {
 
       if (recentSessions.length === 0) {
         this.logger.info('No recent sessions, using general suggestions', { userId });
-        return this.getGeneralWorkflowSuggestions(limit, limit);
+        const fallbackSuggestions = this.getGeneralWorkflowSuggestions(limit, limit);
+        return { suggestions: fallbackSuggestions, cta: PersonaSuggestionService.DEFAULT_CTA };
       }
 
       // 2. Aggregate workflow data from ALL sessions
@@ -421,9 +430,10 @@ export class PersonaSuggestionService {
         toolsFound: workflowData.toolUsage.size,
         outcomesFound: workflowData.outcomes.size,
         workflowSummaries: workflowData.recentWorkflowSummaries.length,
+        recentWorkflowsCount: workflowData.recentWorkflows.length,
       });
 
-      // 3. Try LLM-based generation first (Gemini Flash 2.0)
+      // 3. Use LLM-based generation (Gemini Flash 2.0) - optimized for speed
       if (this.llmProvider) {
         try {
           console.log('[PersonaSuggestionService] Attempting LLM-based query generation...');
@@ -528,62 +538,19 @@ export class PersonaSuggestionService {
 
     console.log('[PersonaSuggestionService] Workflow context length:', workflowContext.length, 'chars');
 
-    const systemPrompt = `You are a "Suggested Queries + CTA" generator for a workflow insight product.
-Your job: generate:
-1. A single CTA prompt that invites the user to explore optimized methods/tools for their current task
-2. ${limit} high-signal suggested queries the user can ask to uncover workflow improvements from their captured sessions
+    const systemPrompt = `Generate ${limit} workflow improvement questions. Rules:
+- Reference specific workflow names from context (e.g., "In my latest 'Building RAG Pipeline', how can I...")
+- Be specific to user's actual tools/patterns
+- No numbers, company names, or vague questions
+- Format: "In my latest '[workflow name]', [actionable question]?"
 
-Hard rules:
-- Be hyper-specific to workflowContext: reference the user's real tools/actions/patterns
-- No counts or numeric metrics (no "two sessions", "15 minutes", "3 times")
-- Never include track names, company names, or project names
-- Exclude irrelevant context switches by default: Slack/DMs
-- Queries must be actionable and lead to insights or a concrete next step
-- Use plain user language. No buzzwords
-- No ellipses and no vague questions
-- Don't mention "tiers" in the user-facing text
+Output JSON:
+{"cta":{"label":"Explore optimizations","text":"..."},"suggested_queries":[{"label":"","tier":"outcome|approach|problem|intent|tools","query":"","why_this":""}]}`;
 
-Prioritization (highest → lowest):
-Outcome clarity → approach improvement → problem diagnosis → intent alignment → tool mechanics
-
-CTA requirements:
-- Must be one sentence question
-- Must be inviting, not pushy
-- Must not include any forbidden names or numbers
-- Should reference "optimized methods/tools" without naming the project/track/company
-- Prefer wording like: "based on how you work" / "for this task" / "for this workflow"
-- Style target: "I noticed a few optimized methods and tools for this workflow based on how you work—want to explore them to make this task smoother?"
-
-Output format (STRICT):
-Return only valid JSON with this shape:
-{
-  "cta": {
-    "label": "Explore optimizations",
-    "text": "..."
-  },
-  "suggested_queries": [
-    {
-      "label": "",
-      "tier": "outcome | approach | problem | intent | tools",
-      "query": "",
-      "why_this": ""
-    }
-  ]
-}`;
-
-    const userPrompt = `Here is the user's workflowContext (derived from their captured sessions, steps, and summaries). Use ONLY this information.
-
+    const userPrompt = `Workflow context:
 ${workflowContext}
 
-Generate:
-1. A single CTA (as specified)
-2. ${limit} suggested queries in the required JSON format
-
-Additional guidance:
-- Tie each query to a specific observed pattern (tool switching, repeated edits, re-checking, rework, duplicated effort, waiting, unclear step boundaries)
-- If "Detected Inefficiencies" exists, ensure at least half the queries directly target them
-- If "AI Collaboration Patterns" exists, include a few queries about improving human+AI handoffs (prompting, grounding, verification, context packaging) while staying tool/step-specific
-
+Generate CTA + ${limit} questions. Each question MUST reference a specific workflow name from the context above.
 Return only valid JSON.`;
 
     try {
@@ -594,8 +561,8 @@ Return only valid JSON.`;
         ],
         LLMQuerySuggestionSchema,
         {
-          temperature: 0.7,
-          maxTokens: 4000, // Increased from 2000 to prevent JSON truncation with large context
+          temperature: 0.4, // Lower = faster, more deterministic
+          maxTokens: 1200, // Reduced for speed - 5-7 suggestions need ~800 tokens max
           // Repair function to fix common JSON issues from LLM
           experimental_repairText: async ({ text, error }) => {
             this.logger.debug('Attempting to repair LLM response', {
@@ -647,9 +614,28 @@ Return only valid JSON.`;
   private buildWorkflowContextForLLM(data: AggregatedWorkflowData): string | null {
     const sections: string[] = [];
 
-    // Session summaries (most important context)
-    if (data.recentWorkflowSummaries.length > 0) {
-      sections.push('## Recent Session Summaries');
+    // PRIORITY: Workflow names (for generating workflow-specific questions)
+    if (data.recentWorkflows.length > 0) {
+      sections.push('## Recent Workflows (use these names in questions)');
+      // Sort: 4 most recent + 3 longest duration
+      const sortedByRecent = [...data.recentWorkflows].sort(
+        (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+      );
+      const sortedByDuration = [...data.recentWorkflows].sort(
+        (a, b) => b.durationSeconds - a.durationSeconds
+      );
+      const recentNames = new Set(sortedByRecent.slice(0, 4).map(w => w.name));
+      const selected = [
+        ...sortedByRecent.slice(0, 4),
+        ...sortedByDuration.filter(w => !recentNames.has(w.name)).slice(0, 3)
+      ].slice(0, 7);
+
+      selected.forEach((w, i) => {
+        sections.push(`${i + 1}. "${w.name}"${w.tools.length > 0 ? ` (${w.tools.slice(0, 3).join(', ')})` : ''}`);
+      });
+    } else if (data.recentWorkflowSummaries.length > 0) {
+      // Fallback to summaries if no structured workflows
+      sections.push('## Recent Workflows');
       data.recentWorkflowSummaries.slice(0, 5).forEach((summary, i) => {
         sections.push(`${i + 1}. ${summary}`);
       });
@@ -1040,6 +1026,7 @@ function aggregateWorkflowData(sessions: SessionMapping[]): AggregatedWorkflowDa
     totalSessions: sessions.length,
     totalDurationSeconds: 0,
     recentWorkflowSummaries: [],
+    recentWorkflows: [],
   };
 
   for (const session of sessions) {
@@ -1057,6 +1044,31 @@ function aggregateWorkflowData(sessions: SessionMapping[]): AggregatedWorkflowDa
       // Collect workflow summaries for context
       if (workflow.workflow_summary && data.recentWorkflowSummaries.length < 5) {
         data.recentWorkflowSummaries.push(workflow.workflow_summary);
+      }
+
+      // Collect recent workflows with full metadata for workflow-specific suggestions
+      // Use workflow_summary or level_2_problem as the workflow name
+      const workflowName = workflow.workflow_summary ||
+        workflow.classification?.level_2_problem ||
+        'Unnamed workflow';
+      const workflowDuration = workflow.timestamps?.duration_ms
+        ? Math.round(workflow.timestamps.duration_ms / 1000)
+        : 0;
+      const workflowTimestamp = workflow.timestamps?.start
+        ? new Date(workflow.timestamps.start)
+        : session.startedAt || new Date();
+      const workflowTools = workflow.classification?.level_4_tools || [];
+      const workflowOutcome = workflow.classification?.level_5_outcome || '';
+
+      // Only add if we have a meaningful name (not just "Unnamed workflow")
+      if (workflowName !== 'Unnamed workflow' && workflowName.length >= 10) {
+        data.recentWorkflows.push({
+          name: workflowName,
+          tools: workflowTools,
+          outcome: workflowOutcome,
+          durationSeconds: workflowDuration,
+          timestamp: workflowTimestamp,
+        });
       }
 
       // Extract classification data (5-tier hierarchy)
@@ -1407,6 +1419,7 @@ function generateRecommendationQuery(data: AggregatedWorkflowData): ContextualQu
  * - Tool optimization (lowest priority)
  */
 function generateContextualQueries(data: AggregatedWorkflowData): ContextualQueryResult[] {
+  // Use tier-based queries as fallback when LLM is not available
   const queries: ContextualQueryResult[] = [];
 
   // TIER 5: Outcome (Result) - HIGHEST PRIORITY - actionable improvements
