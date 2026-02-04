@@ -43,15 +43,11 @@ services:
       # - GCP_SERVICE_ACCOUNT_KEY: Google Cloud Platform service account key
       # - GCP_BUCKET_NAME: GCP storage bucket name
 
-      # ArangoDB (Graph RAG) - Using ArangoGraph Cloud
-      - key: ARANGO_URL
-        sync: false  # Set in Render dashboard for security
-      - key: ARANGO_DATABASE
-        value: kramav1.0
-      - key: ARANGO_USERNAME
-        sync: false  # Set in Render dashboard for security
-      - key: ARANGO_PASSWORD
-        sync: false  # Set in Render dashboard for security
+      # Helix DB (Graph-Vector Database) - Primary
+      - key: HELIX_URL
+        value: "http://helix-db:6969"
+      - key: GRAPH_DB_PROVIDER
+        value: "helix"
       - key: ENABLE_GRAPH_RAG
         value: "true"
       - key: ENABLE_CROSS_SESSION_CONTEXT
@@ -60,6 +56,16 @@ services:
         value: "3"
       - key: GRAPH_RAG_LOOKBACK_DAYS
         value: "90"
+
+      # ArangoDB (Legacy fallback) - Set in Render dashboard if needed
+      # - key: ARANGO_URL
+      #   sync: false
+      # - key: ARANGO_DATABASE
+      #   value: kramav1.0
+      # - key: ARANGO_USERNAME
+      #   sync: false
+      # - key: ARANGO_PASSWORD
+      #   sync: false
 
       # PostHog Analytics (required for web app analytics)
       - key: VITE_POSTHOG_KEY
@@ -87,6 +93,27 @@ services:
     # startCommand: pnpm start
 
     # Auto-deploy on push to branch
+    autoDeploy: true
+
+  # Helix DB Private Service (Graph-Vector Database)
+  - type: pserv
+    name: helix-db
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./Dockerfile.helix
+    dockerContext: .
+    envVars:
+      - key: HELIX_PORT
+        value: "6969"
+      - key: HELIX_DATA_DIR
+        value: "/app/data"
+      - key: HELIX_VERBOSE
+        value: "false"
+    disk:
+      name: helix-data
+      mountPath: /app/data
+      sizeGB: 20
     autoDeploy: true
 
 # Database service (PostgreSQL)

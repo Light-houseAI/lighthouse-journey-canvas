@@ -94,6 +94,10 @@ export const SERVICE_TOKENS = {
   CROSS_SESSION_RETRIEVAL_SERVICE: 'crossSessionRetrievalService',
   // ArangoDB Graph Service
   ARANGODB_GRAPH_SERVICE: 'arangoDBGraphService',
+  // Helix Graph Service
+  HELIX_GRAPH_SERVICE: 'helixGraphService',
+  // Generic Graph Service (selected by GRAPH_DB_PROVIDER env var)
+  GRAPH_SERVICE: 'graphService',
   // Hierarchical Workflow Services
   TOOL_GENERALIZATION_SERVICE: 'toolGeneralizationService',
   CONFIDENCE_SCORING_SERVICE: 'confidenceScoringService',

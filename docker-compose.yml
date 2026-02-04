@@ -1,6 +1,32 @@
 version: '3.8'
 
 services:
+  # Helix DB - Graph-Vector Database (preferred)
+  helix-db:
+    build:
+      context: .
+      dockerfile: Dockerfile.helix
+    container_name: lighthouse-helix
+    ports:
+      - "6969:6969"
+    volumes:
+      - helix_data:/app/data
+      - ./db:/app/db:ro
+    environment:
+      - HELIX_PORT=6969
+      - HELIX_DATA_DIR=/app/data
+      - HELIX_VERBOSE=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6969/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+    networks:
+      - lighthouse-network
+    restart: unless-stopped
+
+  # ArangoDB - Legacy Graph Database (fallback)
   arangodb:
     image: arangodb:3.11
     container_name: lighthouse-arangodb
@@ -26,6 +52,8 @@ networks:
     driver: bridge
 
 volumes:
+  helix_data:
+    driver: local
   arangodb_data:
     driver: local
   arangodb_apps:

@@ -14,7 +14,11 @@ import type { Pool } from 'pg';
 import type { Logger } from '../core/logger.js';
 import type { LLMProvider } from '../core/llm-provider.js';
 import type { ArangoDBGraphService } from './arangodb-graph.service.js';
+import type { HelixGraphService } from './helix-graph.service.js';
 import type { EmbeddingService } from './interfaces/index.js';
+
+// Generic graph service type - supports both ArangoDB and Helix implementations
+type GraphService = ArangoDBGraphService | HelixGraphService;
 import type { IWorkflowScreenshotRepository } from '../repositories/interfaces/workflow-screenshot.repository.interface.js';
 import { createTracer } from '../core/langfuse.js';
 import type {
@@ -56,7 +60,7 @@ export interface NaturalLanguageQueryServiceDeps {
   logger: Logger;
   llmProvider: LLMProvider;
   openAIEmbeddingService: EmbeddingService;
-  arangoDBGraphService?: ArangoDBGraphService;
+  graphService?: GraphService;
   workflowScreenshotRepository?: IWorkflowScreenshotRepository;
   pool?: Pool; // For company document retrieval from graphrag_chunks
 }
@@ -81,7 +85,7 @@ export class NaturalLanguageQueryService {
   private logger: Logger;
   private llmProvider: LLMProvider;
   private embeddingService: EmbeddingService;
-  private graphService?: ArangoDBGraphService;
+  private graphService?: GraphService;
   private screenshotRepository?: IWorkflowScreenshotRepository;
   private pool?: Pool;
   private enableCrossSessionContext: boolean;
@@ -90,7 +94,7 @@ export class NaturalLanguageQueryService {
     this.logger = deps.logger;
     this.llmProvider = deps.llmProvider;
     this.embeddingService = deps.openAIEmbeddingService;
-    this.graphService = deps.arangoDBGraphService;
+    this.graphService = deps.graphService;
     this.screenshotRepository = deps.workflowScreenshotRepository;
     this.pool = deps.pool;
     this.enableCrossSessionContext = process.env.ENABLE_CROSS_SESSION_CONTEXT === 'true';

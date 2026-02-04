@@ -386,6 +386,9 @@ importers:
       express:
         specifier: ^4.21.2
         version: 4.21.2
+      helix-ts:
+        specifier: ^1.0.8
+        version: 1.0.8
       jsdom:
         specifier: ^26.1.0
         version: 26.1.0(bufferutil@4.0.9)
@@ -5075,6 +5078,9 @@ packages:
   headers-polyfill@4.0.3:
     resolution: {integrity: sha512-IScLbePpkvO846sIwOtOTDjutRMWdXdJmXdMvk6gCBHxFO8d+QKOQedyZSxFTTFYRSmlgSTDtXqqq4pcenBXLQ==}
 
+  helix-ts@1.0.8:
+    resolution: {integrity: sha512-YPM3dLbzF8XPam9cVEXtdF0Mc/FCjDG68msZOcDb6tZWfQ7ZWOUVUHp5n5G9Be5Ekky3abgrrh/7WauwMzm1tw==}
+
   hosted-git-info@7.0.2:
     resolution: {integrity: sha512-puUZAUKT5m8Zzvs72XWy3HtvVbTWljRE66cP60bxJzAqf2DgICo7lYTY2IHUmLnNpjYvw5bvmoHvPc0QO2a62w==}
     engines: {node: ^16.14.0 || >=18.0.0}
@@ -7121,7 +7127,7 @@ packages:
   tar@6.2.1:
     resolution: {integrity: sha512-DZ4yORTwrbTj/7MZYq2w+/ZFdI6OZ/f9SFHR+71gIVUZhOQPHzVCLpvRnPgyaMpfWxxk/4ONva3GQSyNIKRv6A==}
     engines: {node: '>=10'}
-    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exhorbitant rates) by contacting i@izs.me
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   tdd-guard-vitest@0.1.5:
     resolution: {integrity: sha512-GP3fn3TCcr3neZ5Q9mHkSvHtvAT5Ou5tds4wL2tHLULUStQhYVSVTKknrItQp0rV5aekG5T0F/UTAGxNich81A==}
@@ -12600,6 +12606,8 @@ snapshots:
   he@1.2.0: {}
 
   headers-polyfill@4.0.3: {}
+
+  helix-ts@1.0.8: {}
 
   hosted-git-info@7.0.2:
     dependencies:

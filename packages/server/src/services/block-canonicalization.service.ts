@@ -42,7 +42,8 @@ interface LLMProvider {
   complete(prompt: string, options?: { model?: string; responseFormat?: string }): Promise<string>;
 }
 
-interface ArangoDBService {
+// Generic graph service interface for block canonicalization
+interface GraphDBService {
   query<T>(query: any): Promise<T[]>;
 }
 
@@ -276,23 +277,23 @@ export class BlockCanonicalizationService {
   private logger: Logger;
   private embeddingService?: OpenAIEmbeddingService;
   private llmProvider?: LLMProvider;
-  private arangoService?: ArangoDBService;
+  private graphService?: GraphDBService;
 
   constructor({
     logger,
     openAIEmbeddingService,
     llmProvider,
-    arangoDBGraphService,
+    graphService,
   }: {
     logger: Logger;
     openAIEmbeddingService?: OpenAIEmbeddingService;
     llmProvider?: LLMProvider;
-    arangoDBGraphService?: ArangoDBService;
+    graphService?: GraphDBService;
   }) {
     this.logger = logger;
     this.embeddingService = openAIEmbeddingService;
     this.llmProvider = llmProvider;
-    this.arangoService = arangoDBGraphService;
+    this.graphService = graphService;
   }
 
   /**
@@ -338,7 +339,7 @@ export class BlockCanonicalizationService {
     }
 
     // Strategy 2: Try embedding similarity to existing blocks
-    if (this.embeddingService && this.arangoService) {
+    if (this.embeddingService && this.graphService) {
       const similarBlock = await this.findSimilarExistingBlock(
         block.suggestedName
       );
@@ -414,7 +415,7 @@ export class BlockCanonicalizationService {
   private async findSimilarExistingBlock(
     suggestedName: string
   ): Promise<ExistingBlockMatch | null> {
-    if (!this.embeddingService || !this.arangoService) {
+    if (!this.embeddingService || !this.graphService) {
       return null;
     }
 
@@ -429,7 +430,7 @@ export class BlockCanonicalizationService {
       // For now, we'll use a simpler approach: get all blocks and compute similarity in-memory
       // In production, this should use vector search index
 
-      const result = await this.arangoService.query<ExistingBlockMatch>(`
+      const result = await this.graphService.query<ExistingBlockMatch>(`
         FOR block IN blocks
           LIMIT 100
           RETURN {
