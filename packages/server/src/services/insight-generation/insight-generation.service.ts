@@ -60,6 +60,10 @@ export interface InsightGenerationServiceDeps {
   traceService?: TraceService | null;
   /** Service for filtering noise from evidence (Slack, etc.) */
   noiseFilterService?: NoiseFilterService;
+  /** Graph service for cross-session pattern detection */
+  graphService?: import('./agentic-loop/agentic-loop.js').AgenticLoopDeps['graphService'];
+  /** Enable cross-session context stitching in retrieval (default: true) */
+  enableContextStitching?: boolean;
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 }
 
@@ -121,6 +125,8 @@ export class InsightGenerationService {
   private readonly memoryService?: MemoryService;
   private readonly traceService?: TraceService | null;
   private readonly noiseFilterService?: NoiseFilterService;
+  private readonly graphService?: InsightGenerationServiceDeps['graphService'];
+  private readonly enableContextStitching: boolean;
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 
   // In-memory listeners for real-time progress streaming (not persisted)
@@ -146,6 +152,8 @@ export class InsightGenerationService {
     this.memoryService = deps.memoryService;
     this.traceService = deps.traceService;
     this.noiseFilterService = deps.noiseFilterService;
+    this.graphService = deps.graphService;
+    this.enableContextStitching = deps.enableContextStitching ?? true; // Enable by default
 
     // Debug logging for trace service injection
     this.logger.info('InsightGenerationService initialized', {
@@ -372,10 +380,12 @@ export class InsightGenerationService {
           memoryService: this.memoryService,
           personaService: this.personaService,
           noiseFilterService: this.noiseFilterService,
+          graphService: this.graphService,
           companyDocsEnabled: this.companyDocsEnabled,
           perplexityApiKey: this.perplexityApiKey,
           modelConfig: options?.modelConfig,
           agenticConfig: agenticOptions?.agenticConfig,
+          enableContextStitching: this.enableContextStitching,
         };
 
         const agenticGraph = createAgenticLoopGraph(agenticDeps);
@@ -836,10 +846,12 @@ export class InsightGenerationService {
           memoryService: this.memoryService,
           personaService: this.personaService,
           noiseFilterService: this.noiseFilterService,
+          graphService: this.graphService,
           companyDocsEnabled: this.companyDocsEnabled,
           perplexityApiKey: this.perplexityApiKey,
           modelConfig: options?.modelConfig,
           agenticConfig: agenticOptions?.agenticConfig,
+          enableContextStitching: this.enableContextStitching,
         };
 
         const agenticGraph = createAgenticLoopGraph(agenticDeps);

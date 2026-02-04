@@ -70,6 +70,7 @@
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.39.1",
     "express": "^4.21.2",
+    "helix-ts": "^1.0.8",
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",
     "langfuse": "^3.38.6",

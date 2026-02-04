@@ -15,7 +15,11 @@ import type { NaturalLanguageQueryService } from '../../natural-language-query.s
 import type { PlatformWorkflowRepository } from '../../../repositories/platform-workflow.repository.js';
 import type { SessionMappingRepository } from '../../../repositories/session-mapping.repository.js';
 import type { ArangoDBGraphService } from '../../arangodb-graph.service.js';
+import type { HelixGraphService } from '../../helix-graph.service.js';
 import type { EmbeddingService } from '../../interfaces/index.js';
+
+// Generic graph service type - supports both ArangoDB and Helix implementations
+type GraphService = ArangoDBGraphService | HelixGraphService;
 import type { LLMProvider } from '../../../core/llm-provider.js';
 import { withTimeout } from '../../../core/retry-utils.js';
 
@@ -267,7 +271,7 @@ export interface RetrievalGraphDeps {
   nlqService: NaturalLanguageQueryService;
   platformWorkflowRepository: PlatformWorkflowRepository;
   sessionMappingRepository: SessionMappingRepository;
-  arangoDBGraphService?: ArangoDBGraphService;
+  graphService?: GraphService;
   embeddingService: EmbeddingService;
   llmProvider: LLMProvider;
   noiseFilterService?: NoiseFilterService;
@@ -536,7 +540,7 @@ async function retrievePeerEvidence(
   state: InsightState,
   deps: RetrievalGraphDeps
 ): Promise<Partial<InsightState>> {
-  const { logger, platformWorkflowRepository, sessionMappingRepository, arangoDBGraphService, embeddingService } = deps;
+  const { logger, platformWorkflowRepository, sessionMappingRepository, graphService, embeddingService } = deps;
 
   if (!state.includePeerComparison) {
     logger.info('A1: Peer comparison disabled, skipping');
@@ -696,14 +700,14 @@ async function retrievePeerEvidence(
       }
 
       // STRATEGY 3: Try graph-based peer retrieval (structural similarity via shared entities)
-      if (arangoDBGraphService) {
+      if (graphService) {
         logger.info('A1: Trying graph-based peer retrieval');
 
         // Extract entities from user's workflow to find similar peer sessions
         const userEntities = state.userEvidence?.entities?.map(e => e.name) ||
           state.userEvidence?.workflows.flatMap(w => w.tools || []) || [];
 
-        const graphPeerPatterns = await arangoDBGraphService.getPeerWorkflowPatterns(
+        const graphPeerPatterns = await graphService.getPeerWorkflowPatterns(
           state.userId,
           {
             workflowType,
@@ -1158,10 +1162,10 @@ async function detectRepetitivePatterns(
   state: InsightState,
   deps: RetrievalGraphDeps
 ): Promise<Partial<InsightState>> {
-  const { logger, arangoDBGraphService } = deps;
+  const { logger, graphService } = deps;
 
   // Skip if no graph service or no user evidence
-  if (!arangoDBGraphService || !state.userId || !state.userEvidence) {
+  if (!graphService || !state.userId || !state.userEvidence) {
     logger.debug('A1: Skipping repetitive pattern detection (no graph service or user evidence)');
     return { progress: 18 };
   }
@@ -1169,7 +1173,7 @@ async function detectRepetitivePatterns(
   logger.info('A1: Detecting repetitive workflow patterns', { userId: state.userId });
 
   try {
-    const patterns = await arangoDBGraphService.detectRepetitiveWorkflowPatterns(
+    const patterns = await graphService.detectRepetitiveWorkflowPatterns(
       state.userId,
       {
         lookbackDays: state.lookbackDays || 30,

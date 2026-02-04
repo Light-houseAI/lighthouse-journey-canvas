@@ -77,6 +77,7 @@ import { UserService } from '../services/user-service';
 import { EntityExtractionService } from '../services/entity-extraction.service';
 import { CrossSessionRetrievalService } from '../services/cross-session-retrieval.service';
 import { ArangoDBGraphService } from '../services/arangodb-graph.service';
+import { HelixGraphService } from '../services/helix-graph.service';
 // Hierarchical Workflow Services
 import { ToolGeneralizationService } from '../services/tool-generalization.service';
 import { ConfidenceScoringService } from '../services/confidence-scoring.service';
@@ -142,22 +143,38 @@ export class Container {
       const database = await createDatabaseConnection();
       logger.info('✅ Database connection initialized');
 
-      // Initialize ArangoDB connection for Graph RAG (if configured)
-      if (process.env.ARANGO_URL && process.env.ARANGO_DATABASE) {
-        try {
-          logger.info('🔄 Initializing ArangoDB connection...');
-          await ArangoDBConnection.initialize({
-            url: process.env.ARANGO_URL,
-            database: process.env.ARANGO_DATABASE,
-            username: process.env.ARANGO_USERNAME || 'root',
-            password: process.env.ARANGO_PASSWORD || '',
-          });
-          logger.info('✅ ArangoDB connection initialized');
-        } catch (error) {
-          logger.warn('⚠️  ArangoDB initialization failed - Graph RAG features will be disabled', error);
+      // Initialize Graph Database connection based on GRAPH_DB_PROVIDER
+      const graphDbProvider = process.env.GRAPH_DB_PROVIDER || 'arango';
+      logger.info(`🔄 Graph DB Provider: ${graphDbProvider}`);
+
+      if (graphDbProvider === 'helix') {
+        // Initialize Helix DB connection
+        if (process.env.HELIX_URL) {
+          logger.info('🔄 Initializing Helix DB connection...');
+          logger.info(`   Helix URL: ${process.env.HELIX_URL}`);
+          // Helix connection is lazy - initialized when HelixGraphService is used
+          logger.info('✅ Helix DB configured (connection will be established on first use)');
+        } else {
+          logger.warn('⚠️  HELIX_URL not configured - Graph RAG features will be disabled');
         }
       } else {
-        logger.info('ℹ️  ArangoDB not configured - Graph RAG features disabled');
+        // Initialize ArangoDB connection for Graph RAG (legacy)
+        if (process.env.ARANGO_URL && process.env.ARANGO_DATABASE) {
+          try {
+            logger.info('🔄 Initializing ArangoDB connection...');
+            await ArangoDBConnection.initialize({
+              url: process.env.ARANGO_URL,
+              database: process.env.ARANGO_DATABASE,
+              username: process.env.ARANGO_USERNAME || 'root',
+              password: process.env.ARANGO_PASSWORD || '',
+            });
+            logger.info('✅ ArangoDB connection initialized');
+          } catch (error) {
+            logger.warn('⚠️  ArangoDB initialization failed - Graph RAG features will be disabled', error);
+          }
+        } else {
+          logger.info('ℹ️  ArangoDB not configured - Graph RAG features disabled');
+        }
       }
 
       // Register infrastructure dependencies as singletons
@@ -350,6 +367,21 @@ export class Container {
         [CONTAINER_TOKENS.ARANGODB_GRAPH_SERVICE]: asClass(
           ArangoDBGraphService
         ).singleton(),
+        // Helix Graph Service
+        [CONTAINER_TOKENS.HELIX_GRAPH_SERVICE]: asFunction(({ logger, database, openAIEmbeddingService }) => {
+          const pool = getPoolFromDatabase(database);
+          return new HelixGraphService({ logger, pool, db: database, embeddingService: openAIEmbeddingService });
+        }).singleton(),
+        // Generic Graph Service (selected by GRAPH_DB_PROVIDER)
+        [CONTAINER_TOKENS.GRAPH_SERVICE]: asFunction(({ arangoDBGraphService, helixGraphService, logger }) => {
+          const provider = process.env.GRAPH_DB_PROVIDER || 'arango';
+          if (provider === 'helix') {
+            logger.info('📊 Using Helix DB for graph operations');
+            return helixGraphService;
+          }
+          logger.info('📊 Using ArangoDB for graph operations');
+          return arangoDBGraphService;
+        }).singleton(),
         // Cross-Session Retrieval Service
         [CONTAINER_TOKENS.CROSS_SESSION_RETRIEVAL_SERVICE]: asClass(
           CrossSessionRetrievalService
@@ -427,6 +459,7 @@ export class Container {
           insightGenerationJobRepository,
           personaService,
           memoryService,
+          graphService,
         }) => {
           return new InsightGenerationService({
             logger,
@@ -440,6 +473,8 @@ export class Container {
             companyDocsEnabled: process.env.COMPANY_DOCS_ENABLED !== 'false', // Default to true
             personaService,
             memoryService,
+            graphService,
+            enableContextStitching: process.env.ENABLE_CONTEXT_STITCHING !== 'false', // Default to true
           });
         }).singleton(),
         // Company Documents Services (RAG document processing)

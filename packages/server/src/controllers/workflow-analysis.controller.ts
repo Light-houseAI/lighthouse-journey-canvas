@@ -50,6 +50,10 @@ import type { Logger } from '../core/logger.js';
 import type { IWorkflowAnalysisService } from '../services/workflow-analysis.service.js';
 import type { CrossSessionRetrievalService } from '../services/cross-session-retrieval.service.js';
 import type { ArangoDBGraphService } from '../services/arangodb-graph.service.js';
+import type { HelixGraphService } from '../services/helix-graph.service.js';
+
+// Generic graph service type - supports both ArangoDB and Helix implementations
+type GraphService = ArangoDBGraphService | HelixGraphService;
 import type { EntityEmbeddingRepository } from '../repositories/entity-embedding.repository.js';
 import type { ConceptEmbeddingRepository } from '../repositories/concept-embedding.repository.js';
 import type { OpenAIEmbeddingService } from '../services/openai-embedding.service.js';
@@ -70,7 +74,7 @@ export class WorkflowAnalysisController extends BaseController {
 
   // Optional Graph RAG services
   private crossSessionRetrievalService?: CrossSessionRetrievalService;
-  private graphService?: ArangoDBGraphService;
+  private graphService?: GraphService;
   private entityRepository?: EntityEmbeddingRepository;
   private conceptRepository?: ConceptEmbeddingRepository;
   private embeddingService?: OpenAIEmbeddingService;
@@ -90,7 +94,7 @@ export class WorkflowAnalysisController extends BaseController {
     workflowAnalysisService,
     logger,
     crossSessionRetrievalService,
-    arangoDBGraphService,
+    graphService,
     entityEmbeddingRepository,
     conceptEmbeddingRepository,
     openAIEmbeddingService,
@@ -107,7 +111,7 @@ export class WorkflowAnalysisController extends BaseController {
     workflowAnalysisService: IWorkflowAnalysisService;
     logger: Logger;
     crossSessionRetrievalService?: CrossSessionRetrievalService;
-    arangoDBGraphService?: ArangoDBGraphService;
+    graphService?: GraphService;
     entityEmbeddingRepository?: EntityEmbeddingRepository;
     conceptEmbeddingRepository?: ConceptEmbeddingRepository;
     openAIEmbeddingService?: OpenAIEmbeddingService;
@@ -125,7 +129,7 @@ export class WorkflowAnalysisController extends BaseController {
     this.workflowAnalysisService = workflowAnalysisService;
     this.logger = logger;
     this.crossSessionRetrievalService = crossSessionRetrievalService;
-    this.graphService = arangoDBGraphService;
+    this.graphService = graphService;
     this.entityRepository = entityEmbeddingRepository;
     this.conceptRepository = conceptEmbeddingRepository;
     this.embeddingService = openAIEmbeddingService;

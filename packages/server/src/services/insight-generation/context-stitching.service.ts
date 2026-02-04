@@ -767,7 +767,7 @@ Return your analysis as valid JSON.`;
           { role: 'user', content: userPrompt },
         ],
         tier1OutputSchema,
-        { temperature: 0.1 } // Low temperature for consistency
+        { temperature: 0.1, maxTokens: 8000 } // Low temperature for consistency, explicit maxTokens to prevent truncation
       );
 
       // Validate and filter by confidence
@@ -811,6 +811,7 @@ Return your analysis as valid JSON.`;
 
   /**
    * Execute Tier 2: Tool-Mastery Stitching
+   * Includes retry logic for truncated JSON responses from Gemini models
    */
   private async executeTier2Stitching(
     sessions: SessionForStitching[]
@@ -839,16 +840,30 @@ Return your analysis as valid JSON.`;
       return { toolMasteryGroups: [] };
     }
 
-    // Format for prompt
-    const toolDescriptions = significantTools.map(([toolName, usage]) => {
-      const sessionDetails = usage.sessions.map((s, idx) =>
-        `  - Session: "${s.title}" | Duration: ${Math.round(s.totalDurationSeconds / 60)}min | Intents: ${s.workflows.map(w => w.intent).join(', ')}`
-      ).join('\n');
-      return `${toolName} (${usage.sessions.length} sessions, ${Math.round(usage.totalTime / 60)}min total):
-${sessionDetails}`;
-    }).join('\n\n');
+    // Retry logic for truncated JSON responses
+    const maxRetries = 3;
+    let lastError: Error | undefined;
 
-    const userPrompt = `Analyze tool usage patterns across these sessions:
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // On retry, use a simpler prompt with fewer tools to reduce output size
+        const toolsToAnalyze = attempt === 1
+          ? significantTools
+          : significantTools.slice(0, Math.max(2, Math.ceil(significantTools.length / attempt)));
+
+        // Format for prompt
+        const toolDescriptions = toolsToAnalyze.map(([toolName, usage]) => {
+          // On retry, use shorter session details
+          const maxSessions = attempt === 1 ? usage.sessions.length : Math.min(3, usage.sessions.length);
+          const sessionDetails = usage.sessions.slice(0, maxSessions).map((s) =>
+            `  - "${s.title}" (${Math.round(s.totalDurationSeconds / 60)}min)`
+          ).join('\n');
+          return `${toolName} (${usage.sessions.length} sessions, ${Math.round(usage.totalTime / 60)}min total):
+${sessionDetails}`;
+        }).join('\n\n');
+
+        const userPrompt = attempt === 1
+          ? `Analyze tool usage patterns across these sessions:
 
 TOOL USAGE:
 ${toolDescriptions}
@@ -858,23 +873,61 @@ For each tool, identify:
 2. Optimization opportunities (based on observed patterns)
 
 Ground all observations in specific session evidence.
-Return your analysis as valid JSON.`;
+Return your analysis as valid JSON.`
+          : `Briefly analyze these ${toolsToAnalyze.length} tools. Keep responses concise.
 
-    try {
-      const result = await this.llmProvider.generateStructuredResponse(
-        [
-          { role: 'system', content: TIER2_TOOL_MASTERY_SYSTEM_PROMPT },
-          { role: 'user', content: userPrompt },
-        ],
-        tier2OutputSchema,
-        { temperature: 0.1 }
-      );
+TOOLS:
+${toolDescriptions}
 
-      return { toolMasteryGroups: result.content.toolMasteryGroups };
-    } catch (error) {
-      this.logger.error('ContextStitching: Tier 2 failed', error instanceof Error ? error : new Error(String(error)));
-      return { toolMasteryGroups: [] };
+Return JSON with toolMasteryGroups array. Keep descriptions short (under 50 words each).`;
+
+        this.logger.debug(`ContextStitching: Tier 2 attempt ${attempt}/${maxRetries}`, {
+          toolCount: toolsToAnalyze.length,
+          promptLength: userPrompt.length,
+        });
+
+        const result = await this.llmProvider.generateStructuredResponse(
+          [
+            { role: 'system', content: TIER2_TOOL_MASTERY_SYSTEM_PROMPT },
+            { role: 'user', content: userPrompt },
+          ],
+          tier2OutputSchema,
+          { temperature: 0.1, maxTokens: 8000 }
+        );
+
+        this.logger.info('ContextStitching: Tier 2 succeeded', {
+          attempt,
+          groupCount: result.content.toolMasteryGroups.length,
+        });
+
+        return { toolMasteryGroups: result.content.toolMasteryGroups };
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        const errorMessage = lastError.message;
+
+        // Check if this is a truncation/parsing error worth retrying
+        const isTruncationError =
+          errorMessage.includes('Unterminated string') ||
+          errorMessage.includes('could not parse') ||
+          errorMessage.includes('No object generated') ||
+          errorMessage.includes('JSON parsing failed');
+
+        if (!isTruncationError || attempt === maxRetries) {
+          this.logger.error('ContextStitching: Tier 2 failed (not retrying)', lastError, {
+            attempt,
+            isTruncationError,
+          });
+          break;
+        }
+
+        this.logger.warn(`ContextStitching: Tier 2 attempt ${attempt} failed with truncation, retrying with simpler prompt`, {
+          attempt,
+          error: errorMessage.slice(0, 200),
+        });
+      }
     }
+
+    return { toolMasteryGroups: [] };
   }
 
   /**
@@ -994,14 +1047,16 @@ Return JSON: { "workstreamId": "id or null", "confidence": 0-1, "reason": "evide
   private getEarliestTimestamp(sessions: SessionForStitching[], sessionIds: string[]): string {
     const timestamps = sessions
       .filter(s => sessionIds.includes(s.sessionId))
-      .map(s => new Date(s.timestamp).getTime());
+      .map(s => new Date(s.timestamp).getTime())
+      .filter(t => !isNaN(t)); // Filter out invalid timestamps
     return timestamps.length > 0 ? new Date(Math.min(...timestamps)).toISOString() : '';
   }
 
   private getLatestTimestamp(sessions: SessionForStitching[], sessionIds: string[]): string {
     const timestamps = sessions
       .filter(s => sessionIds.includes(s.sessionId))
-      .map(s => new Date(s.timestamp).getTime());
+      .map(s => new Date(s.timestamp).getTime())
+      .filter(t => !isNaN(t)); // Filter out invalid timestamps
     return timestamps.length > 0 ? new Date(Math.max(...timestamps)).toISOString() : '';
   }
 

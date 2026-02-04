@@ -34,7 +34,11 @@ import type { SessionMappingRepository } from '../repositories/session-mapping.r
 import type { EmbeddingService } from './interfaces/embedding.service.interface.js';
 import type { EntityExtractionService } from './entity-extraction.service.js';
 import type { ArangoDBGraphService } from './arangodb-graph.service.js';
+import type { HelixGraphService } from './helix-graph.service.js';
 import type { CrossSessionRetrievalService } from './cross-session-retrieval.service.js';
+
+// Generic graph service type - supports both ArangoDB and Helix implementations
+type GraphService = ArangoDBGraphService | HelixGraphService;
 import type { ConceptEmbeddingRepository } from '../repositories/concept-embedding.repository.js';
 import type { EntityEmbeddingRepository } from '../repositories/entity-embedding.repository.js';
 
@@ -172,7 +176,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
 
   // Graph RAG services (optional - graceful degradation if not available)
   private entityExtractionService?: EntityExtractionService;
-  private graphService?: ArangoDBGraphService;
+  private graphService?: GraphService;
   private crossSessionRetrievalService?: CrossSessionRetrievalService;
   private conceptRepo?: ConceptEmbeddingRepository;
   private entityRepo?: EntityEmbeddingRepository;
@@ -186,7 +190,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     llmProvider,
     logger,
     entityExtractionService,
-    arangoDBGraphService,
+    graphService,
     crossSessionRetrievalService,
     conceptEmbeddingRepository,
     entityEmbeddingRepository,
@@ -197,7 +201,7 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     llmProvider: LLMProvider;
     logger: Logger;
     entityExtractionService?: EntityExtractionService;
-    arangoDBGraphService?: ArangoDBGraphService;
+    graphService?: GraphService;
     crossSessionRetrievalService?: CrossSessionRetrievalService;
     conceptEmbeddingRepository?: ConceptEmbeddingRepository;
     entityEmbeddingRepository?: EntityEmbeddingRepository;
@@ -208,19 +212,19 @@ export class WorkflowAnalysisService implements IWorkflowAnalysisService {
     this.llmProvider = llmProvider;
     this.logger = logger;
     this.entityExtractionService = entityExtractionService;
-    this.graphService = arangoDBGraphService;
+    this.graphService = graphService;
     this.crossSessionRetrievalService = crossSessionRetrievalService;
     this.conceptRepo = conceptEmbeddingRepository;
     this.entityRepo = entityEmbeddingRepository;
     // Auto-enable Graph RAG if all required services are available
-    this.enableGraphRAG = !!entityExtractionService && !!arangoDBGraphService;
+    this.enableGraphRAG = !!entityExtractionService && !!graphService;
     // Check env var for cross-session context (defaults to false if not set)
     this.enableCrossSessionContext = process.env.ENABLE_CROSS_SESSION_CONTEXT === 'true';
 
     // Log DI status at startup for debugging
     this.logger.warn('[GRAPH_RAG_STARTUP] Service injection status', {
       hasEntityExtractionService: !!entityExtractionService,
-      hasArangoDBGraphService: !!arangoDBGraphService,
+      hasGraphService: !!graphService,
       hasCrossSessionRetrievalService: !!crossSessionRetrievalService,
       hasConceptEmbeddingRepository: !!conceptEmbeddingRepository,
       hasEntityEmbeddingRepository: !!entityEmbeddingRepository,

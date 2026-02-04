@@ -10,7 +10,11 @@
 
 import type { Logger } from '../core/logger.js';
 import type { ArangoDBGraphService } from './arangodb-graph.service.js';
+import type { HelixGraphService } from './helix-graph.service.js';
 import type { ConceptEmbeddingRepository } from '../repositories/concept-embedding.repository.js';
+
+// Generic graph service type - supports both ArangoDB and Helix implementations
+type GraphService = ArangoDBGraphService | HelixGraphService;
 import type { EntityEmbeddingRepository } from '../repositories/entity-embedding.repository.js';
 import type { EmbeddingService } from './interfaces/index.js';
 import { createTracer } from '../core/langfuse.js';
@@ -105,7 +109,7 @@ export interface CrossSessionRetrievalResult {
  * Service dependencies
  */
 export interface CrossSessionRetrievalServiceDeps {
-  arangoDBGraphService: ArangoDBGraphService;
+  graphService: GraphService;
   conceptEmbeddingRepository: ConceptEmbeddingRepository;
   entityEmbeddingRepository: EntityEmbeddingRepository;
   openAIEmbeddingService: EmbeddingService;
@@ -116,14 +120,14 @@ export interface CrossSessionRetrievalServiceDeps {
  * Cross-Session Retrieval Service
  */
 export class CrossSessionRetrievalService {
-  private graphService: ArangoDBGraphService;
+  private graphService: GraphService;
   private conceptRepo: ConceptEmbeddingRepository;
   private entityRepo: EntityEmbeddingRepository;
   private embeddingService: EmbeddingService;
   private logger: Logger;
 
   constructor(deps: CrossSessionRetrievalServiceDeps) {
-    this.graphService = deps.arangoDBGraphService;
+    this.graphService = deps.graphService;
     this.conceptRepo = deps.conceptEmbeddingRepository;
     this.entityRepo = deps.entityEmbeddingRepository;
     this.embeddingService = deps.openAIEmbeddingService;
