@@ -60,6 +60,8 @@ export interface InsightGenerationServiceDeps {
   traceService?: TraceService | null;
   /** Service for filtering noise from evidence (Slack, etc.) */
   noiseFilterService?: NoiseFilterService;
+  /** Graph service for cross-session pattern detection */
+  graphService?: import('./agentic-loop/agentic-loop.js').AgenticLoopDeps['graphService'];
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 }
 
@@ -121,6 +123,7 @@ export class InsightGenerationService {
   private readonly memoryService?: MemoryService;
   private readonly traceService?: TraceService | null;
   private readonly noiseFilterService?: NoiseFilterService;
+  private readonly graphService?: InsightGenerationServiceDeps['graphService'];
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 
   // In-memory listeners for real-time progress streaming (not persisted)
@@ -146,6 +149,7 @@ export class InsightGenerationService {
     this.memoryService = deps.memoryService;
     this.traceService = deps.traceService;
     this.noiseFilterService = deps.noiseFilterService;
+    this.graphService = deps.graphService;
 
     // Debug logging for trace service injection
     this.logger.info('InsightGenerationService initialized', {
@@ -372,6 +376,7 @@ export class InsightGenerationService {
           memoryService: this.memoryService,
           personaService: this.personaService,
           noiseFilterService: this.noiseFilterService,
+          graphService: this.graphService,
           companyDocsEnabled: this.companyDocsEnabled,
           perplexityApiKey: this.perplexityApiKey,
           modelConfig: options?.modelConfig,
@@ -836,6 +841,7 @@ export class InsightGenerationService {
           memoryService: this.memoryService,
           personaService: this.personaService,
           noiseFilterService: this.noiseFilterService,
+          graphService: this.graphService,
           companyDocsEnabled: this.companyDocsEnabled,
           perplexityApiKey: this.perplexityApiKey,
           modelConfig: options?.modelConfig,

@@ -21,6 +21,10 @@ import type { PersonaService } from '../../persona.service.js';
 import type { NoiseFilterService } from '../filters/noise-filter.service.js';
 import type { InsightModelConfiguration, AgenticActionResult, InsightGenerationResult, SkillId } from '../types.js';
 import type { SkillDependencies } from '../skills/skill-types.js';
+import type { ArangoDBGraphService } from '../../arangodb-graph.service.js';
+import type { HelixGraphService } from '../../helix-graph.service.js';
+
+type GraphService = ArangoDBGraphService | HelixGraphService;
 
 import {
   AgenticStateAnnotation,
@@ -53,6 +57,7 @@ export interface AgenticLoopDeps {
   memoryService?: MemoryService;
   personaService?: PersonaService;
   noiseFilterService?: NoiseFilterService;
+  graphService?: GraphService;
   companyDocsEnabled: boolean;
   perplexityApiKey?: string;
   modelConfig?: Partial<InsightModelConfiguration>;
@@ -116,6 +121,7 @@ async function actionNode(
     memoryService: deps.memoryService,
     personaService: deps.personaService,
     noiseFilterService: deps.noiseFilterService,
+    graphService: deps.graphService,
     companyDocsEnabled: deps.companyDocsEnabled,
     perplexityApiKey: deps.perplexityApiKey,
     modelConfig: deps.modelConfig,

@@ -17,6 +17,10 @@ import type { PersonaService } from '../../persona.service.js';
 import type { NoiseFilterService } from '../filters/noise-filter.service.js';
 import type { InsightModelConfiguration } from '../types.js';
 import type { InsightState } from '../state/insight-state.js';
+import type { ArangoDBGraphService } from '../../arangodb-graph.service.js';
+import type { HelixGraphService } from '../../helix-graph.service.js';
+
+type GraphService = ArangoDBGraphService | HelixGraphService;
 import type {
   SkillId,
   SkillDescription,
@@ -42,6 +46,7 @@ export interface SkillDependencies {
   memoryService?: MemoryService;
   personaService?: PersonaService;
   noiseFilterService?: NoiseFilterService;
+  graphService?: GraphService;
   companyDocsEnabled: boolean;
   perplexityApiKey?: string;
   modelConfig?: Partial<InsightModelConfiguration>;
