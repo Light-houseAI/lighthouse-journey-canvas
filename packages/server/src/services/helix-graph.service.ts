@@ -1393,4 +1393,186 @@ export class HelixGraphService {
   isCrossSessionEnabled(): boolean {
     return this.crossSessionEnabled;
   }
+
+  // ============================================================================
+  // PEER AND PATTERN DETECTION (PostgreSQL-based for Helix)
+  // ============================================================================
+
+  /**
+   * Get peer workflow patterns from other users (anonymized).
+   * Uses PostgreSQL to find similar workflows across ALL users based on workflow classification.
+   * Returns anonymized data suitable for A3 Comparator peer comparison.
+   */
+  async getPeerWorkflowPatterns(
+    excludeUserId: number,
+    options: {
+      workflowType?: string;
+      entities?: string[];
+      minOccurrences?: number;
+      limit?: number;
+    } = {}
+  ): Promise<Array<{
+    workflowType: string;
+    avgDurationSeconds: number;
+    occurrenceCount: number;
+    uniqueUserCount: number;
+    commonEntities: string[];
+    commonTransitions: Array<{ from: string; to: string; frequency: number }>;
+  }>> {
+    if (!this.pool) {
+      this.logger.debug('getPeerWorkflowPatterns: No pool available');
+      return [];
+    }
+
+    const { workflowType, minOccurrences = 3, limit = 10 } = options;
+
+    this.logger.info('Retrieving peer workflow patterns from PostgreSQL', {
+      excludeUserId,
+      workflowType,
+      minOccurrences,
+      limit,
+    });
+
+    try {
+      // Query session_mappings for peer workflow patterns (anonymized)
+      let query = `
+        SELECT
+          category as "workflowType",
+          ROUND(AVG(EXTRACT(EPOCH FROM (ended_at - started_at))))::int as "avgDurationSeconds",
+          COUNT(*)::int as "occurrenceCount",
+          COUNT(DISTINCT user_id)::int as "uniqueUserCount"
+        FROM session_mappings
+        WHERE user_id != $1
+          AND category IS NOT NULL
+      `;
+      const params: (number | string)[] = [excludeUserId];
+
+      if (workflowType) {
+        params.push(workflowType);
+        query += ` AND category = $${params.length}`;
+      }
+
+      query += `
+        GROUP BY category
+        HAVING COUNT(DISTINCT user_id) >= 2
+          AND COUNT(*) >= $${params.length + 1}
+        ORDER BY COUNT(*) DESC
+        LIMIT $${params.length + 2}
+      `;
+      params.push(minOccurrences, limit);
+
+      const result = await this.pool.query(query, params);
+
+      // Return patterns with empty entities/transitions (simplified for Helix)
+      const patterns = result.rows.map(row => ({
+        ...row,
+        commonEntities: [],
+        commonTransitions: [],
+      }));
+
+      this.logger.info('Retrieved peer workflow patterns from PostgreSQL', {
+        patternCount: patterns.length,
+        topPattern: patterns[0]?.workflowType,
+      });
+
+      return patterns;
+    } catch (error) {
+      this.logger.error('Failed to get peer workflow patterns from PostgreSQL',
+        error instanceof Error ? error : new Error(String(error)),
+        { excludeUserId }
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Detect repetitive workflow patterns for a specific user.
+   * Uses PostgreSQL to analyze user's workflow history for recurring sequences.
+   */
+  async detectRepetitiveWorkflowPatterns(
+    userId: number,
+    options: {
+      lookbackDays?: number;
+      minOccurrences?: number;
+      minSequenceLength?: number;
+      maxSequenceLength?: number;
+    } = {}
+  ): Promise<Array<{
+    patternType: 'workflow_sequence' | 'tool_combination' | 'entity_access';
+    sequence: string[];
+    occurrenceCount: number;
+    avgDurationSeconds: number;
+    totalTimeSpentSeconds: number;
+    firstSeen: string;
+    lastSeen: string;
+    sessions: string[];
+    optimizationOpportunity: string;
+  }>> {
+    if (!this.pool) {
+      this.logger.debug('detectRepetitiveWorkflowPatterns: No pool available');
+      return [];
+    }
+
+    const { lookbackDays = 30, minOccurrences = 3 } = options;
+
+    this.logger.info('Detecting repetitive workflow patterns from PostgreSQL', {
+      userId,
+      lookbackDays,
+      minOccurrences,
+    });
+
+    try {
+      const cutoffDate = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
+
+      // Query for workflow category patterns (most common repeated workflows)
+      const query = `
+        SELECT
+          category as "workflowType",
+          COUNT(*)::int as "occurrenceCount",
+          ROUND(AVG(EXTRACT(EPOCH FROM (ended_at - started_at))))::int as "avgDurationSeconds",
+          ROUND(SUM(EXTRACT(EPOCH FROM (ended_at - started_at))))::int as "totalTimeSpentSeconds",
+          MIN(started_at)::text as "firstSeen",
+          MAX(started_at)::text as "lastSeen",
+          ARRAY_AGG(desktop_session_id) as "sessions"
+        FROM session_mappings
+        WHERE user_id = $1
+          AND started_at >= $2
+          AND category IS NOT NULL
+        GROUP BY category
+        HAVING COUNT(*) >= $3
+        ORDER BY COUNT(*) DESC
+        LIMIT 10
+      `;
+
+      const result = await this.pool.query(query, [userId, cutoffDate.toISOString(), minOccurrences]);
+
+      // Transform to expected format
+      const patterns = result.rows.map(row => ({
+        patternType: 'workflow_sequence' as const,
+        sequence: [row.workflowType],
+        occurrenceCount: row.occurrenceCount,
+        avgDurationSeconds: row.avgDurationSeconds || 0,
+        totalTimeSpentSeconds: row.totalTimeSpentSeconds || 0,
+        firstSeen: row.firstSeen,
+        lastSeen: row.lastSeen,
+        sessions: row.sessions || [],
+        optimizationOpportunity: row.occurrenceCount >= 5
+          ? `High-frequency pattern: "${row.workflowType}" repeated ${row.occurrenceCount} times. Consider automation or templating.`
+          : `Moderate frequency pattern: "${row.workflowType}" found ${row.occurrenceCount} times.`,
+      }));
+
+      this.logger.info('Detected repetitive workflow patterns from PostgreSQL', {
+        patternCount: patterns.length,
+        topPattern: patterns[0]?.sequence.join(' → '),
+      });
+
+      return patterns;
+    } catch (error) {
+      this.logger.error('Failed to detect repetitive workflow patterns from PostgreSQL',
+        error instanceof Error ? error : new Error(String(error)),
+        { userId }
+      );
+      return [];
+    }
+  }
 }
