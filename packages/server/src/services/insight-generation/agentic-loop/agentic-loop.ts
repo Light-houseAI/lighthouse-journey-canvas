@@ -1968,7 +1968,13 @@ The user wants to create a blog post or article based on their workflow data.
 ✅ DO use actual session names, times, and tools
 ✅ DO quote visible content from workflow steps
 ✅ DO maintain journalistic accuracy while being engaging
-✅ DO acknowledge when data is incomplete`;
+✅ DO acknowledge when data is incomplete
+
+**FILE GENERATION (MANDATORY):**
+Generate ONLY ONE downloadable markdown file:
+\`\`\`download:workflow-blog-YYYY-MM-DD.md
+[Blog content only - engaging title, narrative, insights]
+\`\`\``;
 
     case 'PROGRESS_UPDATE':
       return `**INTENT: PROGRESS UPDATE**
