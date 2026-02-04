@@ -14,6 +14,7 @@ interface LandingPageProps {
   onGetStarted: () => void;
   onSignIn: () => void;
   onSignUp: () => void;
+  onBlog: () => void;
 }
 
 // Hero Illustration Component - uses actual images
@@ -250,7 +251,7 @@ function SendIcon() {
 }
 
 // Section Components
-function NavBar({ onSignIn, onSignUp }: { onSignIn: () => void; onSignUp: () => void }) {
+function NavBar({ onSignIn, onSignUp, onBlog }: { onSignIn: () => void; onSignUp: () => void; onBlog: () => void }) {
   const { track } = useAnalytics();
 
   const handleSignIn = () => {
@@ -269,6 +270,14 @@ function NavBar({ onSignIn, onSignUp }: { onSignIn: () => void; onSignUp: () => 
     onSignUp();
   };
 
+  const handleBlog = () => {
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'blog',
+      button_location: 'landing_navbar',
+    });
+    onBlog();
+  };
+
   return (
     <nav className="flex w-full items-center justify-between border-b border-black/20 bg-[#F3F4F8] px-20 py-[18px]">
       {/* Logo + Title */}
@@ -282,6 +291,17 @@ function NavBar({ onSignIn, onSignUp }: { onSignIn: () => void; onSignUp: () => 
           <img src={logoImage} alt="Lighthouse" className="h-7 w-7" />
         </div>
         <span className="text-xl font-semibold text-[#040606]">Lighthouse AI</span>
+      </div>
+
+      {/* Navigation Links */}
+      <div className="flex items-center gap-8">
+        <span className="text-base font-semibold text-[#040606]">Home</span>
+        <button
+          onClick={handleBlog}
+          className="text-base font-medium text-[#4A4F4E] hover:text-black transition-colors"
+        >
+          Blog
+        </button>
       </div>
 
       {/* Actions */}
@@ -689,11 +709,11 @@ function FooterSection() {
 }
 
 // Main Landing Page Component
-export default function LandingPage({ onGetStarted, onSignIn, onSignUp }: LandingPageProps) {
+export default function LandingPage({ onGetStarted, onSignIn, onSignUp, onBlog }: LandingPageProps) {
   return (
     <div className="flex min-h-screen w-full flex-col items-center bg-white">
       <div className="flex w-full max-w-[1440px] flex-col">
-        <NavBar onSignIn={onSignIn} onSignUp={onSignUp} />
+        <NavBar onSignIn={onSignIn} onSignUp={onSignUp} onBlog={onBlog} />
         <HeroSection onGetStarted={onGetStarted} />
         <KeyProblemsSection />
         <OurSolutionSection />

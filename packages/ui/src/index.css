@@ -860,3 +860,60 @@ html {
   top: 50% !important;
   transform: translate(-50%, -50%) !important;
 }
+
+/* ================================================
+   KRAMA LANDING PAGE THEME
+   Sage & Cream design system for krama-ai.com
+   ================================================ */
+
+@layer base {
+  :root {
+    /* Krama Brand Colors - Sage & Cream Theme */
+    --krama-background: 30 33% 94%; /* Cream/beige */
+    --krama-foreground: 15 20% 20%; /* Dark brown text */
+    --krama-primary: 160 30% 45%; /* Sage green */
+    --krama-primary-foreground: 0 0% 100%;
+    --krama-accent: 160 30% 45%; /* Sage green */
+    --krama-accent-foreground: 0 0% 100%;
+    --krama-text-body: 15 15% 30%;
+    --krama-border: 200 20% 75%;
+    --krama-card: 30 33% 94%;
+    --krama-card-foreground: 15 20% 20%;
+    --krama-muted: 30 20% 88%;
+    --krama-muted-foreground: 15 10% 45%;
+  }
+}
+
+/* Krama utility classes */
+.bg-krama-background { background-color: hsl(var(--krama-background)); }
+.bg-krama-foreground { background-color: hsl(var(--krama-foreground)); }
+.bg-krama-primary { background-color: hsl(var(--krama-primary)); }
+.bg-krama-card { background-color: hsl(var(--krama-card)); }
+.bg-krama-muted { background-color: hsl(var(--krama-muted)); }
+
+.text-krama-primary { color: hsl(var(--krama-primary)); }
+.text-krama-foreground { color: hsl(var(--krama-foreground)); }
+.text-krama-background { color: hsl(var(--krama-background)); }
+.text-krama-text-body { color: hsl(var(--krama-text-body)); }
+.text-krama-accent { color: hsl(var(--krama-accent)); }
+.text-krama-muted-foreground { color: hsl(var(--krama-muted-foreground)); }
+
+.border-krama-primary { border-color: hsl(var(--krama-primary)); }
+.border-krama-border { border-color: hsl(var(--krama-border)); }
+.border-krama-background { border-color: hsl(var(--krama-background)); }
+
+.ring-krama-primary { --tw-ring-color: hsl(var(--krama-primary)); }
+
+/* Krama landing page specific styles */
+.krama-landing {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.krama-landing h1,
+.krama-landing h2,
+.krama-landing h3,
+.krama-landing h4,
+.krama-landing h5,
+.krama-landing h6 {
+  font-family: 'Playfair Display', Georgia, serif;
+}

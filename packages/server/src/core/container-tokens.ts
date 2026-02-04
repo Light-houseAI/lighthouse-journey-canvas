@@ -39,6 +39,8 @@ export const REPOSITORY_TOKENS = {
   CONCEPT_EMBEDDING_REPOSITORY: 'conceptEmbeddingRepository',
   // User Feedback Repository
   USER_FEEDBACK_REPOSITORY: 'userFeedbackRepository',
+  // Waitlist Repository
+  WAITLIST_REPOSITORY: 'waitlistRepository',
   // Platform Workflow Repository (Insight Generation)
   PLATFORM_WORKFLOW_REPOSITORY: 'platformWorkflowRepository',
   // Company Documents Repository (RAG document storage)
@@ -104,6 +106,8 @@ export const SERVICE_TOKENS = {
   HIERARCHICAL_TOP_WORKFLOWS_SERVICE: 'hierarchicalTopWorkflowsService',
   // User Feedback Service
   USER_FEEDBACK_SERVICE: 'userFeedbackService',
+  // Waitlist Service
+  WAITLIST_SERVICE: 'waitlistService',
   // Natural Language Query Service
   NATURAL_LANGUAGE_QUERY_SERVICE: 'naturalLanguageQueryService',
   // Progress Snapshot Service

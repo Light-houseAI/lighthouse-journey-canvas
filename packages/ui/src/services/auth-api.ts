@@ -57,6 +57,24 @@ export async function signup(data: {
 }
 
 /**
+ * Sign up a new user with an invite code
+ * Used for waitlist users who received an invite code
+ */
+export async function signupWithCode(data: {
+  code: string;
+  password: string;
+  firstName: string;
+  lastName?: string;
+}): Promise<SignupResponse> {
+  return httpClient.request<SignupResponse>('/api/auth/signup-with-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+    skipAuth: true,
+  });
+}
+
+/**
  * Sign in an existing user
  * Validates request using schema
  */

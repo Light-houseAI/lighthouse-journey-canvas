@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { requireAuth, requireGuest } from '../middleware/auth.middleware.js';
 import { containerMiddleware } from '../middleware/index.js';
 import { hashToken } from '../services/refresh-token.service';
+import type { WaitlistService } from '../services/waitlist.service.js';
 
 // Extend Express Request type to include our custom properties
 declare module 'express' {
@@ -31,6 +32,14 @@ declare module 'express' {
 // Validation schemas for JWT endpoints
 const refreshTokenSchema = z.object({
   refreshToken: z.string().min(1, 'Refresh token is required'),
+});
+
+// Validation schema for signup with invite code
+const signUpWithCodeSchema = z.object({
+  code: z.string().min(1, 'Invite code is required'),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
 });
 
 const router: any = Router();
@@ -114,6 +123,135 @@ router.post(
       });
     } catch (error: any) {
       // Let the error handler middleware handle all errors
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /signup-with-code - Register new user with invite code
+ *
+ * This endpoint allows users to sign up using a valid invite code.
+ * The email is derived from the invite code (pre-assigned during invite).
+ */
+router.post(
+  '/signup-with-code',
+  requireGuest,
+  containerMiddleware,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const data = signUpWithCodeSchema.parse(req.body);
+
+      const waitlistService = ((req as any).scope as any).resolve(
+        'waitlistService'
+      ) as WaitlistService;
+      const userService = ((req as any).scope as any).resolve('userService');
+      const jwtService = ((req as any).scope as any).resolve('jwtService');
+      const refreshTokenService = ((req as any).scope as any).resolve(
+        'refreshTokenService'
+      );
+
+      // Validate the invite code
+      const validation = await waitlistService.validateInviteCode(data.code);
+      if (!validation.valid) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: validation.expired
+              ? 'INVITE_EXPIRED'
+              : validation.alreadyUsed
+                ? 'INVITE_ALREADY_USED'
+                : 'INVALID_INVITE_CODE',
+            message: validation.message,
+          },
+          meta: {
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
+
+      // Check if user already exists with this email
+      const existingUser = await userService.getUserByEmail(validation.email!);
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          error: {
+            code: 'ALREADY_EXISTS',
+            message: 'An account with this email already exists',
+          },
+          meta: {
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
+
+      // Create user with email from invite code
+      const user = await userService.createUser({
+        email: validation.email!,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        password: data.password,
+      });
+
+      // Mark the invite code as used
+      await waitlistService.useInviteCode(data.code);
+
+      // Generate JWT tokens
+      const tokenPair = jwtService.generateTokenPair(user);
+
+      // Store refresh token
+      const refreshTokenDecoded = jwtService.decodeRefreshToken(
+        tokenPair.refreshToken
+      );
+      if (refreshTokenDecoded) {
+        const expiryDate = new Date(refreshTokenDecoded.exp * 1000);
+        await refreshTokenService.storeRefreshToken(
+          refreshTokenDecoded.tokenId,
+          user.id,
+          hashToken(tokenPair.refreshToken),
+          expiryDate,
+          {
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'],
+          }
+        );
+      }
+
+      res.status(201).json({
+        success: true,
+        data: {
+          accessToken: tokenPair.accessToken,
+          refreshToken: tokenPair.refreshToken,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            userName: user.userName,
+            interest: user.interest,
+            hasCompletedOnboarding: user.hasCompletedOnboarding,
+            onboardingType: user.onboardingType ?? null,
+            createdAt: user.createdAt.toISOString(),
+          },
+        },
+        meta: {
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid request data',
+            details: error.errors,
+          },
+          meta: {
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
       next(error);
     }
   }

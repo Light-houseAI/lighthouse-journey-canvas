@@ -1,40 +1,92 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
+import BlogPage from "../pages/blog";
 import LandingPage from "../pages/landing";
 import SignIn from "../pages/signin";
 import SignUp from "../pages/signup";
+import { KramaLandingPage } from "./krama-landing";
+
+type UnauthenticatedView = 'landing' | 'blog' | 'signin' | 'signup' | 'join';
 
 /**
  * UnauthenticatedApp - Handles display for non-authenticated users
- * Shows landing page by default, with navigation to auth flow
- * No URL routing - pure component switching
+ * Shows landing page by default, with navigation to auth flow and blog
+ * Supports URL-based routing for /join (invite code signup)
  */
 export function UnauthenticatedApp() {
-  const [showAuth, setShowAuth] = useState(false);
-  const [showSignUp, setShowSignUp] = useState(false);
+  const [currentView, setCurrentView] = useState<UnauthenticatedView>(() => {
+    // Check URL path on initial load
+    const path = window.location.pathname;
+    if (path === '/join') return 'join';
+    if (path === '/blog') return 'blog';
+    if (path === '/signin') return 'signin';
+    if (path === '/signup') return 'signup';
+    return 'landing';
+  });
+  const [inviteCode, setInviteCode] = useState<string>('');
 
-  // Show landing page by default
-  if (!showAuth) {
+  // Handle URL-based routing on initial load
+  useEffect(() => {
+    const path = window.location.pathname;
+    const params = new URLSearchParams(window.location.search);
+    
+    if (path === '/join') {
+      const code = params.get('code') || '';
+      setInviteCode(code);
+      setCurrentView('join');
+    }
+  }, []);
+
+  // Determine if we should use the Krama landing page (krama-ai.com)
+  // For now, we'll check the hostname or allow both landing pages to coexist
+  const isKramaDomain = window.location.hostname.includes('krama-ai.com') || 
+                        window.location.hostname === 'localhost'; // Use Krama for local dev too
+
+  // Show Krama landing page for krama-ai.com domain
+  if (currentView === 'landing' && isKramaDomain) {
+    return (
+      <KramaLandingPage
+        onSignIn={() => setCurrentView('signin')}
+        onSignUp={() => setCurrentView('signup')}
+      />
+    );
+  }
+
+  // Show original landing page for light-houseai.com domain
+  if (currentView === 'landing') {
     return (
       <LandingPage
-        onGetStarted={() => {
-          setShowSignUp(true);
-          setShowAuth(true);
-        }}
-        onSignIn={() => {
-          setShowSignUp(false);
-          setShowAuth(true);
-        }}
-        onSignUp={() => {
-          setShowSignUp(true);
-          setShowAuth(true);
-        }}
+        onGetStarted={() => setCurrentView('signup')}
+        onSignIn={() => setCurrentView('signin')}
+        onSignUp={() => setCurrentView('signup')}
+        onBlog={() => setCurrentView('blog')}
+      />
+    );
+  }
+
+  // Show blog page
+  if (currentView === 'blog') {
+    return (
+      <BlogPage
+        onBack={() => setCurrentView('landing')}
+        onSignIn={() => setCurrentView('signin')}
+        onSignUp={() => setCurrentView('signup')}
+      />
+    );
+  }
+
+  // Show signup with invite code for /join route
+  if (currentView === 'join') {
+    return (
+      <SignUp 
+        onSwitchToSignIn={() => setCurrentView('signin')} 
+        inviteCode={inviteCode}
       />
     );
   }
 
   // Show auth flow when user clicks sign in/sign up/get started
-  return showSignUp ?
-    <SignUp onSwitchToSignIn={() => setShowSignUp(false)} /> :
-    <SignIn onSwitchToSignUp={() => setShowSignUp(true)} />;
+  return currentView === 'signup' ?
+    <SignUp onSwitchToSignIn={() => setCurrentView('signin')} /> :
+    <SignIn onSwitchToSignUp={() => setCurrentView('signup')} />;
 }

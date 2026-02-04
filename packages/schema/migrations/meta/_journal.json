@@ -134,6 +134,48 @@
       "when": 1767830400000,
       "tag": "20260107000001_add_work_to_timeline_node_type",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1768089600000,
+      "tag": "20260123000001_add_platform_insight_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1768176000000,
+      "tag": "20260124000001_add_summary_to_session_mappings",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1768262400000,
+      "tag": "20260125000001_add_company_documents_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1768435200000,
+      "tag": "20260127000001_add_persona_timeline_node_types",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1768867200000,
+      "tag": "20260201000001_add_screenshot_descriptions_to_session_mappings",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1769126400000,
+      "tag": "20260204000001_add_waitlist_tables",
+      "breakpoints": true
     }
   ]
 }

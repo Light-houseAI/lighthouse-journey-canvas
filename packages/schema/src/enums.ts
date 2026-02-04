@@ -449,6 +449,19 @@ export enum SessionMappingAction {
 }
 
 // ============================================================================
+// WAITLIST SYSTEM ENUMS
+// ============================================================================
+
+/**
+ * Status of a waitlist entry
+ */
+export enum WaitlistStatus {
+  Pending = 'pending',
+  Invited = 'invited',
+  Registered = 'registered',
+}
+
+// ============================================================================
 // USER FEEDBACK ENUMS (Thumbs Up/Down Feature)
 // ============================================================================
 

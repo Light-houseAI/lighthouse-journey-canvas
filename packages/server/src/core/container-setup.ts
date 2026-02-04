@@ -44,6 +44,7 @@ import { WorkflowScreenshotRepository } from '../repositories/workflow-screensho
 import { EntityEmbeddingRepository } from '../repositories/entity-embedding.repository';
 import { ConceptEmbeddingRepository } from '../repositories/concept-embedding.repository';
 import { UserFeedbackRepository } from '../repositories/user-feedback.repository';
+import { WaitlistRepository } from '../repositories/waitlist.repository';
 import { CandidateTimelineFetcher } from '../services/candidate-timeline-fetcher.service';
 import { CareerInsightsGeneratorService } from '../services/career-insights-generator.service';
 import { ExperienceMatchesService } from '../services/experience-matches.service';
@@ -85,6 +86,7 @@ import { BlockLinkingService } from '../services/block-linking.service';
 import { StepExtractionService } from '../services/step-extraction.service';
 import { HierarchicalTopWorkflowsService } from '../services/hierarchical-top-workflows.service';
 import { UserFeedbackService } from '../services/user-feedback.service';
+import { WaitlistService } from '../services/waitlist.service';
 import { NaturalLanguageQueryService } from '../services/natural-language-query.service';
 import { ProgressSnapshotService } from '../services/progress-snapshot.service';
 import { InsightAssistantService } from '../services/insight-assistant.service';
@@ -226,6 +228,10 @@ export class Container {
         // User Feedback Repository
         [CONTAINER_TOKENS.USER_FEEDBACK_REPOSITORY]: asClass(
           UserFeedbackRepository
+        ).singleton(),
+        // Waitlist Repository
+        [CONTAINER_TOKENS.WAITLIST_REPOSITORY]: asClass(
+          WaitlistRepository
         ).singleton(),
         // Platform Workflow Repository (Insight Generation)
         [CONTAINER_TOKENS.PLATFORM_WORKFLOW_REPOSITORY]: asFunction(() => {
@@ -373,6 +379,10 @@ export class Container {
         // User Feedback Service
         [CONTAINER_TOKENS.USER_FEEDBACK_SERVICE]: asClass(
           UserFeedbackService
+        ).singleton(),
+        // Waitlist Service
+        [CONTAINER_TOKENS.WAITLIST_SERVICE]: asClass(
+          WaitlistService
         ).singleton(),
         // Natural Language Query Service (RAG pipeline)
         // Now includes pool for company document vector search

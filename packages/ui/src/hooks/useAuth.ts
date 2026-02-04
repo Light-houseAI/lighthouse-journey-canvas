@@ -143,6 +143,64 @@ export function useRegister(): UseRegisterReturn {
   };
 }
 
+interface UseRegisterWithCodeReturn {
+  mutate: (data: { code: string; password: string; firstName: string; lastName?: string }) => void;
+  mutateAsync: (data: {
+    code: string;
+    password: string;
+    firstName: string;
+    lastName?: string;
+  }) => Promise<UserProfile | null>;
+  isPending: boolean;
+  error: ApiErrorResponse['error'] | null;
+}
+
+/**
+ * Hook to handle user registration with invite code
+ * Used for waitlist users who received an invite code
+ */
+export function useRegisterWithCode(): UseRegisterWithCodeReturn {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (data: { code: string; password: string; firstName: string; lastName?: string }) =>
+      authApi.signupWithCode(data),
+    onSuccess: async (response) => {
+      // Save tokens to localStorage (CRITICAL for authenticated requests)
+      tokenManager.setTokens({
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+      });
+
+      // Update user query cache immediately (TanStack Query best practice)
+      queryClient.setQueryData(authKeys.currentUser(), response.user);
+
+      // Update auth store to trigger app redirect (backward compatibility)
+      const { useAuthStore } = await import('../stores/auth-store');
+      useAuthStore.getState().setUser(response.user as any);
+
+      // Clear profile review store
+      const { useProfileReviewStore } = await import(
+        '../stores/profile-review-store'
+      );
+      useProfileReviewStore.getState().reset();
+    },
+    retry: false, // Server handles errors
+  });
+
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: async (data) => {
+      const response = await mutation.mutateAsync(data);
+      return response.user as UserProfile;
+    },
+    isPending: mutation.isPending,
+    error: mutation.error
+      ? { message: mutation.error.message, code: 'ERROR' }
+      : null,
+  };
+}
+
 interface UseLogoutReturn {
   mutate: () => void;
   mutateAsync: () => Promise<void>;

@@ -32,6 +32,7 @@ import {
   SubjectType,
   TimelineNodeType,
   VisibilityLevel,
+  WaitlistStatus,
   WorkTrackCategory,
 } from './enums';
 
@@ -1150,3 +1151,62 @@ export type DataSourceTrace = typeof dataSourceTraces.$inferSelect;
 export type InsertDataSourceTrace = typeof dataSourceTraces.$inferInsert;
 export type QueryTraceStatus = 'started' | 'completed' | 'failed';
 export type AgentTraceStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+
+// ============================================================================
+// WAITLIST AND INVITE SYSTEM
+// ============================================================================
+
+/**
+ * Waitlist Status enum for PostgreSQL
+ */
+export const waitlistStatusEnum = pgEnum('waitlist_status', [
+  WaitlistStatus.Pending,
+  WaitlistStatus.Invited,
+  WaitlistStatus.Registered,
+]);
+
+/**
+ * Waitlist Table
+ * Stores users who have signed up for early access via the landing page.
+ * Status tracks progression: pending -> invited -> registered
+ */
+export const waitlist = pgTable('waitlist', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  jobRole: varchar('job_role', { length: 100 }),
+  status: waitlistStatusEnum('status').notNull().default(WaitlistStatus.Pending),
+  invitedAt: timestamp('invited_at', { withTimezone: true }),
+  registeredAt: timestamp('registered_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/**
+ * Invite Codes Table
+ * Stores unique invite codes sent to waitlist users for registration.
+ * Codes are single-use and have an expiration date.
+ */
+export const inviteCodes = pgTable('invite_codes', {
+  id: serial('id').primaryKey(),
+  code: varchar('code', { length: 32 }).notNull().unique(),
+  email: varchar('email', { length: 255 }).notNull(),
+  waitlistId: integer('waitlist_id').references(() => waitlist.id, {
+    onDelete: 'set null',
+  }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  usedAt: timestamp('used_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Type exports for waitlist system
+export type Waitlist = typeof waitlist.$inferSelect;
+export type InsertWaitlist = typeof waitlist.$inferInsert;
+export type InviteCode = typeof inviteCodes.$inferSelect;
+export type InsertInviteCode = typeof inviteCodes.$inferInsert;
