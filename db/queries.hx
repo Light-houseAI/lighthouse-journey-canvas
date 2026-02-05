@@ -105,9 +105,8 @@ QUERY UpsertEntity(name: String, entity_type: String, metadata: String) =>
 QUERY LinkActivityToEntity(screenshot_external_id: String, entity_name: String, context: String) =>
     activity <- N<Activity>::WHERE(_::{screenshot_external_id}::EQ(screenshot_external_id))
     entity <- N<Entity>({name: entity_name})
-    existing <- E<ActivityMentionsEntity>
-    edge <- existing::UpsertE({context: context})::From(activity)::To(entity)
-    RETURN edge
+    AddE<ActivityMentionsEntity>::From(activity)::To(entity)
+    RETURN "Success"
 
 QUERY GetEntityOccurrences(entity_name: String) =>
     activities <- N<Entity>({name: entity_name})::In<ActivityMentionsEntity>
@@ -125,9 +124,8 @@ QUERY UpsertConcept(name: String, category: String, relevance_score: F64) =>
 QUERY LinkActivityToConcept(screenshot_external_id: String, concept_name: String, relevance: F64) =>
     activity <- N<Activity>::WHERE(_::{screenshot_external_id}::EQ(screenshot_external_id))
     concept <- N<Concept>({name: concept_name})
-    existing <- E<ActivityRelatedToConcept>
-    edge <- existing::UpsertE({relevance: relevance})::From(activity)::To(concept)
-    RETURN edge
+    AddE<ActivityRelatedToConcept>::From(activity)::To(concept)
+    RETURN "Success"
 
 QUERY GetConceptsByCategory(category: String) =>
     concepts <- N<Concept>::WHERE(_::{category}::EQ(category))
