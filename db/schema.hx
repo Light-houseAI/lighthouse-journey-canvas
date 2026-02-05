@@ -7,231 +7,126 @@
 // VERTEX NODES
 // ============================================================================
 
+// User node
 N::User {
-  UNIQUE INDEX external_id: String,
-  created_at: String,
-  metadata: String
+    external_id: String,
+    metadata: String
 }
 
+// Timeline node
 N::TimelineNode {
-  UNIQUE INDEX external_id: String,
-  INDEX user_key: String,
-  node_type: String,
-  title: String,
-  created_at: String,
-  metadata: String
+    external_id: String,
+    node_type: String,
+    title: String,
+    metadata: String
 }
 
+// Session node
 N::Session {
-  UNIQUE INDEX external_id: String,
-  INDEX user_key: String,
-  INDEX node_key: String,
-  start_time: String,
-  end_time: String,
-  duration_seconds: U32,
-  screenshot_count: U32,
-  workflow_primary: String,
-  workflow_secondary: String,
-  workflow_confidence: F32,
-  metadata: String
+    external_id: String,
+    start_time: Date,
+    end_time: Date,
+    duration_seconds: I64,
+    screenshot_count: I64,
+    workflow_primary: String,
+    workflow_secondary: String,
+    workflow_confidence: F64,
+    metadata: String
 }
 
+// Activity node
 N::Activity {
-  INDEX session_key: String,
-  UNIQUE INDEX screenshot_external_id: String,
-  INDEX workflow_tag: String,
-  timestamp: String,
-  summary: String,
-  confidence: F32,
-  metadata: String
+    screenshot_external_id: String,
+    workflow_tag: String,
+    timestamp: Date,
+    summary: String,
+    confidence: F64,
+    metadata: String
 }
 
+// Entity node
 N::Entity {
-  UNIQUE INDEX name: String,
-  INDEX entity_type: String,
-  frequency: U32,
-  metadata: String
+    INDEX name: String,
+    entity_type: String,
+    metadata: String
 }
 
+// Concept node
 N::Concept {
-  UNIQUE INDEX name: String,
-  INDEX category: String,
-  relevance_score: F32
+    INDEX name: String,
+    category: String,
+    relevance_score: F64
 }
 
+// WorkflowPattern node
 N::WorkflowPattern {
-  INDEX user_id: String,
-  INDEX intent_category: String,
-  occurrence_count: U32,
-  last_seen_at: String,
-  metadata: String
+    intent_category: String,
+    occurrence_count: I64,
+    metadata: String
 }
 
+// Block node
 N::Block {
-  INDEX user_id: String,
-  UNIQUE INDEX canonical_slug: String,
-  INDEX intent_label: String,
-  INDEX primary_tool: String,
-  occurrence_count: U32,
-  metadata: String
+    canonical_slug: String,
+    intent_label: String,
+    primary_tool: String,
+    occurrence_count: I64,
+    metadata: String
 }
 
-N::Step {
-  INDEX session_id: String,
-  INDEX action_type: String,
-  order_in_block: U32,
-  timestamp: String,
-  metadata: String
-}
-
+// Tool node
 N::Tool {
-  UNIQUE INDEX canonical_name: String,
-  INDEX category: String,
-  metadata: String
+    INDEX canonical_name: String,
+    category: String,
+    metadata: String
 }
 
 // ============================================================================
 // EDGE RELATIONSHIPS
 // ============================================================================
 
-E::BelongsTo {
-  From: Session,
-  To: TimelineNode,
-  Properties: {
-    created_at: String
-  }
+E::UserOwnsNode {
+    From: User,
+    To: TimelineNode
 }
 
-E::Follows {
-  From: Session,
-  To: Session,
-  Properties: {
-    gap_seconds: U32
-  }
+E::UserOwnsSession {
+    From: User,
+    To: Session
 }
 
-E::Uses {
-  From: Activity,
-  To: Entity,
-  Properties: {
-    context: String
-  }
-}
-
-E::RelatesTo {
-  From: Activity,
-  To: Concept,
-  Properties: {
-    relevance: F32
-  }
-}
-
-E::Contains {
-  From: TimelineNode,
-  To: Session,
-  Properties: {}
-}
-
-E::SwitchesTo {
-  From: Activity,
-  To: Activity,
-  Properties: {
-    switch_type: String
-  }
+E::SessionInNode {
+    From: Session,
+    To: TimelineNode
 }
 
 E::ActivityInSession {
-  From: Activity,
-  To: Session,
-  Properties: {}
+    From: Activity,
+    To: Session
 }
 
-E::DependsOn {
-  From: TimelineNode,
-  To: TimelineNode,
-  Properties: {
-    dependency_type: String
-  }
+E::ActivityMentionsEntity {
+    From: Activity,
+    To: Entity,
+    Properties: {
+        context: String
+    }
 }
 
-E::PatternContainsBlock {
-  From: WorkflowPattern,
-  To: Block,
-  Properties: {
-    order: U32
-  }
+E::ActivityRelatedToConcept {
+    From: Activity,
+    To: Concept,
+    Properties: {
+        relevance: F64
+    }
 }
 
-E::NextBlock {
-  From: Block,
-  To: Block,
-  Properties: {
-    INDEX frequency: U32,
-    probability: F32
-  }
+E::UserHasPattern {
+    From: User,
+    To: WorkflowPattern
 }
 
-E::BlockContainsStep {
-  From: Block,
-  To: Step,
-  Properties: {
-    order: U32
-  }
-}
-
-E::NextStep {
-  From: Step,
-  To: Step,
-  Properties: {
-    gap_ms: U32
-  }
-}
-
-E::BlockUsesTool {
-  From: Block,
-  To: Tool,
-  Properties: {}
-}
-
-E::BlockRelatesConcept {
-  From: Block,
-  To: Concept,
-  Properties: {
-    relevance: F32
-  }
-}
-
-E::PatternOccursInSession {
-  From: WorkflowPattern,
-  To: Session,
-  Properties: {
-    occurred_at: String
-  }
-}
-
-E::StepEvidencedBy {
-  From: Step,
-  To: Activity,
-  Properties: {
-    screenshot_id: String
-  }
-}
-
-// ============================================================================
-// VECTOR EMBEDDINGS
-// ============================================================================
-
-V::ActivityEmbedding {
-  activity_id: String,
-  summary: String
-}
-
-V::ConceptEmbedding {
-  concept_id: String,
-  description: String
-}
-
-V::SessionEmbedding {
-  session_id: String,
-  summary: String
+E::UserHasBlock {
+    From: User,
+    To: Block
 }

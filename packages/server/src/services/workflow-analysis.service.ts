@@ -1787,6 +1787,11 @@ Return ONLY valid JSON, no markdown, no explanation.`;
       });
       this.logger.info('[GRAPH_RAG_DEBUG] Upserted activity', { screenshotId, activityKey });
 
+      // Link activity to session (creates ActivityInSession edge for graph traversals)
+      // This is CRITICAL for cross-session context queries to find entities
+      await this.graphService.linkActivityToSession(screenshotId, sessionId);
+      this.logger.info('[GRAPH_RAG_DEBUG] Linked activity to session', { screenshotId, sessionId });
+
       // Create entity relationships
       let entitiesStored = 0;
       for (const entity of extraction.entities) {

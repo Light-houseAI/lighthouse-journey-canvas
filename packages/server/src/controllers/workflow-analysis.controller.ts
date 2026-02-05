@@ -892,6 +892,57 @@ export class WorkflowAnalysisController extends BaseController {
     }
   }
 
+  /**
+   * POST /api/v2/workflow-analysis/backfill-activity-session-edges
+   * Backfill ActivityInSession edges for existing activities (required for cross-session context)
+   */
+  async backfillActivitySessionEdges(req: Request, res: Response): Promise<void> {
+    try {
+      const user = this.getAuthenticatedUser(req);
+
+      if (!this.graphService) {
+        res.status(503).json({
+          success: false,
+          message: 'Graph service not available',
+        });
+        return;
+      }
+
+      // Check if graphService has backfillActivitySessionEdges method (Helix only)
+      if (!('backfillActivitySessionEdges' in this.graphService)) {
+        res.status(400).json({
+          success: false,
+          message: 'Backfill is only supported for Helix graph service',
+        });
+        return;
+      }
+
+      this.logger.info('Starting ActivityInSession edge backfill', { userId: user.id });
+
+      const result = await (this.graphService as any).backfillActivitySessionEdges();
+
+      this.logger.info('ActivityInSession edge backfill complete', {
+        userId: user.id,
+        ...result,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Backfill complete',
+        data: result,
+      });
+    } catch (error) {
+      this.logger.error('Failed to backfill activity session edges', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to backfill',
+      });
+    }
+  }
+
   // ============================================================================
   // HIERARCHICAL WORKFLOW ENDPOINTS
   // ============================================================================

@@ -440,6 +440,16 @@ export class ArangoDBGraphService {
     }, `upsertActivity(${activityData.screenshotExternalId})`);
   }
 
+  /**
+   * Link activity to session (no-op for ArangoDB - uses session_key property instead)
+   * This method exists for compatibility with HelixGraphService
+   */
+  async linkActivityToSession(_screenshotExternalId: number | string, _sessionExternalId: string): Promise<void> {
+    // ArangoDB uses session_key property on activity document, not a separate edge
+    // This is a no-op for ArangoDB compatibility
+    return;
+  }
+
   // ============================================================================
   // ENTITY OPERATIONS
   // ============================================================================

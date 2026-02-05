@@ -136,6 +136,29 @@ router.post(
 );
 
 /**
+ * @route POST /api/v2/workflow-analysis/backfill-activity-session-edges
+ * @summary Backfill ActivityInSession edges
+ * @description Creates ActivityInSession edges for existing activities (required for cross-session context queries)
+ * @response {200} Backfill complete with stats
+ * @response {503} Graph service not available
+ * @security BearerAuth
+ */
+router.post(
+  '/backfill-activity-session-edges',
+  containerMiddleware,
+  async (req: any, res: any, next: any) => {
+    try {
+      const controller = req.scope.resolve(
+        CONTAINER_TOKENS.WORKFLOW_ANALYSIS_CONTROLLER
+      );
+      await controller.backfillActivitySessionEdges(req, res);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
  * @route POST /api/v2/workflow-analysis/repair-screenshots
  * @summary Repair orphaned screenshots
  * @description Links orphaned screenshots (with null nodeId) to correct nodes via session mappings.

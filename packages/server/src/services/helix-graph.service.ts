@@ -174,6 +174,53 @@ export class HelixGraphService {
   }
 
   /**
+   * Execute Helix query with logging (similar to ArangoDB AQL logging)
+   * Logs the query name and parameters for debugging graph retrieval
+   */
+  private async queryWithLogging<T>(
+    client: HelixClient,
+    queryName: string,
+    params: Record<string, unknown>
+  ): Promise<T> {
+    const startTime = Date.now();
+
+    // Log the HQL query being executed (similar to ArangoDB AQL logging)
+    this.logger.info('[HELIX_QUERY] Executing HelixQL query', {
+      query: queryName,
+      params: params,
+    });
+
+    try {
+      const result = await client.query<T>(queryName, params);
+      const duration = Date.now() - startTime;
+
+      // Log the result summary
+      const resultSummary = Array.isArray(result)
+        ? { type: 'array', count: result.length }
+        : { type: typeof result, isNull: result === null };
+
+      this.logger.info('[HELIX_QUERY] Query completed', {
+        query: queryName,
+        duration: `${duration}ms`,
+        result: resultSummary,
+      });
+
+      return result;
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      this.logger.error('[HELIX_QUERY] Query failed',
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          query: queryName,
+          params: params,
+          duration: `${duration}ms`,
+        }
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Retry wrapper for Helix operations with exponential backoff
    */
   private async withRetry<T>(
@@ -520,6 +567,149 @@ export class HelixGraphService {
     }
   }
 
+  /**
+   * Link activity to session (creates ActivityInSession edge for graph traversals)
+   * This edge is required for cross-session context queries to work
+   */
+  async linkActivityToSession(screenshotExternalId: number | string, sessionExternalId: string): Promise<void> {
+    if (!this.enabled) {
+      return;
+    }
+
+    const client = await this.ensureInitialized();
+
+    return this.withRetry(async () => {
+      try {
+        await client.query('LinkActivityToSession', {
+          screenshot_external_id: String(screenshotExternalId),
+          session_external_id: sessionExternalId,
+        });
+        this.logger.debug('Linked activity to session', { screenshotExternalId, sessionExternalId });
+      } catch (error) {
+        this.logger.error('Failed to link activity to session',
+          error instanceof Error ? error : new Error(String(error)),
+          { screenshotExternalId, sessionExternalId }
+        );
+        throw error;
+      }
+    }, 'linkActivityToSession');
+  }
+
+  /**
+   * Backfill ActivityInSession edges for all existing activities
+   * This is needed because the edge wasn't being created before the fix
+   */
+  async backfillActivitySessionEdges(): Promise<{ processed: number; linked: number; errors: number }> {
+    if (!this.enabled) {
+      return { processed: 0, linked: 0, errors: 0 };
+    }
+
+    const client = await this.ensureInitialized();
+    const stats = { processed: 0, linked: 0, errors: 0 };
+    const batchSize = 100;
+
+    try {
+      // First get total activity count (with logging)
+      const countResult = await this.queryWithLogging<{ count?: number }>(client, 'GetActivityCount', {});
+      const totalCount = (countResult as any)?.count || 0;
+      this.logger.info('Starting ActivityInSession edge backfill', { totalCount });
+
+      // Get all sessions to build a lookup map (with logging)
+      const sessionsResult = await this.queryWithLogging<unknown[]>(client, 'GetAllSessionsForBackfill', {
+        start: 0,
+        end_range: 10000,
+      });
+      const sessions = Array.isArray(sessionsResult) ? sessionsResult : [];
+
+      // Build session_key -> external_id map
+      const sessionKeyToExternalId = new Map<string, string>();
+      for (const session of sessions) {
+        const s = session as any;
+        if (s.external_id) {
+          // session_key format is "session_{external_id}"
+          sessionKeyToExternalId.set(`session_${s.external_id}`, s.external_id);
+          // Also map the raw external_id
+          sessionKeyToExternalId.set(s.external_id, s.external_id);
+        }
+      }
+      this.logger.info('Built session lookup map', { sessionCount: sessionKeyToExternalId.size });
+
+      // Process activities in batches
+      for (let offset = 0; offset < totalCount; offset += batchSize) {
+        const activitiesResult = await this.queryWithLogging<unknown[]>(client, 'GetAllActivitiesForBackfill', {
+          start: offset,
+          end_range: offset + batchSize,
+        });
+        const activities = Array.isArray(activitiesResult) ? activitiesResult : [];
+
+        for (const activity of activities) {
+          stats.processed++;
+          const a = activity as any;
+
+          if (!a.screenshot_external_id || !a.session_key) {
+            this.logger.warn('Activity missing required fields', { activity: a });
+            continue;
+          }
+
+          // Find the session external_id from session_key
+          let sessionExternalId = sessionKeyToExternalId.get(a.session_key);
+          if (!sessionExternalId) {
+            // Try extracting from session_key format "session_{id}"
+            const match = a.session_key.match(/^session_(.+)$/);
+            if (match) {
+              sessionExternalId = match[1];
+            }
+          }
+
+          if (!sessionExternalId) {
+            this.logger.warn('Could not find session for activity', {
+              screenshotId: a.screenshot_external_id,
+              sessionKey: a.session_key
+            });
+            continue;
+          }
+
+          try {
+            await client.query('LinkActivityToSession', {
+              screenshot_external_id: String(a.screenshot_external_id),
+              session_external_id: sessionExternalId,
+            });
+            stats.linked++;
+          } catch (error) {
+            // Edge might already exist, which is fine
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            if (!errorMsg.includes('already exists') && !errorMsg.includes('duplicate')) {
+              stats.errors++;
+              this.logger.warn('Failed to link activity to session', {
+                screenshotId: a.screenshot_external_id,
+                sessionExternalId,
+                error: errorMsg,
+              });
+            } else {
+              stats.linked++; // Count as success if edge already exists
+            }
+          }
+        }
+
+        this.logger.info('Backfill progress', {
+          processed: stats.processed,
+          linked: stats.linked,
+          errors: stats.errors,
+          total: totalCount
+        });
+      }
+
+      this.logger.info('ActivityInSession edge backfill complete', stats);
+      return stats;
+    } catch (error) {
+      this.logger.error('Backfill failed',
+        error instanceof Error ? error : new Error(String(error)),
+        stats
+      );
+      throw error;
+    }
+  }
+
   // ============================================================================
   // ENTITY OPERATIONS
   // ============================================================================
@@ -720,8 +910,15 @@ export class HelixGraphService {
 
   /**
    * Get cross-session context for a user
+   * @param userId - The user ID
+   * @param nodeId - Optional timeline node ID for context
+   * @param lookbackDays - Number of days to look back (default: 30)
    */
-  async getCrossSessionContext(userId: number): Promise<CrossSessionContext> {
+  async getCrossSessionContext(
+    userId: number,
+    nodeId?: number | string,
+    lookbackDays: number = 30
+  ): Promise<CrossSessionContext> {
     const emptyContext: CrossSessionContext = {
       currentNode: null,
       relatedSessions: [],
@@ -738,29 +935,166 @@ export class HelixGraphService {
     const client = await this.ensureInitialized();
     const userKey = `user_${userId}`;
 
+    // Helper to safely extract array from Helix response wrapper
+    // Helix returns {"entities": [...]} or {"patterns": [...]} format
+    const extractArray = (response: unknown, key: string): unknown[] => {
+      if (!response) return [];
+      if (Array.isArray(response)) return response;
+      if (typeof response === 'object' && response !== null) {
+        const obj = response as Record<string, unknown>;
+        if (key in obj && Array.isArray(obj[key])) {
+          return obj[key] as unknown[];
+        }
+        // Try common keys if specific key not found
+        for (const k of ['entities', 'patterns', 'sessions', 'data', 'results']) {
+          if (k in obj && Array.isArray(obj[k])) {
+            return obj[k] as unknown[];
+          }
+        }
+      }
+      return [];
+    };
+
     try {
-      const entities = await client.query<unknown[]>('GetCrossSessionContext', {
-        user_key: userKey,
-      });
+      // Construct external_id format for Helix queries
+      const nodeExternalId = nodeId
+        ? (typeof nodeId === 'string' && nodeId.startsWith('node_') ? nodeId : `node_${nodeId}`)
+        : null;
 
-      const patterns = await client.query<unknown[]>('GetWorkflowPatterns', {
-        user_id: userKey,
-      });
+      // Execute all Helix queries in parallel (no PostgreSQL fallbacks)
+      const [
+        entitiesResponse,
+        patternsResponse,
+        currentNodeResult,
+        relatedSessionsResponse,
+        conceptsResponse,
+      ] = await Promise.all([
+        // Query entities via Helix cross-session context (USES edge traversal)
+        this.queryWithLogging<unknown>(client, 'GetCrossSessionContext', {
+          user_key: userKey,
+        }).catch(err => {
+          this.logger.warn('GetCrossSessionContext query failed', { error: err });
+          return null;
+        }),
 
-      this.logger.info('Retrieved cross-session context', { userId });
+        // Query workflow patterns via Helix
+        this.queryWithLogging<unknown>(client, 'GetWorkflowPatterns', {
+          user_id: userKey,
+        }).catch(err => {
+          this.logger.warn('GetWorkflowPatterns query failed', { error: err });
+          return null;
+        }),
+
+        // Query currentNode from Helix using GetTimelineNodeByExternalId
+        nodeExternalId
+          ? this.queryWithLogging<unknown>(client, 'GetTimelineNodeByExternalId', {
+              external_id: nodeExternalId,
+            }).catch(err => {
+              this.logger.warn('GetTimelineNodeByExternalId query failed', { error: err });
+              return null;
+            })
+          : Promise.resolve(null),
+
+        // Query relatedSessions from Helix using GetSessionsByNode or GetSessionsByUser
+        nodeExternalId
+          ? this.queryWithLogging<unknown>(client, 'GetSessionsByNode', {
+              node_key: nodeExternalId,
+            }).catch(err => {
+              this.logger.warn('GetSessionsByNode query failed', { error: err });
+              return null;
+            })
+          : this.queryWithLogging<unknown>(client, 'GetSessionsByUser', {
+              user_key: userKey,
+              start: 0,
+              end_range: 50,
+            }).catch(err => {
+              this.logger.warn('GetSessionsByUser query failed', { error: err });
+              return null;
+            }),
+
+        // Query concepts via Helix GetConceptsByCategory (get all categories)
+        this.queryWithLogging<unknown>(client, 'GetConceptsByCategory', {
+          category: '',
+        }).catch(err => {
+          this.logger.warn('GetConceptsByCategory query failed', { error: err });
+          return null;
+        }),
+      ]);
+
+      // Extract arrays from wrapped Helix responses
+      const helixEntities = extractArray(entitiesResponse, 'entities');
+      const patterns = extractArray(patternsResponse, 'patterns');
+      const helixSessions = extractArray(relatedSessionsResponse, 'sessions');
+      const helixConcepts = extractArray(conceptsResponse, 'concepts');
+
+      // Transform Helix sessions to expected format
+      const relatedSessionsResult: Array<{
+        sessionId: string;
+        workflowClassification: string;
+        startTime: string;
+        endTime: string | null;
+        durationSeconds: number;
+        activityCount: number;
+      }> = helixSessions.map((session: any) => ({
+        sessionId: session.external_id || session.sessionId || '',
+        workflowClassification: session.workflow_primary || session.workflowClassification || 'unknown',
+        startTime: session.start_time || session.startTime || '',
+        endTime: session.end_time || session.endTime || null,
+        durationSeconds: session.duration_seconds || session.durationSeconds || 0,
+        activityCount: session.screenshot_count || session.activityCount || 0,
+      }));
+
+      // Transform Helix concepts to expected format
+      const conceptsResult = helixConcepts.map((concept: any) => ({
+        name: concept.name || '',
+        category: concept.category || 'general',
+        frequency: concept.relevance_score || 1,
+        lastSeen: new Date().toISOString(),
+      }));
+
+      // Transform Helix entities to expected format
+      const entities = helixEntities.map((entity: any) => ({
+        name: entity.name || '',
+        type: entity.entity_type || entity.type || 'unknown',
+        frequency: entity.frequency || 1,
+        usage_count: entity.frequency || 1,
+        last_seen: entity.metadata || new Date().toISOString(),
+        source: 'helix',
+      }));
+
+      // Build temporal sequence from sessions
+      const temporalSequence = relatedSessionsResult.map((session) => ({
+        sessionId: session.sessionId,
+        timestamp: session.startTime,
+        workflow: session.workflowClassification,
+      })).sort((a, b) =>
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      this.logger.info('Retrieved cross-session context from Helix', {
+        userId,
+        nodeId,
+        lookbackDays,
+        entitiesCount: entities.length,
+        patternsCount: patterns.length,
+        currentNodeFound: !!currentNodeResult,
+        relatedSessionsCount: relatedSessionsResult.length,
+        conceptsCount: conceptsResult.length,
+        temporalSequenceCount: temporalSequence.length,
+      });
 
       return {
-        currentNode: null,
-        relatedSessions: [],
-        entities: entities || [],
-        concepts: [],
-        workflowPatterns: patterns || [],
-        temporalSequence: [],
+        currentNode: currentNodeResult,
+        relatedSessions: relatedSessionsResult,
+        entities: entities,
+        concepts: conceptsResult,
+        workflowPatterns: patterns,
+        temporalSequence: temporalSequence,
       };
     } catch (error) {
-      this.logger.error('Failed to get cross-session context',
+      this.logger.error('Failed to get cross-session context from Helix',
         error instanceof Error ? error : new Error(String(error)),
-        { userId }
+        { userId, nodeId, lookbackDays }
       );
       return emptyContext;
     }
@@ -1395,12 +1729,12 @@ export class HelixGraphService {
   }
 
   // ============================================================================
-  // PEER AND PATTERN DETECTION (PostgreSQL-based for Helix)
+  // PEER AND PATTERN DETECTION (Helix-based)
   // ============================================================================
 
   /**
    * Get peer workflow patterns from other users (anonymized).
-   * Uses PostgreSQL to find similar workflows across ALL users based on workflow classification.
+   * Uses Helix to find similar workflows across ALL users based on workflow classification.
    * Returns anonymized data suitable for A3 Comparator peer comparison.
    */
   async getPeerWorkflowPatterns(
@@ -1419,14 +1753,15 @@ export class HelixGraphService {
     commonEntities: string[];
     commonTransitions: Array<{ from: string; to: string; frequency: number }>;
   }>> {
-    if (!this.pool) {
-      this.logger.debug('getPeerWorkflowPatterns: No pool available');
+    if (!this.enabled) {
+      this.logger.debug('getPeerWorkflowPatterns: Helix not enabled');
       return [];
     }
 
     const { workflowType, minOccurrences = 3, limit = 10 } = options;
+    const excludeUserKey = `user_${excludeUserId}`;
 
-    this.logger.info('Retrieving peer workflow patterns from PostgreSQL', {
+    this.logger.info('Retrieving peer workflow patterns from Helix sessions', {
       excludeUserId,
       workflowType,
       minOccurrences,
@@ -1434,50 +1769,94 @@ export class HelixGraphService {
     });
 
     try {
-      // Query session_mappings for peer workflow patterns (anonymized)
-      let query = `
-        SELECT
-          category as "workflowType",
-          ROUND(AVG(EXTRACT(EPOCH FROM (ended_at - started_at))))::int as "avgDurationSeconds",
-          COUNT(*)::int as "occurrenceCount",
-          COUNT(DISTINCT user_id)::int as "uniqueUserCount"
-        FROM session_mappings
-        WHERE user_id != $1
-          AND category IS NOT NULL
-      `;
-      const params: (number | string)[] = [excludeUserId];
+      const client = await this.ensureInitialized();
 
-      if (workflowType) {
-        params.push(workflowType);
-        query += ` AND category = $${params.length}`;
+      // Query sessions from all users except the excluded one
+      const sessionsResponse = await this.queryWithLogging<unknown>(client, 'GetAllSessionsExcludingUser', {
+        exclude_user_key: excludeUserKey,
+        start: 0,
+        end_range: 500, // Get a reasonable sample of peer sessions
+      });
+
+      // Extract sessions array
+      const extractArray = (response: unknown, key: string): unknown[] => {
+        if (!response) return [];
+        if (Array.isArray(response)) return response;
+        if (typeof response === 'object' && response !== null) {
+          const obj = response as Record<string, unknown>;
+          if (key in obj && Array.isArray(obj[key])) {
+            return obj[key] as unknown[];
+          }
+          for (const k of ['sessions', 'data', 'results']) {
+            if (k in obj && Array.isArray(obj[k])) {
+              return obj[k] as unknown[];
+            }
+          }
+        }
+        return [];
+      };
+
+      const allSessions = extractArray(sessionsResponse, 'sessions');
+
+      // Aggregate sessions by workflow_primary
+      const patternMap = new Map<string, {
+        workflowType: string;
+        totalDuration: number;
+        occurrenceCount: number;
+        userIds: Set<string>;
+      }>();
+
+      for (const session of allSessions) {
+        const s = session as {
+          user_key?: string;
+          workflow_primary?: string;
+          duration_seconds?: number;
+        };
+
+        const workflow = s.workflow_primary || 'unknown';
+
+        // Filter by workflowType if specified
+        if (workflowType && workflow !== workflowType) continue;
+
+        const existing = patternMap.get(workflow);
+
+        if (existing) {
+          existing.occurrenceCount += 1;
+          existing.totalDuration += s.duration_seconds || 0;
+          if (s.user_key) existing.userIds.add(s.user_key);
+        } else {
+          patternMap.set(workflow, {
+            workflowType: workflow,
+            totalDuration: s.duration_seconds || 0,
+            occurrenceCount: 1,
+            userIds: new Set(s.user_key ? [s.user_key] : []),
+          });
+        }
       }
 
-      query += `
-        GROUP BY category
-        HAVING COUNT(DISTINCT user_id) >= 2
-          AND COUNT(*) >= $${params.length + 1}
-        ORDER BY COUNT(*) DESC
-        LIMIT $${params.length + 2}
-      `;
-      params.push(minOccurrences, limit);
+      // Convert to result format and filter by minOccurrences
+      const patterns = Array.from(patternMap.values())
+        .filter(p => p.occurrenceCount >= minOccurrences && p.userIds.size >= 2)
+        .map(p => ({
+          workflowType: p.workflowType,
+          avgDurationSeconds: p.occurrenceCount > 0 ? Math.round(p.totalDuration / p.occurrenceCount) : 0,
+          occurrenceCount: p.occurrenceCount,
+          uniqueUserCount: p.userIds.size,
+          commonEntities: [],
+          commonTransitions: [],
+        }))
+        .sort((a, b) => b.occurrenceCount - a.occurrenceCount)
+        .slice(0, limit);
 
-      const result = await this.pool.query(query, params);
-
-      // Return patterns with empty entities/transitions (simplified for Helix)
-      const patterns = result.rows.map(row => ({
-        ...row,
-        commonEntities: [],
-        commonTransitions: [],
-      }));
-
-      this.logger.info('Retrieved peer workflow patterns from PostgreSQL', {
+      this.logger.info('Retrieved peer workflow patterns from Helix', {
         patternCount: patterns.length,
+        totalSessionsAnalyzed: allSessions.length,
         topPattern: patterns[0]?.workflowType,
       });
 
       return patterns;
     } catch (error) {
-      this.logger.error('Failed to get peer workflow patterns from PostgreSQL',
+      this.logger.error('Failed to get peer workflow patterns from Helix',
         error instanceof Error ? error : new Error(String(error)),
         { excludeUserId }
       );
@@ -1487,7 +1866,7 @@ export class HelixGraphService {
 
   /**
    * Detect repetitive workflow patterns for a specific user.
-   * Uses PostgreSQL to analyze user's workflow history for recurring sequences.
+   * Uses Helix native AGGREGATE_BY to analyze user's workflow history for recurring sequences.
    */
   async detectRepetitiveWorkflowPatterns(
     userId: number,
@@ -1508,67 +1887,111 @@ export class HelixGraphService {
     sessions: string[];
     optimizationOpportunity: string;
   }>> {
-    if (!this.pool) {
-      this.logger.debug('detectRepetitiveWorkflowPatterns: No pool available');
+    if (!this.enabled) {
+      this.logger.debug('detectRepetitiveWorkflowPatterns: Helix not enabled');
       return [];
     }
 
-    const { lookbackDays = 30, minOccurrences = 3 } = options;
+    const { minOccurrences = 3 } = options;
+    const userKey = `user_${userId}`;
 
-    this.logger.info('Detecting repetitive workflow patterns from PostgreSQL', {
+    this.logger.info('Detecting repetitive workflow patterns from Helix using AGGREGATE_BY', {
       userId,
-      lookbackDays,
       minOccurrences,
     });
 
     try {
-      const cutoffDate = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000);
+      const client = await this.ensureInitialized();
 
-      // Query for workflow category patterns (most common repeated workflows)
-      const query = `
-        SELECT
-          category as "workflowType",
-          COUNT(*)::int as "occurrenceCount",
-          ROUND(AVG(EXTRACT(EPOCH FROM (ended_at - started_at))))::int as "avgDurationSeconds",
-          ROUND(SUM(EXTRACT(EPOCH FROM (ended_at - started_at))))::int as "totalTimeSpentSeconds",
-          MIN(started_at)::text as "firstSeen",
-          MAX(started_at)::text as "lastSeen",
-          ARRAY_AGG(desktop_session_id) as "sessions"
-        FROM session_mappings
-        WHERE user_id = $1
-          AND started_at >= $2
-          AND category IS NOT NULL
-        GROUP BY category
-        HAVING COUNT(*) >= $3
-        ORDER BY COUNT(*) DESC
-        LIMIT 10
-      `;
+      // Use Helix native AGGREGATE_BY to group sessions by workflow_primary
+      const aggregateResponse = await this.queryWithLogging<unknown>(client, 'AggregateSessionsByWorkflow', {
+        user_key: userKey,
+      });
 
-      const result = await this.pool.query(query, [userId, cutoffDate.toISOString(), minOccurrences]);
+      // Extract aggregated groups from response
+      // AGGREGATE_BY returns: [{ count: N, data: [...sessions with workflow_primary] }, ...]
+      const extractAggregates = (response: unknown): Array<{
+        workflowType: string;
+        count: number;
+        sessions: unknown[];
+      }> => {
+        if (!response || !Array.isArray(response)) return [];
 
-      // Transform to expected format
-      const patterns = result.rows.map(row => ({
-        patternType: 'workflow_sequence' as const,
-        sequence: [row.workflowType],
-        occurrenceCount: row.occurrenceCount,
-        avgDurationSeconds: row.avgDurationSeconds || 0,
-        totalTimeSpentSeconds: row.totalTimeSpentSeconds || 0,
-        firstSeen: row.firstSeen,
-        lastSeen: row.lastSeen,
-        sessions: row.sessions || [],
-        optimizationOpportunity: row.occurrenceCount >= 5
-          ? `High-frequency pattern: "${row.workflowType}" repeated ${row.occurrenceCount} times. Consider automation or templating.`
-          : `Moderate frequency pattern: "${row.workflowType}" found ${row.occurrenceCount} times.`,
-      }));
+        return response.map((group: { count?: number; data?: Array<{ workflow_primary?: string }> }) => ({
+          workflowType: group.data?.[0]?.workflow_primary || 'unknown',
+          count: group.count || 0,
+          sessions: group.data || [],
+        }));
+      };
 
-      this.logger.info('Detected repetitive workflow patterns from PostgreSQL', {
+      // Debug: Log raw response to understand format
+      this.logger.info('AggregateSessionsByWorkflow raw response debug', {
+        isArray: Array.isArray(aggregateResponse),
+        responseType: typeof aggregateResponse,
+        responseKeys: aggregateResponse && typeof aggregateResponse === 'object' && !Array.isArray(aggregateResponse)
+          ? Object.keys(aggregateResponse as Record<string, unknown>)
+          : null,
+        rawResponsePreview: JSON.stringify(aggregateResponse).slice(0, 1000),
+      });
+
+      const aggregates = extractAggregates(aggregateResponse);
+
+      this.logger.info('Extracted aggregates before minOccurrences filter', {
+        aggregateCount: aggregates.length,
+        aggregates: aggregates.map(a => ({ workflowType: a.workflowType, count: a.count })),
+        minOccurrences,
+      });
+
+      // Convert to result format and filter by minOccurrences
+      const patterns = aggregates
+        .filter(agg => agg.count >= minOccurrences)
+        .map(agg => {
+          // Calculate duration stats from sessions
+          let totalDuration = 0;
+          let firstSeen = new Date();
+          let lastSeen = new Date(0);
+          const sessionIds: string[] = [];
+
+          for (const session of agg.sessions) {
+            const s = session as {
+              external_id?: string;
+              duration_seconds?: number;
+              start_time?: string;
+              end_time?: string;
+            };
+            totalDuration += s.duration_seconds || 0;
+            if (s.external_id) sessionIds.push(s.external_id);
+            const startTime = s.start_time ? new Date(s.start_time) : new Date();
+            const endTime = s.end_time ? new Date(s.end_time) : startTime;
+            if (startTime < firstSeen) firstSeen = startTime;
+            if (endTime > lastSeen) lastSeen = endTime;
+          }
+
+          return {
+            patternType: 'workflow_sequence' as const,
+            sequence: [agg.workflowType],
+            occurrenceCount: agg.count,
+            avgDurationSeconds: agg.count > 0 ? Math.round(totalDuration / agg.count) : 0,
+            totalTimeSpentSeconds: totalDuration,
+            firstSeen: firstSeen.toISOString(),
+            lastSeen: lastSeen.toISOString(),
+            sessions: sessionIds,
+            optimizationOpportunity: agg.count >= 5
+              ? `High-frequency pattern: "${agg.workflowType}" repeated ${agg.count} times. Consider automation or templating.`
+              : `Moderate frequency pattern: "${agg.workflowType}" found ${agg.count} times.`,
+          };
+        })
+        .sort((a, b) => b.occurrenceCount - a.occurrenceCount)
+        .slice(0, 10);
+
+      this.logger.info('Detected repetitive workflow patterns from Helix', {
         patternCount: patterns.length,
         topPattern: patterns[0]?.sequence.join(' → '),
       });
 
       return patterns;
     } catch (error) {
-      this.logger.error('Failed to detect repetitive workflow patterns from PostgreSQL',
+      this.logger.error('Failed to detect repetitive workflow patterns from Helix',
         error instanceof Error ? error : new Error(String(error)),
         { userId }
       );
