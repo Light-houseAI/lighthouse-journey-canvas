@@ -418,11 +418,12 @@ export class Container {
         ).singleton(),
         // Natural Language Query Service (RAG pipeline)
         // Now includes pool for company document vector search
+        // Uses generic graphService which respects GRAPH_DB_PROVIDER (helix or arango)
         [CONTAINER_TOKENS.NATURAL_LANGUAGE_QUERY_SERVICE]: asFunction(({
           logger,
           llmProvider,
           openAIEmbeddingService,
-          arangoDBGraphService,
+          graphService,
           workflowScreenshotRepository,
         }) => {
           const pool = getPoolFromDatabase(database);
@@ -430,7 +431,7 @@ export class Container {
             logger,
             llmProvider,
             openAIEmbeddingService,
-            arangoDBGraphService,
+            graphService,
             workflowScreenshotRepository,
             pool,
           });
