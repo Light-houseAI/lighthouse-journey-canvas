@@ -3,7 +3,9 @@
  *
  * Provides a RAG (Retrieval-Augmented Generation) pipeline for natural language queries:
  * 1. Embed the user's natural language query using OpenAI embeddings
- * 2. Retrieve relevant nodes and relationships from ArangoDB using AQL
+ * 2. Retrieve relevant nodes and relationships using HQL (Helix Query Language)
+ *    - SearchBM25: BM25 keyword search for text matching
+ *    - SearchV + Embed: Semantic vector search for similarity matching
  * 3. Perform cosine similarity search over pgvector for semantic matching
  * 4. Aggregate and rank results from both sources
  * 5. Send top results to LLM with original query to generate contextual response
@@ -77,6 +79,16 @@ const LLMResponseSchema = z.object({
 });
 
 type LLMResponse = z.infer<typeof LLMResponseSchema>;
+
+/**
+ * Normalize timestamp to ISO 8601 format
+ * Handles PostgreSQL timestamp formats like "2026-02-04 06:45:11.546+00"
+ */
+function normalizeTimestamp(timestamp: string | Date | undefined): string {
+  if (!timestamp) return new Date().toISOString();
+  const date = new Date(timestamp);
+  return isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+}
 
 /**
  * Natural Language Query Service
@@ -175,25 +187,25 @@ export class NaturalLanguageQueryService {
 
       // Step 2 & 3: Retrieve context from graph and vector databases in parallel
       // This includes:
-      // - AQL-based text search in ArangoDB (converts query to AQL patterns)
+      // - HQL-based search (SearchBM25 for keywords + SearchV for semantic similarity)
       // - Graph structure traversal for related entities/concepts
       // - Screenshot vector search (user's track-specific, session-specific)
       // - Company document vector search (user's uploaded documents)
-      const [graphContext, aqlSearchContext, screenshotContext, companyDocContext] = await Promise.all([
+      const [graphContext, hqlSearchContext, screenshotContext, companyDocContext] = await Promise.all([
         this.retrieveGraphContext(userId, request, queryEmbeddingArray),
-        this.retrieveAqlSearchContext(userId, request),
+        this.retrieveHqlSearchContext(userId, request),
         this.retrieveScreenshotContext(userId, request, queryEmbeddingArray),
         this.retrieveCompanyDocContext(userId, request, queryEmbeddingArray),
       ]);
 
-      graphQueryTimeMs = graphContext.queryTimeMs + aqlSearchContext.queryTimeMs;
+      graphQueryTimeMs = graphContext.queryTimeMs + hqlSearchContext.queryTimeMs;
       vectorQueryTimeMs = Math.max(vectorQueryTimeMs, screenshotContext.queryTimeMs, companyDocContext.queryTimeMs);
 
       // Step 4: Aggregate and rank results from all retrieval methods
-      // Combines: Graph traversal + AQL text search + screenshot vectors + company documents
+      // Combines: Graph traversal + HQL search + screenshot vectors + company documents
       const aggregatedSources = this.aggregateAndRankSources(
         graphContext.sources,
-        aqlSearchContext.sources,
+        hqlSearchContext.sources,
         screenshotContext.sources,
         companyDocContext.sources,
         request.maxResults
@@ -202,7 +214,7 @@ export class NaturalLanguageQueryService {
       // Extract related work sessions from all sources
       const relatedWorkSessions = this.extractWorkSessions(
         graphContext.sessions,
-        aqlSearchContext.sessions,
+        hqlSearchContext.sessions,
         screenshotContext.sessions
       );
 
@@ -330,14 +342,22 @@ export class NaturalLanguageQueryService {
         });
       }
 
-      // Convert related sessions
+      // Convert related sessions - only add if sessionId is valid
       for (const session of context.relatedSessions || []) {
         const sessionId = session.external_id || session.externalId || session._key;
+
+        // Skip sessions without valid sessionId (required by schema)
+        if (!sessionId) {
+          continue;
+        }
+
+        const timestamp = normalizeTimestamp(session.start_time || session.startTime);
+
         sessions.push({
           sessionId,
           name: session.workflow_classification?.primary || session.workflowClassification?.primary || 'Work Session',
           summary: session.summary,
-          timestamp: session.start_time || session.startTime || new Date().toISOString(),
+          timestamp,
           relevanceScore: 0.5,
         });
 
@@ -347,7 +367,7 @@ export class NaturalLanguageQueryService {
           title: session.workflow_classification?.primary || 'Work Session',
           description: session.summary || 'Work session from graph context',
           relevanceScore: 0.55,
-          timestamp: session.start_time || session.startTime,
+          timestamp,
           sessionId,
         });
       }
@@ -362,11 +382,11 @@ export class NaturalLanguageQueryService {
   }
 
   /**
-   * Retrieve context using AQL-based text search in ArangoDB
-   * Converts natural language query into AQL patterns for text matching
-   * Searches entities, concepts, sessions, and activities by text similarity
+   * Retrieve context using HQL-based search in Helix DB
+   * Uses SearchBM25 for keyword matching and SearchV with Embed() for semantic similarity
+   * Searches entities, concepts, sessions, and activities
    */
-  private async retrieveAqlSearchContext(
+  private async retrieveHqlSearchContext(
     userId: number,
     request: NaturalLanguageQueryRequest
   ): Promise<{
@@ -383,7 +403,7 @@ export class NaturalLanguageQueryService {
     }
 
     try {
-      // Execute AQL-based text search
+      // Execute HQL-based search (SearchBM25 + SearchV with Embed)
       const searchResults = await this.graphService.searchByNaturalLanguageQuery(
         userId,
         request.query,
@@ -400,15 +420,15 @@ export class NaturalLanguageQueryService {
       // Convert matched entities to sources
       for (const entity of searchResults.entities) {
         sources.push({
-          id: `aql_entity_${entity.name}`,
+          id: `hql_entity_${entity.name}`,
           type: 'entity',
           title: entity.name,
-          description: `${entity.type} entity (AQL match: ${Math.round(entity.matchScore * 100)}% on ${entity.matchedOn})`,
-          relevanceScore: entity.matchScore * 0.85, // Scale AQL matches slightly lower than vector
+          description: `${entity.type} entity (HQL match: ${Math.round(entity.matchScore * 100)}% on ${entity.matchedOn})`,
+          relevanceScore: entity.matchScore * 0.85, // Scale HQL matches slightly lower than vector
           metadata: {
             entityType: entity.type,
             frequency: entity.frequency,
-            source: 'aql_search',
+            source: 'hql_search',
             matchedOn: entity.matchedOn,
           },
         });
@@ -417,15 +437,15 @@ export class NaturalLanguageQueryService {
       // Convert matched concepts to sources
       for (const concept of searchResults.concepts) {
         sources.push({
-          id: `aql_concept_${concept.name}`,
+          id: `hql_concept_${concept.name}`,
           type: 'concept',
           title: concept.name,
-          description: `${concept.category || 'general'} concept (AQL match: ${Math.round(concept.matchScore * 100)}% on ${concept.matchedOn})`,
+          description: `${concept.category || 'general'} concept (HQL match: ${Math.round(concept.matchScore * 100)}% on ${concept.matchedOn})`,
           relevanceScore: concept.matchScore * 0.8,
           metadata: {
             category: concept.category,
             frequency: concept.frequency,
-            source: 'aql_search',
+            source: 'hql_search',
             matchedOn: concept.matchedOn,
           },
         });
@@ -435,16 +455,23 @@ export class NaturalLanguageQueryService {
       for (const session of searchResults.sessions) {
         const sessionId = session.externalId || session.sessionKey;
 
+        // Skip sessions without valid sessionId (required by schema)
+        if (!sessionId) {
+          continue;
+        }
+
+        const timestamp = normalizeTimestamp(session.startTime);
+
         sources.push({
-          id: `aql_session_${sessionId}`,
+          id: `hql_session_${sessionId}`,
           type: 'session',
           title: session.workflowClassification || 'Work Session',
-          description: session.summary || `Session matched via AQL (${Math.round(session.matchScore * 100)}%)`,
+          description: session.summary || `Session matched via HQL (${Math.round(session.matchScore * 100)}%)`,
           relevanceScore: session.matchScore * 0.9, // Sessions are highly relevant
-          timestamp: session.startTime,
+          timestamp,
           sessionId,
           metadata: {
-            source: 'aql_search',
+            source: 'hql_search',
             matchedOn: session.matchedOn,
           },
         });
@@ -453,7 +480,7 @@ export class NaturalLanguageQueryService {
           sessionId,
           name: session.workflowClassification || 'Work Session',
           summary: session.summary,
-          timestamp: session.startTime,
+          timestamp,
           relevanceScore: session.matchScore * 0.9,
         });
       }
@@ -461,21 +488,21 @@ export class NaturalLanguageQueryService {
       // Convert matched activities to sources (activities provide detailed context)
       for (const activity of searchResults.activities) {
         sources.push({
-          id: `aql_activity_${activity.activityKey}`,
+          id: `hql_activity_${activity.activityKey}`,
           type: 'screenshot', // Activities correspond to screenshots
           title: activity.summary?.slice(0, 100) || 'Activity',
-          description: `${activity.workflowTag} activity (AQL match: ${Math.round(activity.matchScore * 100)}%)`,
+          description: `${activity.workflowTag} activity (HQL match: ${Math.round(activity.matchScore * 100)}%)`,
           relevanceScore: activity.matchScore * 0.75,
-          timestamp: activity.timestamp,
+          timestamp: normalizeTimestamp(activity.timestamp),
           metadata: {
             workflowTag: activity.workflowTag,
-            source: 'aql_search',
+            source: 'hql_search',
             matchedOn: activity.matchedOn,
           },
         });
       }
 
-      this.logger.debug('AQL search context retrieved', {
+      this.logger.debug('HQL search context retrieved', {
         userId,
         query: request.query,
         entitiesFound: searchResults.entities.length,
@@ -487,7 +514,7 @@ export class NaturalLanguageQueryService {
 
       return { sources, sessions, queryTimeMs: Date.now() - startTime };
     } catch (error) {
-      this.logger.warn('AQL search context retrieval failed, continuing with other sources', {
+      this.logger.warn('HQL search context retrieval failed, continuing with other sources', {
         error: error instanceof Error ? error.message : String(error),
       });
       return { sources, sessions, queryTimeMs: Date.now() - startTime };

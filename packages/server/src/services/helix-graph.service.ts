@@ -174,8 +174,8 @@ export class HelixGraphService {
   }
 
   /**
-   * Execute Helix query with logging (similar to ArangoDB AQL logging)
-   * Logs the query name and parameters for debugging graph retrieval
+   * Execute Helix query with logging
+   * Logs the HQL query name and parameters for debugging graph retrieval
    */
   private async queryWithLogging<T>(
     client: HelixClient,
@@ -184,8 +184,8 @@ export class HelixGraphService {
   ): Promise<T> {
     const startTime = Date.now();
 
-    // Log the HQL query being executed (similar to ArangoDB AQL logging)
-    this.logger.info('[HELIX_QUERY] Executing HelixQL query', {
+    // Log the HQL query being executed
+    this.logger.info('[HELIX_QUERY] Executing HQL query', {
       query: queryName,
       params: params,
     });
@@ -1101,9 +1101,18 @@ export class HelixGraphService {
   }
 
   /**
-   * Search by natural language query
-   * Hybrid approach: Uses PostgreSQL pgvector for semantic search + Helix for graph structure
-   * Performs cosine similarity search across entity, concept, session, and activity embeddings
+   * Search by natural language query using HQL search operators
+   *
+   * HQL provides two native search approaches:
+   * 1. SearchBM25: Full-text keyword search using BM25 ranking algorithm
+   * 2. SearchV + Embed(): Semantic vector search using embeddings
+   *
+   * This method uses:
+   * - pgvector cosine similarity for semantic search (SearchV equivalent)
+   * - PostgreSQL full-text search for keyword matching (SearchBM25 equivalent)
+   *
+   * Note: HQL doesn't have regex/LIKE pattern matching like ArangoDB AQL.
+   * Use SearchBM25 for keyword matching or SearchV for semantic similarity.
    */
   async searchByNaturalLanguageQuery(
     userId: number,
@@ -1164,7 +1173,7 @@ export class HelixGraphService {
       };
     }
 
-    this.logger.info('Helix searchByNaturalLanguageQuery (pgvector semantic search)', {
+    this.logger.info('HQL search (SearchBM25 keyword + SearchV semantic)', {
       userId,
       query,
       options,
@@ -1209,31 +1218,54 @@ export class HelixGraphService {
     };
 
     try {
-      // Generate embedding for the query
+      // Generate embedding for the query (SearchV with Embed equivalent)
       this.logger.debug('Generating embedding for query', { query });
       const queryEmbedding = await this.embeddingService!.generateEmbedding(query);
       const embeddingArray = Array.from(queryEmbedding);
       this.logger.debug('Query embedding generated', { dimensions: embeddingArray.length });
 
-      // Search entities using pgvector cosine similarity
+      // Run semantic search (SearchV) and keyword search (SearchBM25) in parallel
+      const searchPromises: Promise<void>[] = [];
+
+      // Search entities using SearchV (pgvector cosine similarity)
       if (options.includeEntities !== false) {
-        results.entities = await this.searchEntitiesInPostgres(embeddingArray, maxResults);
+        searchPromises.push(
+          this.searchEntitiesInPostgres(embeddingArray, maxResults).then(r => { results.entities = r; })
+        );
       }
 
-      // Search concepts using pgvector cosine similarity
+      // Search concepts using SearchV (pgvector cosine similarity)
       if (options.includeConcepts !== false) {
-        results.concepts = await this.searchConceptsInPostgres(embeddingArray, maxResults);
+        searchPromises.push(
+          this.searchConceptsInPostgres(embeddingArray, maxResults).then(r => { results.concepts = r; })
+        );
       }
 
-      // Search sessions using pgvector cosine similarity
+      // Search sessions using both SearchV (semantic) and SearchBM25 (keyword)
       if (options.includeSessions !== false) {
-        results.sessions = await this.searchSessionsInPostgres(userId, embeddingArray, cutoffDate, maxResults);
+        searchPromises.push(
+          Promise.all([
+            this.searchSessionsInPostgres(userId, embeddingArray, cutoffDate, maxResults),
+            this.searchSessionsByKeywords(userId, query, cutoffDate, maxResults),
+          ]).then(([semantic, keyword]) => {
+            results.sessions = this.mergeAndDeduplicateResults(semantic, keyword, 'sessionKey', maxResults);
+          })
+        );
       }
 
-      // Search activities (screenshots) using pgvector cosine similarity
+      // Search activities using both SearchV (semantic) and SearchBM25 (keyword)
       if (options.includeActivities !== false) {
-        results.activities = await this.searchActivitiesInPostgres(userId, embeddingArray, cutoffDate, maxResults);
+        searchPromises.push(
+          Promise.all([
+            this.searchActivitiesInPostgres(userId, embeddingArray, cutoffDate, maxResults),
+            this.searchActivitiesByKeywords(userId, query, cutoffDate, maxResults),
+          ]).then(([semantic, keyword]) => {
+            results.activities = this.mergeAndDeduplicateResults(semantic, keyword, 'activityKey', maxResults);
+          })
+        );
       }
+
+      await Promise.all(searchPromises);
 
       this.logger.info('Natural language search completed', {
         userId,
@@ -1254,7 +1286,8 @@ export class HelixGraphService {
   }
 
   /**
-   * Search entities in PostgreSQL using pgvector cosine similarity
+   * Search entities using semantic similarity (SearchV equivalent)
+   * HQL equivalent: SearchV<Entity>(Embed(query), limit)
    */
   private async searchEntitiesInPostgres(
     queryEmbedding: number[],
@@ -1278,7 +1311,7 @@ export class HelixGraphService {
           entity_type as "type",
           frequency,
           1 - (embedding <=> $1::vector) as "matchScore",
-          'cosine_similarity' as "matchedOn"
+          'semantic_search' as "matchedOn"
         FROM entity_embeddings
         WHERE embedding IS NOT NULL
         ORDER BY embedding <=> $1::vector
@@ -1297,7 +1330,8 @@ export class HelixGraphService {
   }
 
   /**
-   * Search concepts in PostgreSQL using pgvector cosine similarity
+   * Search concepts using semantic similarity (SearchV equivalent)
+   * HQL equivalent: SearchV<Concept>(Embed(query), limit)
    */
   private async searchConceptsInPostgres(
     queryEmbedding: number[],
@@ -1321,7 +1355,7 @@ export class HelixGraphService {
           category,
           frequency,
           1 - (embedding <=> $1::vector) as "matchScore",
-          'cosine_similarity' as "matchedOn"
+          'semantic_search' as "matchedOn"
         FROM concept_embeddings
         WHERE embedding IS NOT NULL
         ORDER BY embedding <=> $1::vector
@@ -1340,7 +1374,8 @@ export class HelixGraphService {
   }
 
   /**
-   * Search sessions in PostgreSQL using pgvector cosine similarity
+   * Search sessions using semantic similarity (SearchV equivalent)
+   * HQL equivalent: SearchV<Session>(Embed(query), limit)
    */
   private async searchSessionsInPostgres(
     userId: number,
@@ -1370,7 +1405,7 @@ export class HelixGraphService {
           category::text as "workflowClassification",
           started_at::text as "startTime",
           1 - (summary_embedding <=> $2::vector) as "matchScore",
-          'cosine_similarity' as "matchedOn"
+          'semantic_search' as "matchedOn"
         FROM session_mappings
         WHERE
           user_id = $1
@@ -1393,6 +1428,7 @@ export class HelixGraphService {
 
   /**
    * Search activities (workflow screenshots) in PostgreSQL using pgvector cosine similarity
+   * HQL equivalent: SearchV<Activity>(Embed(query), limit)
    */
   private async searchActivitiesInPostgres(
     userId: number,
@@ -1420,7 +1456,7 @@ export class HelixGraphService {
           workflow_tag as "workflowTag",
           timestamp::text,
           1 - (embedding <=> $2::vector) as "matchScore",
-          'cosine_similarity' as "matchedOn"
+          'semantic_search' as "matchedOn"
         FROM workflow_screenshots
         WHERE
           user_id = $1
@@ -1441,6 +1477,181 @@ export class HelixGraphService {
     }
   }
 
+  // ============================================================================
+  // HQL SEARCHBM25 KEYWORD SEARCH (Full-text search using BM25 ranking)
+  // ============================================================================
+
+  /**
+   * Search sessions using BM25 keyword matching
+   * HQL equivalent: SearchBM25<Session>(keywords, limit)
+   * Uses PostgreSQL full-text search with ts_rank for BM25-style ranking
+   */
+  private async searchSessionsByKeywords(
+    userId: number,
+    query: string,
+    cutoffDate: Date,
+    maxResults: number
+  ): Promise<Array<{
+    sessionKey: string;
+    externalId: string;
+    summary: string;
+    workflowClassification: string;
+    startTime: string;
+    matchScore: number;
+    matchedOn: string;
+  }>> {
+    if (!this.pool) return [];
+
+    try {
+      // Convert query to tsquery format for full-text search
+      const searchTerms = query
+        .toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(term => term.length > 2)
+        .slice(0, 10);
+
+      if (searchTerms.length === 0) return [];
+
+      // Create OR-joined tsquery for broader matching
+      const tsQuery = searchTerms.join(' | ');
+
+      const result = await this.pool.query(
+        `
+        SELECT
+          desktop_session_id as "externalId",
+          desktop_session_id as "sessionKey",
+          COALESCE(high_level_summary, workflow_name, '') as "summary",
+          category::text as "workflowClassification",
+          started_at::text as "startTime",
+          ts_rank_cd(
+            to_tsvector('english', COALESCE(high_level_summary, '') || ' ' || COALESCE(workflow_name, '')),
+            to_tsquery('english', $2)
+          ) as "matchScore",
+          'bm25_keyword' as "matchedOn"
+        FROM session_mappings
+        WHERE
+          user_id = $1
+          AND started_at >= $3
+          AND to_tsvector('english', COALESCE(high_level_summary, '') || ' ' || COALESCE(workflow_name, ''))
+              @@ to_tsquery('english', $2)
+        ORDER BY "matchScore" DESC
+        LIMIT $4
+        `,
+        [userId, tsQuery, cutoffDate.toISOString(), maxResults]
+      );
+
+      return result.rows;
+    } catch (error) {
+      this.logger.warn('BM25 keyword search for sessions failed, continuing with semantic only', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Search activities using BM25 keyword matching
+   * HQL equivalent: SearchBM25<Activity>(keywords, limit)
+   * Uses PostgreSQL full-text search with ts_rank for BM25-style ranking
+   */
+  private async searchActivitiesByKeywords(
+    userId: number,
+    query: string,
+    cutoffDate: Date,
+    maxResults: number
+  ): Promise<Array<{
+    activityKey: string;
+    summary: string;
+    workflowTag: string;
+    timestamp: string;
+    matchScore: number;
+    matchedOn: string;
+  }>> {
+    if (!this.pool) return [];
+
+    try {
+      // Convert query to tsquery format for full-text search
+      const searchTerms = query
+        .toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(term => term.length > 2)
+        .slice(0, 10);
+
+      if (searchTerms.length === 0) return [];
+
+      // Create OR-joined tsquery for broader matching
+      const tsQuery = searchTerms.join(' | ');
+
+      const result = await this.pool.query(
+        `
+        SELECT
+          'activity_' || id::text as "activityKey",
+          COALESCE(summary, '') as "summary",
+          workflow_tag as "workflowTag",
+          timestamp::text,
+          ts_rank_cd(
+            to_tsvector('english', COALESCE(summary, '') || ' ' || COALESCE(workflow_tag, '')),
+            to_tsquery('english', $2)
+          ) as "matchScore",
+          'bm25_keyword' as "matchedOn"
+        FROM workflow_screenshots
+        WHERE
+          user_id = $1
+          AND timestamp >= $3
+          AND to_tsvector('english', COALESCE(summary, '') || ' ' || COALESCE(workflow_tag, ''))
+              @@ to_tsquery('english', $2)
+        ORDER BY "matchScore" DESC
+        LIMIT $4
+        `,
+        [userId, tsQuery, cutoffDate.toISOString(), maxResults]
+      );
+
+      return result.rows;
+    } catch (error) {
+      this.logger.warn('BM25 keyword search for activities failed, continuing with semantic only', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Merge and deduplicate results from semantic (SearchV) and keyword (SearchBM25) search
+   * Combines results by unique key, preferring higher scores
+   */
+  private mergeAndDeduplicateResults<T extends { matchScore: number }>(
+    semanticResults: T[],
+    keywordResults: T[],
+    keyField: keyof T,
+    maxResults: number
+  ): T[] {
+    const resultMap = new Map<unknown, T>();
+
+    // Add semantic results first
+    for (const result of semanticResults) {
+      const key = result[keyField];
+      resultMap.set(key, result);
+    }
+
+    // Merge keyword results, combining scores for duplicates
+    for (const result of keywordResults) {
+      const key = result[keyField];
+      const existing = resultMap.get(key);
+      if (existing) {
+        // Boost score for items found by both methods
+        existing.matchScore = Math.min(1.0, existing.matchScore * 1.2 + result.matchScore * 0.3);
+      } else {
+        resultMap.set(key, result);
+      }
+    }
+
+    // Sort by score and return top results
+    return Array.from(resultMap.values())
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, maxResults);
+  }
 
   // ============================================================================
   // WORKFLOW PATTERN OPERATIONS

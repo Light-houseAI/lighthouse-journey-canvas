@@ -20,6 +20,8 @@ LOG_FILE="logs/server-logs-${TIMESTAMP}.log"
 # Remote Helix DB on GCP (static IP)
 export HELIX_URL="http://136.118.249.68:6969"
 export GRAPH_DB_PROVIDER="helix"
+export ENABLE_GRAPH_RAG="true"
+export ENABLE_CROSS_SESSION_CONTEXT="true"
 
 echo "==================================="
 echo "Checking remote Helix DB connection..."
