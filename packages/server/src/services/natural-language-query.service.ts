@@ -3,7 +3,7 @@
  *
  * Provides a RAG (Retrieval-Augmented Generation) pipeline for natural language queries:
  * 1. Embed the user's natural language query using OpenAI embeddings
- * 2. Retrieve relevant nodes and relationships using HQL (Helix Query Language)
+ * 2. Retrieve relevant nodes and relationships using graph queries (AQL/ArangoDB)
  *    - SearchBM25: BM25 keyword search for text matching
  *    - SearchV + Embed: Semantic vector search for similarity matching
  * 3. Perform cosine similarity search over pgvector for semantic matching
@@ -187,7 +187,7 @@ export class NaturalLanguageQueryService {
 
       // Step 2 & 3: Retrieve context from graph and vector databases in parallel
       // This includes:
-      // - HQL-based search (SearchBM25 for keywords + SearchV for semantic similarity)
+      // - Graph-based search (keyword matching + semantic similarity)
       // - Graph structure traversal for related entities/concepts
       // - Screenshot vector search (user's track-specific, session-specific)
       // - Company document vector search (user's uploaded documents)
@@ -202,7 +202,7 @@ export class NaturalLanguageQueryService {
       vectorQueryTimeMs = Math.max(vectorQueryTimeMs, screenshotContext.queryTimeMs, companyDocContext.queryTimeMs);
 
       // Step 4: Aggregate and rank results from all retrieval methods
-      // Combines: Graph traversal + HQL search + screenshot vectors + company documents
+      // Combines: Graph traversal + graph search + screenshot vectors + company documents
       const aggregatedSources = this.aggregateAndRankSources(
         graphContext.sources,
         hqlSearchContext.sources,
@@ -382,7 +382,7 @@ export class NaturalLanguageQueryService {
   }
 
   /**
-   * Retrieve context using HQL-based search in Helix DB
+   * Retrieve context using graph-based search in ArangoDB
    * Uses SearchBM25 for keyword matching and SearchV with Embed() for semantic similarity
    * Searches entities, concepts, sessions, and activities
    */
@@ -403,7 +403,7 @@ export class NaturalLanguageQueryService {
     }
 
     try {
-      // Execute HQL-based search (SearchBM25 + SearchV with Embed)
+      // Execute graph-based search (keyword matching + semantic similarity)
       const searchResults = await this.graphService.searchByNaturalLanguageQuery(
         userId,
         request.query,
@@ -423,8 +423,8 @@ export class NaturalLanguageQueryService {
           id: `hql_entity_${entity.name}`,
           type: 'entity',
           title: entity.name,
-          description: `${entity.type} entity (HQL match: ${Math.round(entity.matchScore * 100)}% on ${entity.matchedOn})`,
-          relevanceScore: entity.matchScore * 0.85, // Scale HQL matches slightly lower than vector
+          description: `${entity.type} entity (Graph match: ${Math.round(entity.matchScore * 100)}% on ${entity.matchedOn})`,
+          relevanceScore: entity.matchScore * 0.85, // Scale graph matches slightly lower than vector
           metadata: {
             entityType: entity.type,
             frequency: entity.frequency,
@@ -440,7 +440,7 @@ export class NaturalLanguageQueryService {
           id: `hql_concept_${concept.name}`,
           type: 'concept',
           title: concept.name,
-          description: `${concept.category || 'general'} concept (HQL match: ${Math.round(concept.matchScore * 100)}% on ${concept.matchedOn})`,
+          description: `${concept.category || 'general'} concept (Graph match: ${Math.round(concept.matchScore * 100)}% on ${concept.matchedOn})`,
           relevanceScore: concept.matchScore * 0.8,
           metadata: {
             category: concept.category,
@@ -466,7 +466,7 @@ export class NaturalLanguageQueryService {
           id: `hql_session_${sessionId}`,
           type: 'session',
           title: session.workflowClassification || 'Work Session',
-          description: session.summary || `Session matched via HQL (${Math.round(session.matchScore * 100)}%)`,
+          description: session.summary || `Session matched via graph (${Math.round(session.matchScore * 100)}%)`,
           relevanceScore: session.matchScore * 0.9, // Sessions are highly relevant
           timestamp,
           sessionId,
@@ -491,7 +491,7 @@ export class NaturalLanguageQueryService {
           id: `hql_activity_${activity.activityKey}`,
           type: 'screenshot', // Activities correspond to screenshots
           title: activity.summary?.slice(0, 100) || 'Activity',
-          description: `${activity.workflowTag} activity (HQL match: ${Math.round(activity.matchScore * 100)}%)`,
+          description: `${activity.workflowTag} activity (Graph match: ${Math.round(activity.matchScore * 100)}%)`,
           relevanceScore: activity.matchScore * 0.75,
           timestamp: normalizeTimestamp(activity.timestamp),
           metadata: {
@@ -502,7 +502,7 @@ export class NaturalLanguageQueryService {
         });
       }
 
-      this.logger.debug('HQL search context retrieved', {
+      this.logger.debug('Graph search context retrieved', {
         userId,
         query: request.query,
         entitiesFound: searchResults.entities.length,
@@ -514,7 +514,7 @@ export class NaturalLanguageQueryService {
 
       return { sources, sessions, queryTimeMs: Date.now() - startTime };
     } catch (error) {
-      this.logger.warn('HQL search context retrieval failed, continuing with other sources', {
+      this.logger.warn('Graph search context retrieval failed, continuing with other sources', {
         error: error instanceof Error ? error.message : String(error),
       });
       return { sources, sessions, queryTimeMs: Date.now() - startTime };
