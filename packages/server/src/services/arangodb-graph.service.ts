@@ -67,6 +67,22 @@ export interface SessionData {
   metadata?: Record<string, any>;
 }
 
+export interface WorkflowPatternData {
+  userId: string;
+  intentCategory: string;
+  occurrenceCount: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface BlockData {
+  userId: string;
+  canonicalSlug: string;
+  intentLabel: string;
+  primaryTool: string;
+  occurrenceCount: number;
+  metadata?: Record<string, unknown>;
+}
+
 // ============================================================================
 // ARANGODB GRAPH SERVICE
 // ============================================================================
@@ -74,9 +90,13 @@ export interface SessionData {
 export class ArangoDBGraphService {
   private db: Database | null = null;
   private logger: Logger;
+  private enabled: boolean;
+  private crossSessionEnabled: boolean;
 
   constructor({ logger }: { logger: Logger }) {
     this.logger = logger;
+    this.enabled = process.env.ENABLE_GRAPH_RAG?.toLowerCase() === 'true';
+    this.crossSessionEnabled = process.env.ENABLE_CROSS_SESSION_CONTEXT?.toLowerCase() === 'true';
   }
 
   /**
@@ -489,7 +509,7 @@ export class ArangoDBGraphService {
   /**
    * Upsert entity node
    */
-  private async upsertEntity(name: string, type: string): Promise<string> {
+  async upsertEntity(name: string, type: string, metadata?: Record<string, unknown>): Promise<string> {
     const db = await this.ensureInitialized();
     const entityKey = `entity_${name.replace(/[^a-zA-Z0-9]/g, '_')}_${type}`;
 
@@ -504,11 +524,12 @@ export class ArangoDBGraphService {
           first_seen: DATE_ISO8601(DATE_NOW()),
           last_seen: DATE_ISO8601(DATE_NOW()),
           frequency: 1,
-          metadata: {}
+          metadata: ${metadata || {}}
         }
         UPDATE {
           last_seen: DATE_ISO8601(DATE_NOW()),
-          frequency: OLD.frequency + 1
+          frequency: OLD.frequency + 1,
+          metadata: ${metadata || {}}
         }
         IN entities
         RETURN NEW
@@ -562,7 +583,7 @@ export class ArangoDBGraphService {
   /**
    * Upsert concept node
    */
-  private async upsertConcept(
+  async upsertConcept(
     name: string,
     category?: string
   ): Promise<string> {
@@ -1764,5 +1785,545 @@ export class ArangoDBGraphService {
       );
       throw error;
     }
+  }
+
+  // ============================================================================
+  // HEALTH CHECK AND STATUS
+  // ============================================================================
+
+  /**
+   * Check ArangoDB connection health
+   */
+  async healthCheck(): Promise<boolean> {
+    if (!this.enabled) {
+      return true; // Return true if disabled, as it's not an error state
+    }
+
+    try {
+      const db = await this.ensureInitialized();
+      // Simple query to check connection
+      await db.query(aql`RETURN 1`);
+      return true;
+    } catch (error) {
+      this.logger.warn('ArangoDB health check failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Check if service is enabled
+   */
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  /**
+   * Check if cross-session context is enabled
+   */
+  isCrossSessionEnabled(): boolean {
+    return this.crossSessionEnabled;
+  }
+
+  // ============================================================================
+  // USER RETRIEVAL
+  // ============================================================================
+
+  /**
+   * Get user by external ID
+   */
+  async getUser(userId: number): Promise<unknown | null> {
+    if (!this.enabled) {
+      return null;
+    }
+
+    const db = await this.ensureInitialized();
+    const userKey = `user_${userId}`;
+
+    try {
+      const query = aql`
+        FOR user IN users
+          FILTER user._key == ${userKey}
+          RETURN user
+      `;
+
+      const cursor = await db.query(query);
+      const result = await cursor.next();
+      return result || null;
+    } catch (error) {
+      this.logger.error('Failed to get user', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  // ============================================================================
+  // TIMELINE NODE RETRIEVAL
+  // ============================================================================
+
+  /**
+   * Get timeline nodes by user
+   */
+  async getTimelineNodesByUser(userId: number): Promise<unknown[]> {
+    if (!this.enabled) {
+      return [];
+    }
+
+    const db = await this.ensureInitialized();
+    const userKey = `user_${userId}`;
+
+    try {
+      const query = aql`
+        FOR node IN timeline_nodes
+          FILTER node.user_key == ${userKey}
+          SORT node.created_at DESC
+          RETURN node
+      `;
+
+      const cursor = await db.query(query);
+      return await cursor.all();
+    } catch (error) {
+      this.logger.error('Failed to get timeline nodes by user', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  // ============================================================================
+  // SESSION RETRIEVAL
+  // ============================================================================
+
+  /**
+   * Get related sessions via shared timeline node
+   */
+  async getRelatedSessions(sessionExternalId: string): Promise<unknown[]> {
+    if (!this.enabled) {
+      return [];
+    }
+
+    const db = await this.ensureInitialized();
+    const sessionKey = `session_${sessionExternalId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    try {
+      const query = aql`
+        LET current_session = DOCUMENT(sessions, ${sessionKey})
+        FILTER current_session != null
+
+        FOR related IN sessions
+          FILTER related.node_key == current_session.node_key
+          FILTER related._key != current_session._key
+          SORT related.start_time DESC
+          LIMIT 20
+          RETURN related
+      `;
+
+      const cursor = await db.query(query);
+      return await cursor.all();
+    } catch (error) {
+      this.logger.error('Failed to get related sessions', {
+        sessionExternalId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  /**
+   * Link session to timeline node (creates BELONGS_TO edge)
+   */
+  async linkSessionToNode(sessionExternalId: string, nodeExternalId: string): Promise<void> {
+    if (!this.enabled) {
+      return;
+    }
+
+    const sessionKey = `session_${sessionExternalId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+    const nodeKeyId = nodeExternalId.replace(/-/g, '_');
+    const nodeKey = `node_${nodeKeyId}`;
+
+    try {
+      await this.createEdge('BELONGS_TO', sessionKey, nodeKey, {
+        created_at: new Date().toISOString(),
+      });
+      this.logger.debug('Linked session to node', { sessionKey, nodeKey });
+    } catch (error) {
+      this.logger.error('Failed to link session to node', {
+        sessionExternalId,
+        nodeExternalId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  // ============================================================================
+  // ACTIVITY RETRIEVAL
+  // ============================================================================
+
+  /**
+   * Get activities by session
+   */
+  async getActivitiesBySession(sessionKey: string): Promise<unknown[]> {
+    if (!this.enabled) {
+      return [];
+    }
+
+    const db = await this.ensureInitialized();
+    // Normalize session key if needed
+    const normalizedKey = sessionKey.startsWith('session_')
+      ? sessionKey
+      : `session_${sessionKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    try {
+      const query = aql`
+        FOR activity IN activities
+          FILTER activity.session_key == ${normalizedKey}
+          SORT activity.timestamp ASC
+          RETURN activity
+      `;
+
+      const cursor = await db.query(query);
+      return await cursor.all();
+    } catch (error) {
+      this.logger.error('Failed to get activities by session', {
+        sessionKey,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  // ============================================================================
+  // ENTITY LINKING
+  // ============================================================================
+
+  /**
+   * Link activity to entity
+   */
+  async linkActivityToEntity(
+    screenshotExternalId: number | string,
+    entityName: string,
+    context?: string
+  ): Promise<void> {
+    if (!this.enabled) {
+      return;
+    }
+
+    const activityKey = `activity_${screenshotExternalId}`;
+    const entityKey = `entity_${entityName.replace(/[^a-zA-Z0-9]/g, '_')}_unknown`;
+
+    try {
+      await this.createEdge('USES', activityKey, entityKey, {
+        context: context || '',
+        created_at: new Date().toISOString(),
+      });
+      this.logger.debug('Linked activity to entity', { activityKey, entityName });
+    } catch (error) {
+      this.logger.error('Failed to link activity to entity', {
+        screenshotExternalId,
+        entityName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Get entity occurrences across sessions
+   */
+  async getEntityOccurrences(entityName: string): Promise<unknown[]> {
+    if (!this.enabled) {
+      return [];
+    }
+
+    const db = await this.ensureInitialized();
+
+    try {
+      const query = aql`
+        FOR entity IN entities
+          FILTER LOWER(entity.name) == LOWER(${entityName})
+
+          LET occurrences = (
+            FOR edge IN USES
+              FILTER edge._to == CONCAT('entities/', entity._key)
+              LET activity = DOCUMENT(SPLIT(edge._from, '/')[0], SPLIT(edge._from, '/')[1])
+              FILTER activity != null
+              LET session = DOCUMENT(sessions, activity.session_key)
+              RETURN {
+                activityKey: activity._key,
+                sessionKey: activity.session_key,
+                timestamp: activity.timestamp,
+                workflowTag: activity.workflow_tag,
+                sessionWorkflow: session.workflow_classification.primary
+              }
+          )
+
+          RETURN {
+            entity: entity,
+            occurrences: occurrences,
+            totalOccurrences: LENGTH(occurrences)
+          }
+      `;
+
+      const cursor = await db.query(query);
+      return await cursor.all();
+    } catch (error) {
+      this.logger.error('Failed to get entity occurrences', {
+        entityName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  // ============================================================================
+  // CONCEPT LINKING
+  // ============================================================================
+
+  /**
+   * Link activity to concept
+   */
+  async linkActivityToConcept(
+    screenshotExternalId: number | string,
+    conceptName: string,
+    relevance: number = 1.0
+  ): Promise<void> {
+    if (!this.enabled) {
+      return;
+    }
+
+    const activityKey = `activity_${screenshotExternalId}`;
+    const conceptKey = `concept_${conceptName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    try {
+      await this.createEdge('RELATES_TO', activityKey, conceptKey, {
+        relevance_score: relevance,
+        created_at: new Date().toISOString(),
+      });
+      this.logger.debug('Linked activity to concept', { activityKey, conceptName });
+    } catch (error) {
+      this.logger.error('Failed to link activity to concept', {
+        screenshotExternalId,
+        conceptName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  // ============================================================================
+  // WORKFLOW PATTERN OPERATIONS
+  // ============================================================================
+
+  /**
+   * Upsert workflow pattern
+   */
+  async upsertWorkflowPattern(pattern: WorkflowPatternData): Promise<unknown> {
+    if (!this.enabled) {
+      return null;
+    }
+
+    const db = await this.ensureInitialized();
+    const patternKey = `pattern_${pattern.userId}_${pattern.intentCategory.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    return this.withRetry(async () => {
+      try {
+        const query = aql`
+          UPSERT { _key: ${patternKey} }
+          INSERT {
+            _key: ${patternKey},
+            user_id: ${pattern.userId},
+            intent_category: ${pattern.intentCategory},
+            occurrence_count: ${pattern.occurrenceCount},
+            created_at: DATE_ISO8601(DATE_NOW()),
+            last_seen_at: DATE_ISO8601(DATE_NOW()),
+            metadata: ${pattern.metadata || {}}
+          }
+          UPDATE {
+            occurrence_count: OLD.occurrence_count + ${pattern.occurrenceCount},
+            last_seen_at: DATE_ISO8601(DATE_NOW()),
+            metadata: ${pattern.metadata || OLD.metadata}
+          }
+          IN workflow_patterns
+          RETURN NEW
+        `;
+
+        const cursor = await db.query(query);
+        const result = await cursor.next();
+
+        this.logger.debug('Upserted workflow pattern', { patternKey });
+        return result;
+      } catch (error) {
+        this.logger.error('Failed to upsert workflow pattern', {
+          pattern,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+    }, `upsertWorkflowPattern(${patternKey})`);
+  }
+
+  // ============================================================================
+  // BLOCK OPERATIONS
+  // ============================================================================
+
+  /**
+   * Upsert block
+   */
+  async upsertBlock(block: BlockData): Promise<unknown> {
+    if (!this.enabled) {
+      return null;
+    }
+
+    const db = await this.ensureInitialized();
+    const blockKey = `block_${block.canonicalSlug.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    return this.withRetry(async () => {
+      try {
+        const query = aql`
+          UPSERT { _key: ${blockKey} }
+          INSERT {
+            _key: ${blockKey},
+            user_id: ${block.userId},
+            canonical_slug: ${block.canonicalSlug},
+            intent_label: ${block.intentLabel},
+            primary_tool: ${block.primaryTool},
+            occurrence_count: ${block.occurrenceCount},
+            created_at: DATE_ISO8601(DATE_NOW()),
+            last_seen_at: DATE_ISO8601(DATE_NOW()),
+            metadata: ${block.metadata || {}}
+          }
+          UPDATE {
+            occurrence_count: OLD.occurrence_count + ${block.occurrenceCount},
+            last_seen_at: DATE_ISO8601(DATE_NOW()),
+            metadata: ${block.metadata || OLD.metadata}
+          }
+          IN blocks
+          RETURN NEW
+        `;
+
+        const cursor = await db.query(query);
+        const result = await cursor.next();
+
+        this.logger.debug('Upserted block', { blockKey });
+        return result;
+      } catch (error) {
+        this.logger.error('Failed to upsert block', {
+          block,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+    }, `upsertBlock(${blockKey})`);
+  }
+
+  /**
+   * Get blocks by user
+   */
+  async getBlocksByUser(userId: string): Promise<unknown[]> {
+    if (!this.enabled) {
+      return [];
+    }
+
+    const db = await this.ensureInitialized();
+
+    try {
+      const query = aql`
+        FOR block IN blocks
+          FILTER block.user_id == ${userId}
+          SORT block.occurrence_count DESC
+          RETURN block
+      `;
+
+      const cursor = await db.query(query);
+      return await cursor.all();
+    } catch (error) {
+      this.logger.error('Failed to get blocks by user', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return [];
+    }
+  }
+
+  // ============================================================================
+  // TOOL OPERATIONS
+  // ============================================================================
+
+  /**
+   * Upsert tool
+   */
+  async upsertTool(
+    canonicalName: string,
+    category: string,
+    metadata?: Record<string, unknown>
+  ): Promise<unknown> {
+    if (!this.enabled) {
+      return null;
+    }
+
+    const db = await this.ensureInitialized();
+    const toolKey = `tool_${canonicalName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+    return this.withRetry(async () => {
+      try {
+        const query = aql`
+          UPSERT { _key: ${toolKey} }
+          INSERT {
+            _key: ${toolKey},
+            canonical_name: ${canonicalName},
+            category: ${category},
+            created_at: DATE_ISO8601(DATE_NOW()),
+            metadata: ${metadata || {}}
+          }
+          UPDATE {
+            category: ${category},
+            metadata: ${metadata || OLD.metadata}
+          }
+          IN tools
+          RETURN NEW
+        `;
+
+        const cursor = await db.query(query);
+        const result = await cursor.next();
+
+        this.logger.debug('Upserted tool', { canonicalName, category });
+        return result;
+      } catch (error) {
+        this.logger.error('Failed to upsert tool', {
+          canonicalName,
+          category,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw error;
+      }
+    }, `upsertTool(${toolKey})`);
+  }
+
+  // ============================================================================
+  // VECTOR SEARCH (Delegates to pgvector - stubs for interface compatibility)
+  // ============================================================================
+
+  /**
+   * Search similar activities by embedding
+   * Note: ArangoDB doesn't have native vector search - use pgvector instead
+   */
+  async searchSimilarActivities(_queryEmbedding: number[], _limit: number = 10): Promise<unknown[]> {
+    // Vector search is handled by pgvector in PostgreSQL
+    // This is a compatibility stub
+    this.logger.debug('searchSimilarActivities called - use pgvector for vector search');
+    return [];
+  }
+
+  /**
+   * Search similar concepts by embedding
+   * Note: ArangoDB doesn't have native vector search - use pgvector instead
+   */
+  async searchSimilarConcepts(_queryEmbedding: number[], _limit: number = 10): Promise<unknown[]> {
+    // Vector search is handled by pgvector in PostgreSQL
+    // This is a compatibility stub
+    this.logger.debug('searchSimilarConcepts called - use pgvector for vector search');
+    return [];
   }
 }
