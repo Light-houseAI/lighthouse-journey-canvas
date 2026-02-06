@@ -721,7 +721,7 @@ export class ArangoDBGraphService {
             RETURN session
         )
 
-        // Get entities used across all sessions
+        // Get entities used across all sessions (limit to top 50 by usage)
         LET entities = (
           FOR session IN APPEND(node_sessions, related_sessions)
             FOR activity IN activities
@@ -729,10 +729,12 @@ export class ArangoDBGraphService {
               FOR entity IN 1..1 OUTBOUND activity USES
                 COLLECT e = entity
                 AGGREGATE count = COUNT(1)
+                SORT count DESC
+                LIMIT 50
                 RETURN MERGE(e, { usage_count: count })
         )
 
-        // Get concepts
+        // Get concepts (limit to top 50 by mention count)
         LET concepts = (
           FOR session IN APPEND(node_sessions, related_sessions)
             FOR activity IN activities
@@ -740,6 +742,8 @@ export class ArangoDBGraphService {
               FOR concept IN 1..1 OUTBOUND activity RELATES_TO
                 COLLECT c = concept
                 AGGREGATE count = COUNT(1)
+                SORT count DESC
+                LIMIT 50
                 RETURN MERGE(c, { mention_count: count })
         )
 
