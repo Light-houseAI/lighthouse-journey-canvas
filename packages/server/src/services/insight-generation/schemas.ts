@@ -410,10 +410,58 @@ export const attachedSessionContextSchema = z.object({
   appsUsed: z.array(z.string()),
 });
 
+// ============================================================================
+// ATTACHED WORKFLOW/BLOCK CONTEXT SCHEMAS (for / mention)
+// ============================================================================
+
+/**
+ * Schema for user-attached workflow pattern context
+ * Used when users explicitly select workflows via /mention
+ */
+export const attachedWorkflowContextSchema = z.object({
+  type: z.literal('workflow'),
+  workflowId: z.string(),
+  canonicalName: z.string(),
+  intentCategory: z.string(),
+  description: z.string(),
+  occurrenceCount: z.number(),
+  sessionCount: z.number(),
+  avgDurationSeconds: z.number(),
+  blocks: z.array(z.object({
+    canonicalName: z.string(),
+    intent: z.string(),
+    primaryTool: z.string(),
+    avgDurationSeconds: z.number(),
+  })),
+  tools: z.array(z.string()),
+});
+
+/**
+ * Schema for user-attached block/step context
+ * Used when users select individual steps via /mention detail view
+ */
+export const attachedBlockContextSchema = z.object({
+  type: z.literal('block'),
+  blockId: z.string(),
+  canonicalName: z.string(),
+  intent: z.string(),
+  primaryTool: z.string(),
+  avgDurationSeconds: z.number(),
+  parentWorkflowId: z.string(),
+  parentWorkflowName: z.string(),
+});
+
+export const attachedSlashContextSchema = z.discriminatedUnion('type', [
+  attachedWorkflowContextSchema,
+  attachedBlockContextSchema,
+]);
+
 export const generateInsightsRequestSchema = z.object({
   query: z.string().min(10).max(2000),
   /** User-attached sessions for analysis (bypasses NLQ retrieval in A1) */
   sessionContext: z.array(attachedSessionContextSchema).optional(),
+  /** User-attached workflows/steps for analysis via /mention */
+  workflowContext: z.array(attachedSlashContextSchema).optional(),
   options: insightGenerationOptionsSchema.optional(),
 });
 
@@ -465,5 +513,8 @@ export type InsightGenerationOptions = z.infer<typeof insightGenerationOptionsSc
 export type AttachedSemanticStep = z.infer<typeof attachedSemanticStepSchema>;
 export type AttachedWorkflow = z.infer<typeof attachedWorkflowSchema>;
 export type AttachedSessionContext = z.infer<typeof attachedSessionContextSchema>;
+export type AttachedWorkflowContext = z.infer<typeof attachedWorkflowContextSchema>;
+export type AttachedBlockContext = z.infer<typeof attachedBlockContextSchema>;
+export type AttachedSlashContext = z.infer<typeof attachedSlashContextSchema>;
 export type GenerateInsightsRequest = z.infer<typeof generateInsightsRequestSchema>;
 export type GenerateInsightsResponse = z.infer<typeof generateInsightsResponseSchema>;

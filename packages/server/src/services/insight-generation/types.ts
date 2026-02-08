@@ -1077,12 +1077,51 @@ export interface AttachedSessionContext {
 }
 
 /**
+ * User-attached workflow pattern context for analysis via /mention
+ */
+export interface AttachedWorkflowContext {
+  type: 'workflow';
+  workflowId: string;
+  canonicalName: string;
+  intentCategory: string;
+  description: string;
+  occurrenceCount: number;
+  sessionCount: number;
+  avgDurationSeconds: number;
+  blocks: {
+    canonicalName: string;
+    intent: string;
+    primaryTool: string;
+    avgDurationSeconds: number;
+  }[];
+  tools: string[];
+}
+
+/**
+ * User-attached block/step context for analysis via /mention detail view
+ */
+export interface AttachedBlockContext {
+  type: 'block';
+  blockId: string;
+  canonicalName: string;
+  intent: string;
+  primaryTool: string;
+  avgDurationSeconds: number;
+  parentWorkflowId: string;
+  parentWorkflowName: string;
+}
+
+export type AttachedSlashContext = AttachedWorkflowContext | AttachedBlockContext;
+
+/**
  * Request to generate insights
  */
 export interface GenerateInsightsRequest {
   query: string;
   /** User-attached sessions for analysis (bypasses NLQ retrieval in A1) */
   sessionContext?: AttachedSessionContext[];
+  /** User-attached workflows/steps for analysis via /mention */
+  workflowContext?: AttachedSlashContext[];
   options?: InsightGenerationOptions;
 }
 

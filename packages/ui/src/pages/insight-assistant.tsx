@@ -5,6 +5,7 @@
  */
 
 import {
+  Activity,
   ArrowLeft,
   FolderOpen,
   Mic,
@@ -12,6 +13,7 @@ import {
   Send,
   Sparkles,
   X,
+  Zap,
 } from 'lucide-react';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
@@ -21,6 +23,7 @@ import { InteractiveMessage } from '../components/insight-assistant/InteractiveM
 import { PastConversationsPanel } from '../components/insight-assistant/PastConversationsPanel';
 import { PersonaSuggestions } from '../components/insight-assistant/PersonaSuggestions';
 import { SessionMentionPopup } from '../components/insight-assistant/SessionMentionPopup';
+import { WorkflowMentionPopup } from '../components/insight-assistant/WorkflowMentionPopup';
 import { SessionDetailsModal } from '../components/insight-assistant/SessionDetailsModal';
 import { StrategyProposalDetailsModal } from '../components/insight-assistant/StrategyProposalDetailsModal';
 import type { SessionMappingItem } from '@journey/schema';
@@ -39,9 +42,11 @@ import {
   type InsightGenerationResult,
   type JobProgress,
   type AttachedSessionContext,
+  type AttachedSlashContext,
   type OptimizationBlock,
 } from '../services/insight-assistant-api';
 import type { RetrievedSource } from '../services/workflow-api';
+import type { SessionWorkflow, SessionWorkflowStep } from '../components/insight-assistant/WorkflowMentionPopup';
 import type { StrategyProposal, InsightMessage } from '../types/insight-assistant.types';
 
 /**
@@ -116,6 +121,15 @@ export default function InsightAssistant() {
   // Selected work sessions (displayed as tags in input area)
   const [selectedWorkSessions, setSelectedWorkSessions] = useState<SessionMappingItem[]>([]);
   const [viewingWorkSession, setViewingWorkSession] = useState<SessionMappingItem | null>(null);
+
+  // Workflow slash command popup state
+  const [isSlashPopupOpen, setIsSlashPopupOpen] = useState(false);
+  const [slashSearchQuery, setSlashSearchQuery] = useState('');
+  const [slashStartIndex, setSlashStartIndex] = useState<number | null>(null);
+
+  // Selected workflows and blocks (displayed as tags in input area)
+  const [selectedWorkflows, setSelectedWorkflows] = useState<SessionWorkflow[]>([]);
+  const [selectedBlocks, setSelectedBlocks] = useState<Array<{ block: SessionWorkflowStep; parentWorkflow: SessionWorkflow }>>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -224,7 +238,8 @@ export default function InsightAssistant() {
 
   // Handle sending a message
   const handleSendMessage = useCallback(async () => {
-    if ((!inputValue.trim() && selectedWorkSessions.length === 0) || isGeneratingProposals) return;
+    const hasContext = selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0;
+    if ((!inputValue.trim() && !hasContext) || isGeneratingProposals) return;
 
     // Build query with selected session context
     let query = inputValue.trim();
@@ -265,6 +280,66 @@ export default function InsightAssistant() {
       displayContent = query ? `${sessionNames.map(n => `@${n}`).join(' ')} ${inputValue}`.trim() : sessionNames.map(n => `@${n}`).join(' ');
     }
 
+    // Build workflow/block context data for API
+    let workflowContextData: AttachedSlashContext[] | undefined;
+
+    if (selectedWorkflows.length > 0 || selectedBlocks.length > 0) {
+      workflowContextData = [];
+
+      // Add full workflows from sessions
+      for (const w of selectedWorkflows) {
+        workflowContextData.push({
+          type: 'workflow',
+          workflowId: w.id,
+          canonicalName: w.workflowSummary,
+          intentCategory: w.intentCategory,
+          description: w.approach,
+          occurrenceCount: 1,
+          sessionCount: 1,
+          avgDurationSeconds: Math.round(w.durationMs / 1000),
+          blocks: w.steps.map(s => ({
+            canonicalName: s.stepName,
+            intent: w.intentCategory,
+            primaryTool: s.toolsInvolved[0] || '',
+            avgDurationSeconds: s.durationSeconds,
+          })),
+          tools: w.tools,
+        });
+      }
+
+      // Add individual steps (skip if parent workflow already selected)
+      const selectedWorkflowIds = new Set(selectedWorkflows.map(w => w.id));
+      for (const { block, parentWorkflow } of selectedBlocks) {
+        if (!selectedWorkflowIds.has(parentWorkflow.id)) {
+          workflowContextData.push({
+            type: 'block',
+            blockId: `${block.parentWorkflowId}-${block.stepName}`,
+            canonicalName: block.stepName,
+            intent: parentWorkflow.intentCategory,
+            primaryTool: block.toolsInvolved[0] || '',
+            avgDurationSeconds: block.durationSeconds,
+            parentWorkflowId: parentWorkflow.id,
+            parentWorkflowName: parentWorkflow.workflowSummary,
+          });
+        }
+      }
+
+      // Build display names
+      const contextNames = [
+        ...selectedWorkflows.map(w => `/${w.workflowSummary}`),
+        ...selectedBlocks
+          .filter(({ parentWorkflow }) => !selectedWorkflowIds.has(parentWorkflow.id))
+          .map(({ block }) => `/${block.stepName}`),
+      ];
+
+      const workflowContext = `[Analyzing workflows: ${contextNames.join(', ')}]`;
+      query = query
+        ? `${workflowContext} ${query}`
+        : `${workflowContext} Analyze these workflow patterns and provide insights.`;
+
+      displayContent = `${contextNames.join(' ')} ${displayContent}`.trim();
+    }
+
     const userMessage: InsightMessage = {
       id: Date.now().toString(),
       type: 'user',
@@ -290,6 +365,8 @@ export default function InsightAssistant() {
 
     setInputValue('');
     setSelectedWorkSessions([]); // Clear selected sessions after sending
+    setSelectedWorkflows([]); // Clear selected workflows after sending
+    setSelectedBlocks([]); // Clear selected blocks after sending
 
     track(AnalyticsEvents.BUTTON_CLICKED, {
       button_name: 'send_insight_query',
@@ -305,6 +382,7 @@ export default function InsightAssistant() {
       const startResponse = await startInsightGeneration({
         query,
         sessionContext: sessionContextData,
+        workflowContext: workflowContextData,
         options: {
           lookbackDays: 90,
           includeWebSearch: true,
@@ -447,36 +525,81 @@ export default function InsightAssistant() {
   }, []);
 
 
-  // Handle input change with @ mention detection
+  // Handle input change with @ mention and / slash command detection
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const cursorPosition = e.target.selectionStart || 0;
 
     setInputValue(value);
 
-    // Check for @ mention trigger
     const textBeforeCursor = value.slice(0, cursorPosition);
     const atIndex = textBeforeCursor.lastIndexOf('@');
+    const slashIndex = textBeforeCursor.lastIndexOf('/');
 
-    if (atIndex !== -1) {
-      // Check if @ is at start or preceded by space
-      const charBeforeAt = atIndex > 0 ? value[atIndex - 1] : ' ';
-      if (charBeforeAt === ' ' || atIndex === 0) {
-        const searchText = textBeforeCursor.slice(atIndex + 1);
-        // Only show popup if no space after the search text
-        if (!searchText.includes(' ')) {
-          setMentionStartIndex(atIndex);
-          setMentionSearchQuery(searchText);
-          setIsMentionPopupOpen(true);
-          return;
-        }
+    // Helper to check if a trigger char at a given index is valid
+    const isValidTrigger = (index: number, char: string) => {
+      if (index === -1) return false;
+      const charBefore = index > 0 ? value[index - 1] : ' ';
+      if (charBefore !== ' ' && index !== 0) return false;
+      const searchText = textBeforeCursor.slice(index + 1);
+      return !searchText.includes(' ');
+    };
+
+    const atValid = isValidTrigger(atIndex, '@');
+    const slashValid = isValidTrigger(slashIndex, '/');
+
+    // If both are valid, pick the one closest to cursor (rightmost)
+    if (atValid && slashValid) {
+      if (slashIndex > atIndex) {
+        // / is closer to cursor — open slash popup
+        setSlashStartIndex(slashIndex);
+        setSlashSearchQuery(textBeforeCursor.slice(slashIndex + 1));
+        setIsSlashPopupOpen(true);
+        setIsMentionPopupOpen(false);
+        setMentionStartIndex(null);
+        setMentionSearchQuery('');
+        return;
+      } else {
+        // @ is closer to cursor — open mention popup
+        setMentionStartIndex(atIndex);
+        setMentionSearchQuery(textBeforeCursor.slice(atIndex + 1));
+        setIsMentionPopupOpen(true);
+        setIsSlashPopupOpen(false);
+        setSlashStartIndex(null);
+        setSlashSearchQuery('');
+        return;
       }
     }
 
-    // Close popup if @ mention is no longer valid
+    // Only @ is valid
+    if (atValid) {
+      setMentionStartIndex(atIndex);
+      setMentionSearchQuery(textBeforeCursor.slice(atIndex + 1));
+      setIsMentionPopupOpen(true);
+      setIsSlashPopupOpen(false);
+      setSlashStartIndex(null);
+      setSlashSearchQuery('');
+      return;
+    }
+
+    // Only / is valid
+    if (slashValid) {
+      setSlashStartIndex(slashIndex);
+      setSlashSearchQuery(textBeforeCursor.slice(slashIndex + 1));
+      setIsSlashPopupOpen(true);
+      setIsMentionPopupOpen(false);
+      setMentionStartIndex(null);
+      setMentionSearchQuery('');
+      return;
+    }
+
+    // Neither trigger is valid — close both popups
     setIsMentionPopupOpen(false);
     setMentionStartIndex(null);
     setMentionSearchQuery('');
+    setIsSlashPopupOpen(false);
+    setSlashStartIndex(null);
+    setSlashSearchQuery('');
   }, []);
 
   // Handle session selection from mention popup
@@ -531,10 +654,80 @@ export default function InsightAssistant() {
     setMentionSearchQuery('');
   }, []);
 
+  // Handle workflow selection from slash popup
+  const handleWorkflowSelect = useCallback((workflow: SessionWorkflow) => {
+    setSelectedWorkflows((prev) => {
+      if (prev.some((w) => w.id === workflow.id)) {
+        return prev;
+      }
+      return [...prev, workflow];
+    });
+
+    if (slashStartIndex !== null) {
+      const beforeSlash = inputValue.slice(0, slashStartIndex);
+      const afterSlash = inputValue.slice(slashStartIndex + 1 + slashSearchQuery.length);
+      setInputValue(`${beforeSlash}${afterSlash}`.trim());
+    }
+
+    setIsSlashPopupOpen(false);
+    setSlashStartIndex(null);
+    setSlashSearchQuery('');
+    inputRef.current?.focus();
+
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'select_workflow_mention',
+      workflow_id: workflow.id,
+    });
+  }, [inputValue, slashStartIndex, slashSearchQuery, track]);
+
+  // Handle block/step selection from slash popup detail view
+  const handleBlockSelect = useCallback((block: SessionWorkflowStep, parentWorkflow: SessionWorkflow) => {
+    setSelectedBlocks((prev) => {
+      const blockKey = `${block.parentWorkflowId}-${block.stepName}`;
+      if (prev.some((b) => `${b.block.parentWorkflowId}-${b.block.stepName}` === blockKey)) {
+        return prev;
+      }
+      return [...prev, { block, parentWorkflow }];
+    });
+
+    if (slashStartIndex !== null) {
+      const beforeSlash = inputValue.slice(0, slashStartIndex);
+      const afterSlash = inputValue.slice(slashStartIndex + 1 + slashSearchQuery.length);
+      setInputValue(`${beforeSlash}${afterSlash}`.trim());
+    }
+
+    setIsSlashPopupOpen(false);
+    setSlashStartIndex(null);
+    setSlashSearchQuery('');
+    inputRef.current?.focus();
+
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'select_block_mention',
+      block_id: `${block.parentWorkflowId}-${block.stepName}`,
+    });
+  }, [inputValue, slashStartIndex, slashSearchQuery, track]);
+
+  // Handle removing a selected workflow
+  const handleRemoveWorkflow = useCallback((workflowId: string) => {
+    setSelectedWorkflows((prev) => prev.filter((w) => w.id !== workflowId));
+  }, []);
+
+  // Handle removing a selected block/step
+  const handleRemoveBlock = useCallback((blockKey: string) => {
+    setSelectedBlocks((prev) => prev.filter((b) => `${b.block.parentWorkflowId}-${b.block.stepName}` !== blockKey));
+  }, []);
+
+  // Handle closing slash popup
+  const handleCloseSlashPopup = useCallback(() => {
+    setIsSlashPopupOpen(false);
+    setSlashStartIndex(null);
+    setSlashSearchQuery('');
+  }, []);
+
   // Handle key press
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Don't submit if mention popup is open and user presses enter
-    if (e.key === 'Enter' && !e.shiftKey && !isMentionPopupOpen) {
+    // Don't submit if either popup is open and user presses enter
+    if (e.key === 'Enter' && !e.shiftKey && !isMentionPopupOpen && !isSlashPopupOpen) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -714,6 +907,15 @@ export default function InsightAssistant() {
                     searchQuery={mentionSearchQuery}
                   />
 
+                  {/* Workflow Slash Command Popup */}
+                  <WorkflowMentionPopup
+                    isOpen={isSlashPopupOpen}
+                    onClose={handleCloseSlashPopup}
+                    onSelectWorkflow={handleWorkflowSelect}
+                    onSelectBlock={handleBlockSelect}
+                    searchQuery={slashSearchQuery}
+                  />
+
                   {/* Selected Work Sessions Tags */}
                   {selectedWorkSessions.length > 0 && (
                     <div className="flex flex-wrap gap-2 pb-2">
@@ -748,6 +950,60 @@ export default function InsightAssistant() {
                     </div>
                   )}
 
+                  {/* Selected Workflow Tags (emerald) */}
+                  {selectedWorkflows.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pb-2">
+                      {selectedWorkflows.map((workflow) => (
+                        <div
+                          key={workflow.id}
+                          className="group flex items-center gap-1 rounded-lg bg-emerald-100 px-2 py-1"
+                        >
+                          <span className="flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+                            <Activity className="h-3.5 w-3.5" />
+                            <span className="max-w-[200px] truncate">{workflow.workflowSummary}</span>
+                          </span>
+                          <button
+                            onClick={() => handleRemoveWorkflow(workflow.id)}
+                            className="ml-1 rounded p-0.5 text-emerald-400 hover:bg-emerald-200 hover:text-emerald-700"
+                            title="Remove"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Selected Block/Step Tags (teal) */}
+                  {selectedBlocks.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pb-2">
+                      {selectedBlocks.map(({ block, parentWorkflow }) => {
+                        const blockKey = `${block.parentWorkflowId}-${block.stepName}`;
+                        return (
+                          <div
+                            key={blockKey}
+                            className="group flex items-center gap-1 rounded-lg bg-teal-100 px-2 py-1"
+                          >
+                            <span
+                              className="flex items-center gap-1.5 text-sm font-medium text-teal-700"
+                              title={`Step from: ${parentWorkflow.workflowSummary}`}
+                            >
+                              <Zap className="h-3.5 w-3.5" />
+                              <span className="max-w-[200px] truncate">{block.stepName}</span>
+                            </span>
+                            <button
+                              onClick={() => handleRemoveBlock(blockKey)}
+                              className="ml-1 rounded p-0.5 text-teal-400 hover:bg-teal-200 hover:text-teal-700"
+                              title="Remove"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2">
                     <Paperclip className="h-5 w-5" style={{ color: '#94A3B8' }} />
                     <input
@@ -756,9 +1012,11 @@ export default function InsightAssistant() {
                       value={inputValue}
                       onChange={handleInputChange}
                       onKeyDown={handleKeyDown}
-                      placeholder={selectedWorkSessions.length > 0
-                        ? "Ask about the selected session(s)..."
-                        : "Ask about your workflows... (type @ to mention a session)"}
+                      placeholder={
+                        (selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0)
+                          ? "Ask about the selected context..."
+                          : "Ask about your workflows... (@ sessions, / workflows & steps)"
+                      }
                       className="flex-1 text-base outline-none"
                       style={{ color: '#1E293B' }}
                     />
@@ -775,10 +1033,10 @@ export default function InsightAssistant() {
                     </button>
                     <button
                       onClick={handleSendMessage}
-                      disabled={(!inputValue.trim() && selectedWorkSessions.length === 0) || isGeneratingProposals}
+                      disabled={(!inputValue.trim() && selectedWorkSessions.length === 0 && selectedWorkflows.length === 0 && selectedBlocks.length === 0) || isGeneratingProposals}
                       className="flex items-center gap-2 rounded-lg px-4 py-2.5"
                       style={{
-                        background: (inputValue.trim() || selectedWorkSessions.length > 0) && !isGeneratingProposals ? '#4F46E5' : '#A5B4FC',
+                        background: (inputValue.trim() || selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0) && !isGeneratingProposals ? '#4F46E5' : '#A5B4FC',
                       }}
                     >
                       <span className="text-sm font-medium" style={{ color: '#FFFFFF' }}>

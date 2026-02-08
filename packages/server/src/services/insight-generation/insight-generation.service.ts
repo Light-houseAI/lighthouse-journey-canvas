@@ -24,6 +24,7 @@ import type {
   InsightGenerationOptions,
   InsightGenerationOptionsWithAgentic,
   AttachedSessionContext,
+  AttachedSlashContext,
   RetrievedMemories,
   ConversationMemory,
 } from './types.js';
@@ -135,6 +136,8 @@ export class InsightGenerationService {
   private jobOptionsCache: Map<string, InsightGenerationOptions> = new Map();
   // In-memory cache for attached session context (not stored in DB, only needed during processing)
   private sessionContextCache: Map<string, AttachedSessionContext[]> = new Map();
+  // In-memory cache for attached workflow/block context via /mention
+  private workflowContextCache: Map<string, AttachedSlashContext[]> = new Map();
   // In-memory cache for retrieved conversation memories (for follow-up context)
   private memoryContextCache: Map<string, RetrievedMemories> = new Map();
 
@@ -170,7 +173,8 @@ export class InsightGenerationService {
     userId: number,
     query: string,
     options?: InsightGenerationOptions,
-    sessionContext?: AttachedSessionContext[]
+    sessionContext?: AttachedSessionContext[],
+    workflowContext?: AttachedSlashContext[]
   ): Promise<{ jobId: string; status: JobStatus }> {
     // Create job in database
     const jobRecord = await this.jobRepository.create({
@@ -190,6 +194,9 @@ export class InsightGenerationService {
     }
     if (sessionContext && sessionContext.length > 0) {
       this.sessionContextCache.set(jobId, sessionContext);
+    }
+    if (workflowContext && workflowContext.length > 0) {
+      this.workflowContextCache.set(jobId, workflowContext);
     }
 
     // Retrieve relevant conversation memories for follow-up context
@@ -668,9 +675,10 @@ export class InsightGenerationService {
         });
       }
     } finally {
-      // Clean up cached options, session context, and memory context
+      // Clean up cached options, session context, workflow context, and memory context
       this.jobOptionsCache.delete(jobId);
       this.sessionContextCache.delete(jobId);
+      this.workflowContextCache.delete(jobId);
       this.memoryContextCache.delete(jobId);
     }
   }

@@ -61,6 +61,10 @@ export {
   insightGenerationOptionsSchema,
   generateInsightsRequestSchema,
   generateInsightsResponseSchema,
+  // Attached workflow/block context schemas (for /mention)
+  attachedWorkflowContextSchema,
+  attachedBlockContextSchema,
+  attachedSlashContextSchema,
 } from './schemas.js';
 
 // Services

@@ -189,7 +189,8 @@ export class InsightAssistantController {
         userId,
         validatedData.query,
         validatedData.options,
-        validatedData.sessionContext
+        validatedData.sessionContext,
+        validatedData.workflowContext
       );
 
       res.status(202).json({
