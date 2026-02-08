@@ -632,7 +632,7 @@ export default function InsightAssistant() {
   }, []);
 
   // Handle template selection from slash popup (auto-submit)
-  const handleTemplateSelect = useCallback(async (templateQuery: string, templateName: string) => {
+  const handleTemplateSelect = useCallback(async (templateQuery: string, templateName: string, promptPreview: string) => {
     if (isGeneratingProposals) return;
 
     // Close popup and clear input
@@ -645,11 +645,11 @@ export default function InsightAssistant() {
       template_name: templateName,
     });
 
-    // Add user message to chat (show template name, not raw query)
+    // Add user message to chat showing the prompt template preview
     const userMessage: InsightMessage = {
       id: Date.now().toString(),
       type: 'user',
-      content: templateName,
+      content: promptPreview,
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);

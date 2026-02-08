@@ -20,13 +20,15 @@ export interface SlashTemplate {
   icon: typeof FileText;
   /** The query string sent to the server */
   query: string;
+  /** User-facing preview of the prompt template */
+  promptPreview: string;
   colors: { bg: string; text: string; iconBg: string };
 }
 
 export interface TemplateMentionPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectTemplate: (templateQuery: string, templateName: string) => void;
+  onSelectTemplate: (templateQuery: string, templateName: string, promptPreview: string) => void;
   disabled?: boolean;
 }
 
@@ -41,6 +43,16 @@ const SLASH_TEMPLATES: SlashTemplate[] = [
     description: 'Generate a structured progress report from your recent workflows',
     icon: FileText,
     query: 'Create a weekly progress update report from my recent workflows',
+    promptPreview: `**Prompt:** Weekly Progress Update
+
+Transforms your workflow session data into a professional weekly progress report covering:
+- Key accomplishments and activities
+- Tools & platforms utilized
+- Collaboration and deliverables
+- Upcoming priorities based on observed patterns
+- Workflow insights (strengths & areas for improvement)
+
+Output: Downloadable markdown report`,
     colors: {
       bg: 'hover:bg-blue-50',
       text: 'text-blue-700',
@@ -53,6 +65,16 @@ const SLASH_TEMPLATES: SlashTemplate[] = [
     description: 'Transform your workflow insights into an engaging blog post',
     icon: BookOpen,
     query: 'Create a blog post based on my recent workflow patterns and insights',
+    promptPreview: `**Prompt:** Blog Creation
+
+Transforms your workflow data into an engaging, publishable blog post featuring:
+- Compelling narrative about how you worked
+- Tool usage patterns and productivity insights
+- AI integration observations (if applicable)
+- Key takeaways for readers
+- Forward-looking conclusions about modern work practices
+
+Output: Downloadable markdown blog post`,
     colors: {
       bg: 'hover:bg-purple-50',
       text: 'text-purple-700',
@@ -96,7 +118,7 @@ export function TemplateMentionPopup({
         case 'Enter':
           e.preventDefault();
           if (SLASH_TEMPLATES[selectedIndex] && !disabled) {
-            onSelectTemplate(SLASH_TEMPLATES[selectedIndex].query, SLASH_TEMPLATES[selectedIndex].name);
+            onSelectTemplate(SLASH_TEMPLATES[selectedIndex].query, SLASH_TEMPLATES[selectedIndex].name, SLASH_TEMPLATES[selectedIndex].promptPreview);
           }
           break;
         case 'Escape':
@@ -154,7 +176,7 @@ export function TemplateMentionPopup({
           return (
             <button
               key={template.id}
-              onClick={() => onSelectTemplate(template.query, template.name)}
+              onClick={() => onSelectTemplate(template.query, template.name, template.promptPreview)}
               disabled={disabled}
               className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors ${
                 index === selectedIndex ? 'bg-gray-100' : template.colors.bg
