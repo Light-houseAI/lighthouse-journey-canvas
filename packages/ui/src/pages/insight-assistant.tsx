@@ -23,6 +23,7 @@ import { InteractiveMessage } from '../components/insight-assistant/InteractiveM
 import { PastConversationsPanel } from '../components/insight-assistant/PastConversationsPanel';
 import { PersonaSuggestions } from '../components/insight-assistant/PersonaSuggestions';
 import { SessionMentionPopup } from '../components/insight-assistant/SessionMentionPopup';
+import { TemplateMentionPopup } from '../components/insight-assistant/TemplateMentionPopup';
 import { SessionDetailsModal } from '../components/insight-assistant/SessionDetailsModal';
 import { StrategyProposalDetailsModal } from '../components/insight-assistant/StrategyProposalDetailsModal';
 import type { SessionMappingItem } from '@journey/schema';
@@ -116,6 +117,10 @@ export default function InsightAssistant() {
   const [isMentionPopupOpen, setIsMentionPopupOpen] = useState(false);
   const [mentionSearchQuery, setMentionSearchQuery] = useState('');
   const [mentionStartIndex, setMentionStartIndex] = useState<number | null>(null);
+
+  // Template slash popup state
+  const [isTemplatePopupOpen, setIsTemplatePopupOpen] = useState(false);
+  const [slashStartIndex, setSlashStartIndex] = useState<number | null>(null);
 
   // Selected work sessions (displayed as tags in input area)
   const [selectedWorkSessions, setSelectedWorkSessions] = useState<SessionMappingItem[]>([]);
@@ -519,7 +524,7 @@ export default function InsightAssistant() {
   }, []);
 
 
-  // Handle input change with @ mention detection
+  // Handle input change with @ mention and / template detection
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const cursorPosition = e.target.selectionStart || 0;
@@ -527,9 +532,25 @@ export default function InsightAssistant() {
     setInputValue(value);
 
     const textBeforeCursor = value.slice(0, cursorPosition);
-    const atIndex = textBeforeCursor.lastIndexOf('@');
+
+    // Check for "/" trigger (slash template popup) — checked first
+    const slashIndex = textBeforeCursor.lastIndexOf('/');
+    if (slashIndex !== -1) {
+      const charBefore = slashIndex > 0 ? value[slashIndex - 1] : ' ';
+      const searchText = textBeforeCursor.slice(slashIndex + 1);
+      if ((charBefore === ' ' || slashIndex === 0) && !searchText.includes(' ')) {
+        setSlashStartIndex(slashIndex);
+        setIsTemplatePopupOpen(true);
+        // Close @ popup if open
+        setIsMentionPopupOpen(false);
+        setMentionStartIndex(null);
+        setMentionSearchQuery('');
+        return;
+      }
+    }
 
     // Check if @ trigger is valid (at start or after space, no spaces after it)
+    const atIndex = textBeforeCursor.lastIndexOf('@');
     if (atIndex !== -1) {
       const charBefore = atIndex > 0 ? value[atIndex - 1] : ' ';
       const searchText = textBeforeCursor.slice(atIndex + 1);
@@ -537,14 +558,19 @@ export default function InsightAssistant() {
         setMentionStartIndex(atIndex);
         setMentionSearchQuery(searchText);
         setIsMentionPopupOpen(true);
+        // Close / popup if open
+        setIsTemplatePopupOpen(false);
+        setSlashStartIndex(null);
         return;
       }
     }
 
-    // No valid trigger — close popup
+    // No valid trigger — close both popups
     setIsMentionPopupOpen(false);
     setMentionStartIndex(null);
     setMentionSearchQuery('');
+    setIsTemplatePopupOpen(false);
+    setSlashStartIndex(null);
   }, []);
 
   // Handle session selection from mention popup
@@ -598,6 +624,160 @@ export default function InsightAssistant() {
     setMentionStartIndex(null);
     setMentionSearchQuery('');
   }, []);
+
+  // Handle closing template popup
+  const handleCloseTemplatePopup = useCallback(() => {
+    setIsTemplatePopupOpen(false);
+    setSlashStartIndex(null);
+  }, []);
+
+  // Handle template selection from slash popup (auto-submit)
+  const handleTemplateSelect = useCallback(async (templateQuery: string, templateName: string) => {
+    if (isGeneratingProposals) return;
+
+    // Close popup and clear input
+    setIsTemplatePopupOpen(false);
+    setSlashStartIndex(null);
+    setInputValue('');
+
+    track(AnalyticsEvents.BUTTON_CLICKED, {
+      button_name: 'select_slash_template',
+      template_name: templateName,
+    });
+
+    // Add user message to chat (show template name, not raw query)
+    const userMessage: InsightMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: templateName,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+
+    // Save user message to session
+    if (currentSessionId) {
+      const session = getChatSession('global', 'insight-assistant', currentSessionId);
+      if (session) {
+        session.messages.push({
+          id: userMessage.id,
+          type: 'user',
+          content: userMessage.content,
+          timestamp: userMessage.timestamp.toISOString(),
+        });
+        saveChatSession(session);
+      }
+    }
+
+    // Generate insights using the template query
+    setIsGeneratingProposals(true);
+    setInsightProgress(null);
+    setInsightResult(null);
+
+    try {
+      const startResponse = await startInsightGeneration({
+        query: templateQuery,
+        options: {
+          lookbackDays: 90,
+          includeWebSearch: false,
+          includePeerComparison: false,
+          maxOptimizationBlocks: 5,
+        },
+      });
+
+      console.log('[InsightAssistant] Started template job:', startResponse.jobId, 'template:', templateName);
+
+      const job = await pollForJobCompletion(
+        startResponse.jobId,
+        (progress) => {
+          setInsightProgress(progress);
+          console.log('[InsightAssistant] Progress:', progress.currentStage, `${progress.progress}%`);
+        },
+        2000,
+        2000
+      );
+
+      if (job.status === 'completed' && job.result) {
+        setInsightResult(job.result);
+
+        const followUps = (job.result.suggestedFollowUps && job.result.suggestedFollowUps.length > 0)
+          ? job.result.suggestedFollowUps
+          : generateFollowUpSuggestions(job.result.query, job.result);
+
+        const answerMessage: InsightMessage = {
+          id: `insight-${Date.now()}`,
+          type: 'ai',
+          content: job.result.userQueryAnswer,
+          timestamp: new Date(),
+          insightResult: job.result,
+          suggestedFollowUps: followUps,
+        };
+        setMessages((prev) => [...prev, answerMessage]);
+
+        if (currentSessionId) {
+          const session = getChatSession('global', 'insight-assistant', currentSessionId);
+          if (session) {
+            session.messages.push({
+              id: answerMessage.id,
+              type: 'ai',
+              content: answerMessage.content,
+              timestamp: answerMessage.timestamp.toISOString(),
+              insightResult: job.result,
+              suggestedFollowUps: followUps,
+            });
+            saveChatSession(session);
+          }
+        }
+      } else if (job.status === 'failed') {
+        console.error('[InsightAssistant] Template job failed:', job.error);
+        const errorMessage: InsightMessage = {
+          id: `error-${Date.now()}`,
+          type: 'ai',
+          content: `**Analysis Failed**\n\nI encountered an error while generating your ${templateName.toLowerCase()}. Please try again.`,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+
+        if (currentSessionId) {
+          const session = getChatSession('global', 'insight-assistant', currentSessionId);
+          if (session) {
+            session.messages.push({
+              id: errorMessage.id,
+              type: 'ai',
+              content: errorMessage.content,
+              timestamp: errorMessage.timestamp.toISOString(),
+            });
+            saveChatSession(session);
+          }
+        }
+      }
+    } catch (err) {
+      const errorDetails = err instanceof Error ? err.message : String(err);
+      console.error('[InsightAssistant] Template insight generation failed:', errorDetails, err);
+      const errorMessage: InsightMessage = {
+        id: `error-${Date.now()}`,
+        type: 'ai',
+        content: `**Analysis Failed**\n\nI encountered an error: ${errorDetails}\n\nPlease try again.`,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+
+      if (currentSessionId) {
+        const session = getChatSession('global', 'insight-assistant', currentSessionId);
+        if (session) {
+          session.messages.push({
+            id: errorMessage.id,
+            type: 'ai',
+            content: errorMessage.content,
+            timestamp: errorMessage.timestamp.toISOString(),
+          });
+          saveChatSession(session);
+        }
+      }
+    } finally {
+      setIsGeneratingProposals(false);
+      setSessions(getChatSessions('global', 'insight-assistant'));
+    }
+  }, [isGeneratingProposals, currentSessionId, track]);
 
   // Handle workflow selection from @ popup (Workflows tab)
   const handleWorkflowSelect = useCallback((workflow: SessionWorkflow) => {
@@ -665,8 +845,8 @@ export default function InsightAssistant() {
 
   // Handle key press
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Don't submit if popup is open and user presses enter
-    if (e.key === 'Enter' && !e.shiftKey && !isMentionPopupOpen) {
+    // Don't submit if either popup is open and user presses enter
+    if (e.key === 'Enter' && !e.shiftKey && !isMentionPopupOpen && !isTemplatePopupOpen) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -848,6 +1028,14 @@ export default function InsightAssistant() {
                     searchQuery={mentionSearchQuery}
                   />
 
+                  {/* Template Slash Popup */}
+                  <TemplateMentionPopup
+                    isOpen={isTemplatePopupOpen}
+                    onClose={handleCloseTemplatePopup}
+                    onSelectTemplate={handleTemplateSelect}
+                    disabled={isGeneratingProposals}
+                  />
+
                   {/* Selected Work Sessions Tags */}
                   {selectedWorkSessions.length > 0 && (
                     <div className="flex flex-wrap gap-2 pb-2">
@@ -947,7 +1135,7 @@ export default function InsightAssistant() {
                       placeholder={
                         (selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0)
                           ? "Ask about the selected context..."
-                          : "Ask about your workflows... (@ to add sessions, workflows & steps)"
+                          : "Ask about your workflows... (@ to add context, / for templates)"
                       }
                       className="flex-1 text-base outline-none"
                       style={{ color: '#1E293B' }}
