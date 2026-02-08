@@ -23,7 +23,6 @@ import { InteractiveMessage } from '../components/insight-assistant/InteractiveM
 import { PastConversationsPanel } from '../components/insight-assistant/PastConversationsPanel';
 import { PersonaSuggestions } from '../components/insight-assistant/PersonaSuggestions';
 import { SessionMentionPopup } from '../components/insight-assistant/SessionMentionPopup';
-import { WorkflowMentionPopup } from '../components/insight-assistant/WorkflowMentionPopup';
 import { SessionDetailsModal } from '../components/insight-assistant/SessionDetailsModal';
 import { StrategyProposalDetailsModal } from '../components/insight-assistant/StrategyProposalDetailsModal';
 import type { SessionMappingItem } from '@journey/schema';
@@ -46,7 +45,7 @@ import {
   type OptimizationBlock,
 } from '../services/insight-assistant-api';
 import type { RetrievedSource } from '../services/workflow-api';
-import type { SessionWorkflow, SessionWorkflowStep } from '../components/insight-assistant/WorkflowMentionPopup';
+import type { SessionWorkflow, SessionWorkflowStep } from '../components/insight-assistant/SessionMentionPopup';
 import type { StrategyProposal, InsightMessage } from '../types/insight-assistant.types';
 
 /**
@@ -121,11 +120,6 @@ export default function InsightAssistant() {
   // Selected work sessions (displayed as tags in input area)
   const [selectedWorkSessions, setSelectedWorkSessions] = useState<SessionMappingItem[]>([]);
   const [viewingWorkSession, setViewingWorkSession] = useState<SessionMappingItem | null>(null);
-
-  // Workflow slash command popup state
-  const [isSlashPopupOpen, setIsSlashPopupOpen] = useState(false);
-  const [slashSearchQuery, setSlashSearchQuery] = useState('');
-  const [slashStartIndex, setSlashStartIndex] = useState<number | null>(null);
 
   // Selected workflows and blocks (displayed as tags in input area)
   const [selectedWorkflows, setSelectedWorkflows] = useState<SessionWorkflow[]>([]);
@@ -326,10 +320,10 @@ export default function InsightAssistant() {
 
       // Build display names
       const contextNames = [
-        ...selectedWorkflows.map(w => `/${w.workflowSummary}`),
+        ...selectedWorkflows.map(w => `@${w.workflowSummary}`),
         ...selectedBlocks
           .filter(({ parentWorkflow }) => !selectedWorkflowIds.has(parentWorkflow.id))
-          .map(({ block }) => `/${block.stepName}`),
+          .map(({ block }) => `@${block.stepName}`),
       ];
 
       const workflowContext = `[Analyzing workflows: ${contextNames.join(', ')}]`;
@@ -501,7 +495,7 @@ export default function InsightAssistant() {
       // Refresh sessions list to update title in sidebar
       setSessions(getChatSessions('global', 'insight-assistant'));
     }
-  }, [inputValue, isGeneratingProposals, currentSessionId, track, selectedWorkSessions]);
+  }, [inputValue, isGeneratingProposals, currentSessionId, track, selectedWorkSessions, selectedWorkflows, selectedBlocks]);
 
   // Handle follow-up question click
   const handleFollowUpClick = useCallback((followUp: string) => {
@@ -525,7 +519,7 @@ export default function InsightAssistant() {
   }, []);
 
 
-  // Handle input change with @ mention and / slash command detection
+  // Handle input change with @ mention detection
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const cursorPosition = e.target.selectionStart || 0;
@@ -534,72 +528,23 @@ export default function InsightAssistant() {
 
     const textBeforeCursor = value.slice(0, cursorPosition);
     const atIndex = textBeforeCursor.lastIndexOf('@');
-    const slashIndex = textBeforeCursor.lastIndexOf('/');
 
-    // Helper to check if a trigger char at a given index is valid
-    const isValidTrigger = (index: number, char: string) => {
-      if (index === -1) return false;
-      const charBefore = index > 0 ? value[index - 1] : ' ';
-      if (charBefore !== ' ' && index !== 0) return false;
-      const searchText = textBeforeCursor.slice(index + 1);
-      return !searchText.includes(' ');
-    };
-
-    const atValid = isValidTrigger(atIndex, '@');
-    const slashValid = isValidTrigger(slashIndex, '/');
-
-    // If both are valid, pick the one closest to cursor (rightmost)
-    if (atValid && slashValid) {
-      if (slashIndex > atIndex) {
-        // / is closer to cursor — open slash popup
-        setSlashStartIndex(slashIndex);
-        setSlashSearchQuery(textBeforeCursor.slice(slashIndex + 1));
-        setIsSlashPopupOpen(true);
-        setIsMentionPopupOpen(false);
-        setMentionStartIndex(null);
-        setMentionSearchQuery('');
-        return;
-      } else {
-        // @ is closer to cursor — open mention popup
+    // Check if @ trigger is valid (at start or after space, no spaces after it)
+    if (atIndex !== -1) {
+      const charBefore = atIndex > 0 ? value[atIndex - 1] : ' ';
+      const searchText = textBeforeCursor.slice(atIndex + 1);
+      if ((charBefore === ' ' || atIndex === 0) && !searchText.includes(' ')) {
         setMentionStartIndex(atIndex);
-        setMentionSearchQuery(textBeforeCursor.slice(atIndex + 1));
+        setMentionSearchQuery(searchText);
         setIsMentionPopupOpen(true);
-        setIsSlashPopupOpen(false);
-        setSlashStartIndex(null);
-        setSlashSearchQuery('');
         return;
       }
     }
 
-    // Only @ is valid
-    if (atValid) {
-      setMentionStartIndex(atIndex);
-      setMentionSearchQuery(textBeforeCursor.slice(atIndex + 1));
-      setIsMentionPopupOpen(true);
-      setIsSlashPopupOpen(false);
-      setSlashStartIndex(null);
-      setSlashSearchQuery('');
-      return;
-    }
-
-    // Only / is valid
-    if (slashValid) {
-      setSlashStartIndex(slashIndex);
-      setSlashSearchQuery(textBeforeCursor.slice(slashIndex + 1));
-      setIsSlashPopupOpen(true);
-      setIsMentionPopupOpen(false);
-      setMentionStartIndex(null);
-      setMentionSearchQuery('');
-      return;
-    }
-
-    // Neither trigger is valid — close both popups
+    // No valid trigger — close popup
     setIsMentionPopupOpen(false);
     setMentionStartIndex(null);
     setMentionSearchQuery('');
-    setIsSlashPopupOpen(false);
-    setSlashStartIndex(null);
-    setSlashSearchQuery('');
   }, []);
 
   // Handle session selection from mention popup
@@ -654,7 +599,7 @@ export default function InsightAssistant() {
     setMentionSearchQuery('');
   }, []);
 
-  // Handle workflow selection from slash popup
+  // Handle workflow selection from @ popup (Workflows tab)
   const handleWorkflowSelect = useCallback((workflow: SessionWorkflow) => {
     setSelectedWorkflows((prev) => {
       if (prev.some((w) => w.id === workflow.id)) {
@@ -663,24 +608,24 @@ export default function InsightAssistant() {
       return [...prev, workflow];
     });
 
-    if (slashStartIndex !== null) {
-      const beforeSlash = inputValue.slice(0, slashStartIndex);
-      const afterSlash = inputValue.slice(slashStartIndex + 1 + slashSearchQuery.length);
-      setInputValue(`${beforeSlash}${afterSlash}`.trim());
+    if (mentionStartIndex !== null) {
+      const beforeAt = inputValue.slice(0, mentionStartIndex);
+      const afterAt = inputValue.slice(mentionStartIndex + 1 + mentionSearchQuery.length);
+      setInputValue(`${beforeAt}${afterAt}`.trim());
     }
 
-    setIsSlashPopupOpen(false);
-    setSlashStartIndex(null);
-    setSlashSearchQuery('');
+    setIsMentionPopupOpen(false);
+    setMentionStartIndex(null);
+    setMentionSearchQuery('');
     inputRef.current?.focus();
 
     track(AnalyticsEvents.BUTTON_CLICKED, {
       button_name: 'select_workflow_mention',
       workflow_id: workflow.id,
     });
-  }, [inputValue, slashStartIndex, slashSearchQuery, track]);
+  }, [inputValue, mentionStartIndex, mentionSearchQuery, track]);
 
-  // Handle block/step selection from slash popup detail view
+  // Handle block/step selection from @ popup (Workflows tab detail view)
   const handleBlockSelect = useCallback((block: SessionWorkflowStep, parentWorkflow: SessionWorkflow) => {
     setSelectedBlocks((prev) => {
       const blockKey = `${block.parentWorkflowId}-${block.stepName}`;
@@ -690,22 +635,22 @@ export default function InsightAssistant() {
       return [...prev, { block, parentWorkflow }];
     });
 
-    if (slashStartIndex !== null) {
-      const beforeSlash = inputValue.slice(0, slashStartIndex);
-      const afterSlash = inputValue.slice(slashStartIndex + 1 + slashSearchQuery.length);
-      setInputValue(`${beforeSlash}${afterSlash}`.trim());
+    if (mentionStartIndex !== null) {
+      const beforeAt = inputValue.slice(0, mentionStartIndex);
+      const afterAt = inputValue.slice(mentionStartIndex + 1 + mentionSearchQuery.length);
+      setInputValue(`${beforeAt}${afterAt}`.trim());
     }
 
-    setIsSlashPopupOpen(false);
-    setSlashStartIndex(null);
-    setSlashSearchQuery('');
+    setIsMentionPopupOpen(false);
+    setMentionStartIndex(null);
+    setMentionSearchQuery('');
     inputRef.current?.focus();
 
     track(AnalyticsEvents.BUTTON_CLICKED, {
       button_name: 'select_block_mention',
       block_id: `${block.parentWorkflowId}-${block.stepName}`,
     });
-  }, [inputValue, slashStartIndex, slashSearchQuery, track]);
+  }, [inputValue, mentionStartIndex, mentionSearchQuery, track]);
 
   // Handle removing a selected workflow
   const handleRemoveWorkflow = useCallback((workflowId: string) => {
@@ -717,17 +662,11 @@ export default function InsightAssistant() {
     setSelectedBlocks((prev) => prev.filter((b) => `${b.block.parentWorkflowId}-${b.block.stepName}` !== blockKey));
   }, []);
 
-  // Handle closing slash popup
-  const handleCloseSlashPopup = useCallback(() => {
-    setIsSlashPopupOpen(false);
-    setSlashStartIndex(null);
-    setSlashSearchQuery('');
-  }, []);
 
   // Handle key press
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Don't submit if either popup is open and user presses enter
-    if (e.key === 'Enter' && !e.shiftKey && !isMentionPopupOpen && !isSlashPopupOpen) {
+    // Don't submit if popup is open and user presses enter
+    if (e.key === 'Enter' && !e.shiftKey && !isMentionPopupOpen) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -899,21 +838,14 @@ export default function InsightAssistant() {
                     boxShadow: '0px 4px 6px -2px rgba(16, 24, 40, 0.03)',
                   }}
                 >
-                  {/* Session Mention Popup */}
+                  {/* Session & Workflow Mention Popup (tabbed) */}
                   <SessionMentionPopup
                     isOpen={isMentionPopupOpen}
                     onClose={handleCloseMentionPopup}
                     onSelect={handleSessionSelect}
-                    searchQuery={mentionSearchQuery}
-                  />
-
-                  {/* Workflow Slash Command Popup */}
-                  <WorkflowMentionPopup
-                    isOpen={isSlashPopupOpen}
-                    onClose={handleCloseSlashPopup}
                     onSelectWorkflow={handleWorkflowSelect}
                     onSelectBlock={handleBlockSelect}
-                    searchQuery={slashSearchQuery}
+                    searchQuery={mentionSearchQuery}
                   />
 
                   {/* Selected Work Sessions Tags */}
@@ -1015,7 +947,7 @@ export default function InsightAssistant() {
                       placeholder={
                         (selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0)
                           ? "Ask about the selected context..."
-                          : "Ask about your workflows... (@ sessions, / workflows & steps)"
+                          : "Ask about your workflows... (@ to add sessions, workflows & steps)"
                       }
                       className="flex-1 text-base outline-none"
                       style={{ color: '#1E293B' }}
