@@ -1,7 +1,6 @@
 import logoImage from '../../assets/images/logo.png';
 import WaitlistForm from './WaitlistForm';
 import WorkflowComparison from './WorkflowComparison';
-import UseCases from './UseCases';
 
 // Header Component - Clean header with just the logo
 function Header() {
@@ -211,7 +210,6 @@ export default function KramaLandingPage() {
     <div className="min-h-screen bg-krama-background">
       <Header />
       <HeroSection />
-      <UseCases />
       <FeaturesSection />
       <CTASection />
       <Footer />
