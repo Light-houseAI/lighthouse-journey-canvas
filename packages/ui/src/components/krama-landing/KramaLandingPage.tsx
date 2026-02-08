@@ -1,4 +1,6 @@
 import logoImage from '../../assets/images/logo.png';
+import HowItWorksSection from './HowItWorksSection';
+import UseCasesSection from './UseCasesSection';
 import WaitlistForm from './WaitlistForm';
 import WorkflowComparison from './WorkflowComparison';
 
@@ -211,6 +213,8 @@ export default function KramaLandingPage() {
       <Header />
       <HeroSection />
       <FeaturesSection />
+      <HowItWorksSection />
+      <UseCasesSection />
       <CTASection />
       <Footer />
     </div>
