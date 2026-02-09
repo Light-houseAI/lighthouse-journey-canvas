@@ -8,7 +8,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Zap, FileText, BookOpen, ChevronRight, Copy, Check } from 'lucide-react';
+import { X, Zap, FileText, BookOpen, ChevronRight, Copy, Check, Rocket } from 'lucide-react';
 
 // ============================================================================
 // TYPES
@@ -80,6 +80,28 @@ Output: Downloadable markdown blog post`,
       bg: 'hover:bg-purple-50',
       text: 'text-purple-700',
       iconBg: 'bg-purple-100',
+    },
+  },
+  {
+    id: 'founders',
+    name: 'Founders',
+    description: 'Analyze a session for a founder — predict outcomes, assess optimality, rank opportunities',
+    icon: Rocket,
+    query: `Analyze this Krama session for a Founder. For each captured step: (1) Predict the likely outcome user is trying to achieve in this session (2) assess if steps taken by the user were done optimally, (3) identify what could be better (4) Only state an observation to do something better if you can point to a page + timestamp segment in the session (5) The suggested improvement should create meaningful difference to get user a better outcome. Ignore the PDF filename; it's a screen-capture timeline. Then provide the top 3-5 opportunities ranked by effort vs. impact, formatted as a priority matrix.`,
+    promptPreview: `Prompt: Founders Session Analysis
+
+Analyzes your Krama session from a Founder's perspective:
+- Predicts the likely outcome you're trying to achieve
+- Assesses if steps were done optimally
+- Identifies what could be better (with page + timestamp evidence)
+- Only suggests improvements that create meaningful difference
+- Provides top 3-5 opportunities as an effort vs. impact priority matrix
+
+Output: Priority matrix with evidence-backed recommendations`,
+    colors: {
+      bg: 'hover:bg-orange-50',
+      text: 'text-orange-700',
+      iconBg: 'bg-orange-100',
     },
   },
 ];

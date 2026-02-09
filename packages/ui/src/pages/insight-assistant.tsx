@@ -645,11 +645,98 @@ export default function InsightAssistant() {
       template_name: templateName,
     });
 
-    // Add user message to chat showing the template name
+    // Build session context from @-tagged sessions (same as handleSendMessage)
+    let sessionContextData: AttachedSessionContext[] | undefined;
+    let displayContent = templateName;
+    let query = templateQuery;
+
+    if (selectedWorkSessions.length > 0) {
+      const sessionNames = selectedWorkSessions.map((s) =>
+        s.generatedTitle || s.workflows?.[0]?.workflow_summary || s.chapters?.[0]?.title || 'Session'
+      );
+
+      sessionContextData = selectedWorkSessions.map((s) => ({
+        sessionId: s.id,
+        title: s.generatedTitle || s.workflows?.[0]?.workflow_summary || s.chapters?.[0]?.title || 'Session',
+        highLevelSummary: s.highLevelSummary ?? undefined,
+        workflows: (s.workflows || []).map(w => ({
+          workflow_summary: w.workflow_summary,
+          semantic_steps: w.semantic_steps || [],
+          classification: w.classification,
+          timestamps: w.timestamps,
+        })),
+        totalDurationSeconds: s.durationSeconds ?? 0,
+        appsUsed: [...new Set(
+          (s.workflows || []).flatMap(w =>
+            w.classification?.level_4_tools || []
+          )
+        )],
+      }));
+
+      const sessionContext = `[Analyzing sessions: ${sessionNames.join(', ')}]`;
+      query = `${sessionContext} ${templateQuery}`;
+      displayContent = `${sessionNames.map(n => `@${n}`).join(' ')} ${templateName}`.trim();
+    }
+
+    // Build workflow/block context from @-tagged workflows (same as handleSendMessage)
+    let workflowContextData: AttachedSlashContext[] | undefined;
+
+    if (selectedWorkflows.length > 0 || selectedBlocks.length > 0) {
+      workflowContextData = [];
+
+      for (const w of selectedWorkflows) {
+        workflowContextData.push({
+          type: 'workflow',
+          workflowId: w.id,
+          canonicalName: w.workflowSummary,
+          intentCategory: w.intentCategory,
+          description: w.approach,
+          occurrenceCount: 1,
+          sessionCount: 1,
+          avgDurationSeconds: Math.round(w.durationMs / 1000),
+          blocks: w.steps.map(s => ({
+            canonicalName: s.stepName,
+            intent: w.intentCategory,
+            primaryTool: s.toolsInvolved[0] || '',
+            avgDurationSeconds: s.durationSeconds,
+          })),
+          tools: w.tools,
+        });
+      }
+
+      const selectedWorkflowIds = new Set(selectedWorkflows.map(w => w.id));
+      for (const { block, parentWorkflow } of selectedBlocks) {
+        if (!selectedWorkflowIds.has(parentWorkflow.id)) {
+          workflowContextData.push({
+            type: 'block',
+            blockId: `${block.parentWorkflowId}-${block.stepName}`,
+            canonicalName: block.stepName,
+            intent: parentWorkflow.intentCategory,
+            primaryTool: block.toolsInvolved[0] || '',
+            avgDurationSeconds: block.durationSeconds,
+            parentWorkflowId: parentWorkflow.id,
+            parentWorkflowName: parentWorkflow.workflowSummary,
+          });
+        }
+      }
+
+      const contextNames = [
+        ...selectedWorkflows.map(w => `@${w.workflowSummary}`),
+        ...selectedBlocks
+          .filter(({ parentWorkflow }) => !selectedWorkflowIds.has(parentWorkflow.id))
+          .map(({ block }) => `@${block.stepName}`),
+      ];
+
+      const workflowContext = `[Analyzing workflows: ${contextNames.join(', ')}]`;
+      query = `${workflowContext} ${query}`;
+      displayContent = `${contextNames.join(' ')} ${displayContent}`.trim();
+    }
+
+    // Add user message to chat showing the template name + any @-tagged context
     const userMessage: InsightMessage = {
       id: Date.now().toString(),
       type: 'user',
-      content: templateName,
+      content: displayContent,
       timestamp: new Date(),
     };
     setMessages((prev) => [...prev, userMessage]);
@@ -668,14 +755,21 @@ export default function InsightAssistant() {
       }
     }
 
-    // Generate insights using the template query
+    // Clear selected sessions/workflows/blocks after sending
+    setSelectedWorkSessions([]);
+    setSelectedWorkflows([]);
+    setSelectedBlocks([]);
+
+    // Generate insights using the template query with attached context
     setIsGeneratingProposals(true);
     setInsightProgress(null);
     setInsightResult(null);
 
     try {
       const startResponse = await startInsightGeneration({
-        query: templateQuery,
+        query,
+        sessionContext: sessionContextData,
+        workflowContext: workflowContextData,
         options: {
           lookbackDays: 90,
           includeWebSearch: false,
@@ -777,7 +871,7 @@ export default function InsightAssistant() {
       setIsGeneratingProposals(false);
       setSessions(getChatSessions('global', 'insight-assistant'));
     }
-  }, [isGeneratingProposals, currentSessionId, track]);
+  }, [isGeneratingProposals, currentSessionId, track, selectedWorkSessions, selectedWorkflows, selectedBlocks]);
 
   // Handle workflow selection from @ popup (Workflows tab)
   const handleWorkflowSelect = useCallback((workflow: SessionWorkflow) => {
