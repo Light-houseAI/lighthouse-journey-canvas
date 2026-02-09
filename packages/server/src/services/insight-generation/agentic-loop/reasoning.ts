@@ -395,7 +395,11 @@ export async function reasoningNode(
     shouldTerminate: result.shouldTerminate,
     terminationReason: result.terminationReason || null,
     currentIteration: state.currentIteration + 1,
-    currentStage: result.shouldTerminate ? 'agentic_terminating' : 'agentic_reasoning_complete',
+    currentStage: result.shouldTerminate
+      ? 'agentic_terminating'
+      : result.skillToInvoke
+        ? `agentic_executing:${result.skillToInvoke}`
+        : 'agentic_reasoning_complete',
     progress: Math.min(10 + state.currentIteration * 8, 90),
   };
 }

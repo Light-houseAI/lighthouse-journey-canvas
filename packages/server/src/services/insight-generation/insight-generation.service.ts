@@ -393,6 +393,17 @@ export class InsightGenerationService {
           'agentic_failed': 'Processing failed',
         };
 
+        // Skill-specific descriptions for agentic_executing:<skillId> stages
+        const skillStageDescriptions: Record<string, string> = {
+          'retrieve_user_workflows': 'Retrieving your workflow history...',
+          'analyze_workflow_efficiency': 'Analyzing workflow efficiency...',
+          'compare_with_peers': 'Comparing with peer patterns...',
+          'search_web_best_practices': 'Searching web best practices...',
+          'search_company_docs': 'Searching company documentation...',
+          'discover_underused_features': 'Discovering underused features...',
+          'search_conversation_memory': 'Searching conversation history...',
+        };
+
         const agenticDeps: AgenticLoopDeps = {
           logger: this.logger,
           llmProvider: this.llmProvider,
@@ -411,7 +422,13 @@ export class InsightGenerationService {
           enableContextStitching: this.enableContextStitching,
           // Write progress to DB so frontend polling can read it
           onProgressUpdate: async (progress: number, stage: string) => {
-            const readableStage = stageDescriptions[stage] || stage;
+            let readableStage: string;
+            if (stage.startsWith('agentic_executing:')) {
+              const skillId = stage.split(':')[1];
+              readableStage = skillStageDescriptions[skillId] || `Running ${skillId}...`;
+            } else {
+              readableStage = stageDescriptions[stage] || stage;
+            }
             await this.updateJobInDb(jobId, { progress, currentStage: readableStage });
           },
         };

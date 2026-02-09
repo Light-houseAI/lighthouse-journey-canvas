@@ -219,7 +219,9 @@ async function actionNode(
       usedSkills: [state.selectedSkill],
       selectedSkill: null, // Clear for next iteration
       selectedSkillInput: null,
-      currentStage: result.success ? 'agentic_action_complete' : 'agentic_action_failed',
+      // On success, omit currentStage so the skill-specific stage from reasoning
+      // stays visible until the next reasoning node sets a new one
+      ...(result.success ? {} : { currentStage: 'agentic_action_failed' }),
     };
   } catch (error) {
     const executionTimeMs = Date.now() - startTime;
