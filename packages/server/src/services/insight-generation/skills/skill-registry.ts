@@ -149,6 +149,11 @@ export const INTENT_TO_SKILLS: Record<QueryIntent, SkillId[]> = {
     // Uses PROGRESS_UPDATE_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
     'retrieve_user_workflows',
   ],
+  SKILL_FILE_GENERATION: [
+    // Skill file generation only needs retrieval - the skill file prompt does the heavy lifting
+    // Uses SKILL_FILE_GENERATION_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
+    'retrieve_user_workflows',
+  ],
 };
 
 /**

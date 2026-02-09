@@ -38,6 +38,7 @@ export type QueryIntent =
   | 'TOOL_INTEGRATION'  // Integrate/use/add a tool → A4-Web priority (web search first)
   | 'BLOG_CREATION'     // Create blog/article from workflow → A1 only, uses blog prompt
   | 'PROGRESS_UPDATE'   // Create weekly progress update report → A1 only, uses progress update prompt
+  | 'SKILL_FILE_GENERATION' // Create SKILL.md from workflow → A1 only, uses skill file prompt
   | 'GENERAL';          // Fallback for unclear queries
 
 /**
@@ -139,7 +140,78 @@ const SCOPE_PATTERNS: Record<QueryScope, RegExp[]> = {
   ],
 };
 
+// NOTE: Order matters! Template-based intents (SKILL_FILE_GENERATION, BLOG_CREATION,
+// PROGRESS_UPDATE) MUST come first since they are highly specific. Generic intents like
+// PATTERN (which matches any mention of "pattern") would otherwise shadow them.
 const INTENT_PATTERNS: Record<QueryIntent, RegExp[]> = {
+  // --- Template-based intents (highest priority, most specific) ---
+  SKILL_FILE_GENERATION: [
+    // "Create/write/generate a skill file/skill.md"
+    /\b(create|write|generate|make|draft|build)\s+(an?\s+)?(skill\s*\.?\s*md|skill\s+file|skill\s+document)/i,
+    // "Skill file from my workflow/session"
+    /\b(skill\s*\.?\s*md|skill\s+file)\s+(from|based\s+on|about)\s+(my\s+)?(workflow|session|work)/i,
+    // "Turn my workflow into a skill file"
+    /\bturn\s+(my\s+)?(workflow|session|work)\s+into\s+(an?\s+)?(skill\s*\.?\s*md|skill\s+file|skill)/i,
+    // "Document my workflow as a skill"
+    /\bdocument\s+(my\s+)?(workflow|session|work)\s+as\s+(an?\s+)?skill/i,
+    // "Extract skills from my sessions"
+    /\b(extract|capture|document)\s+(my\s+)?(skill|workflow\s+pattern|repeatable\s+workflow)/i,
+    // "Create a reusable workflow/playbook"
+    /\b(create|make|generate)\s+(an?\s+)?(reusable|repeatable)\s+(workflow|playbook|template|skill)/i,
+    // "Skill inventory/catalog"
+    /\b(skill\s+)?(inventory|catalog)\s+(from|based\s+on)\s+(my\s+)?(workflow|session|work)/i,
+    // Just "skill file" or "skill.md" as direct requests
+    /\bskill\s*\.?\s*md\b/i,
+    // "Generate skill" (standalone)
+    /\b(generate|create)\s+(an?\s+)?skill\b/i,
+  ],
+  BLOG_CREATION: [
+    // "Create/write/generate a blog/article"
+    /\b(create|write|generate|make|draft)\s+(an?\s+)?(blog|article|post|story)/i,
+    // "Blog/article about/from my workflow"
+    /\b(blog|article|post)\s+(about|from|based\s+on)\s+(my\s+)?(workflow|session|work)/i,
+    // "Turn my workflow into a blog/an article"
+    /\bturn\s+(my\s+)?(workflow|session|work)\s+into\s+(an?\s+)?(blog|article|story|post)/i,
+    // "Convert/transform workflow to blog"
+    /\b(convert|transform)\s+(my\s+)?(workflow|session)\s+(to|into)\s+(an?\s+)?(blog|article)/i,
+    // "Write about/up my workflow"
+    /\bwrite\s+(about|up)\s+(my\s+)?(workflow|session|productivity|work)/i,
+    // "Blog about/from/based on"
+    /\bblog\s+(about|from|based\s+on)\s+/i,
+    // "Narrative of my workflow"
+    /\bnarrative\s+(of|about|from)\s+(my\s+)?(workflow|session|work)/i,
+    // "Create content from my session"
+    /\b(create|generate)\s+(content|post)\s+(from|based\s+on)\s+(my\s+)?(workflow|session)/i,
+    // "Document my workflow as a blog"
+    /\bdocument\s+(my\s+)?(workflow|session)\s+(as|into)\s+(an?\s+)?(blog|article)/i,
+  ],
+  PROGRESS_UPDATE: [
+    // "Create/write/generate a weekly progress update/report"
+    /\b(create|write|generate|make|draft)\s+(an?\s+)?(weekly\s+)?(progress\s+)?(update|report)/i,
+    // "Weekly update/report"
+    /\b(weekly|daily|monthly)\s+(progress\s+)?(update|report|summary)/i,
+    // "Progress report/update from my workflow"
+    /\b(progress\s+)?(report|update)\s+(from|based\s+on|about)\s+(my\s+)?(workflow|session|work)/i,
+    // "Turn my workflow into a progress report"
+    /\bturn\s+(my\s+)?(workflow|session|work)\s+into\s+(an?\s+)?(progress\s+)?(report|update)/i,
+    // "Summarize my work/week as a report"
+    /\bsummar(ize|y)\s+(my\s+)?(work|week|activities?)\s+(as|into)\s+(an?\s+)?(report|update)/i,
+    // "What did I accomplish this week"
+    /\bwhat\s+(did|have)\s+i\s+(accomplish|achieve|complete|do)\s+(this|last)\s+(week|month)/i,
+    // "Create a status report"
+    /\b(create|write|generate)\s+(an?\s+)?(status|activity|work)\s+(report|update|summary)/i,
+    // "Weekly standup/status update"
+    /\b(weekly|daily)\s+(standup|status)\s+(update|report|summary)/i,
+    // "Generate progress summary"
+    /\b(generate|create)\s+(progress|weekly|work)\s+(summary|overview)/i,
+    // "Report on my activities"
+    /\breport\s+(on|about)\s+(my\s+)?(activities?|work|accomplishments?)/i,
+    // "Structure my weekly update"
+    /\bstructure\s+(my\s+)?(weekly|progress)\s+(update|report)/i,
+    // "Format as progress report"
+    /\bformat\s+(as|into)\s+(an?\s+)?(progress|weekly)\s+(report|update)/i,
+  ],
+  // --- Generic intents (lower priority) ---
   DIAGNOSTIC: [
     /\bwhere\s+(am\s+i|do\s+i)\s+(slow|wasting|losing|spending|inefficient)/i,
     /\bwhat('s|\s+is)\s+(slowing|taking|wasting)/i,
@@ -229,52 +301,6 @@ const INTENT_PATTERNS: Record<QueryIntent, RegExp[]> = {
     /\b\w+\s+(integration|plugin|extension|addon|add-on)/i,
     // "Set up X" / "Configure X"
     /\b(set\s*up|configure|install)\s+\w+/i,
-  ],
-  BLOG_CREATION: [
-    // "Create/write/generate a blog/article"
-    /\b(create|write|generate|make|draft)\s+(an?\s+)?(blog|article|post|story)/i,
-    // "Blog/article about/from my workflow"
-    /\b(blog|article|post)\s+(about|from|based\s+on)\s+(my\s+)?(workflow|session|work)/i,
-    // "Turn my workflow into a blog/an article"
-    /\bturn\s+(my\s+)?(workflow|session|work)\s+into\s+(an?\s+)?(blog|article|story|post)/i,
-    // "Convert/transform workflow to blog"
-    /\b(convert|transform)\s+(my\s+)?(workflow|session)\s+(to|into)\s+(an?\s+)?(blog|article)/i,
-    // "Write about/up my workflow"
-    /\bwrite\s+(about|up)\s+(my\s+)?(workflow|session|productivity|work)/i,
-    // "Blog about/from/based on"
-    /\bblog\s+(about|from|based\s+on)\s+/i,
-    // "Narrative of my workflow"
-    /\bnarrative\s+(of|about|from)\s+(my\s+)?(workflow|session|work)/i,
-    // "Create content from my session"
-    /\b(create|generate)\s+(content|post)\s+(from|based\s+on)\s+(my\s+)?(workflow|session)/i,
-    // "Document my workflow as a blog"
-    /\bdocument\s+(my\s+)?(workflow|session)\s+(as|into)\s+(an?\s+)?(blog|article)/i,
-  ],
-  PROGRESS_UPDATE: [
-    // "Create/write/generate a weekly progress update/report"
-    /\b(create|write|generate|make|draft)\s+(an?\s+)?(weekly\s+)?(progress\s+)?(update|report)/i,
-    // "Weekly update/report"
-    /\b(weekly|daily|monthly)\s+(progress\s+)?(update|report|summary)/i,
-    // "Progress report/update from my workflow"
-    /\b(progress\s+)?(report|update)\s+(from|based\s+on|about)\s+(my\s+)?(workflow|session|work)/i,
-    // "Turn my workflow into a progress report"
-    /\bturn\s+(my\s+)?(workflow|session|work)\s+into\s+(an?\s+)?(progress\s+)?(report|update)/i,
-    // "Summarize my work/week as a report"
-    /\bsummar(ize|y)\s+(my\s+)?(work|week|activities?)\s+(as|into)\s+(an?\s+)?(report|update)/i,
-    // "What did I accomplish this week"
-    /\bwhat\s+(did|have)\s+i\s+(accomplish|achieve|complete|do)\s+(this|last)\s+(week|month)/i,
-    // "Create a status report"
-    /\b(create|write|generate)\s+(an?\s+)?(status|activity|work)\s+(report|update|summary)/i,
-    // "Weekly standup/status update"
-    /\b(weekly|daily)\s+(standup|status)\s+(update|report|summary)/i,
-    // "Generate progress summary"
-    /\b(generate|create)\s+(progress|weekly|work)\s+(summary|overview)/i,
-    // "Report on my activities"
-    /\breport\s+(on|about)\s+(my\s+)?(activities?|work|accomplishments?)/i,
-    // "Structure my weekly update"
-    /\bstructure\s+(my\s+)?(weekly|progress)\s+(update|report)/i,
-    // "Format as progress report"
-    /\bformat\s+(as|into)\s+(an?\s+)?(progress|weekly)\s+(report|update)/i,
   ],
   GENERAL: [], // Fallback
 };
@@ -757,6 +783,14 @@ function determineRouting(
       includePeerComparison = false;  // No peer comparison for progress report
       includeWebSearch = false;       // No web search for progress report
       includeFeatureAdoption = false; // No feature tips for progress report
+      break;
+    case 'SKILL_FILE_GENERATION':
+      // Skill file generation only needs retrieval - the skill file prompt does the heavy lifting
+      // Uses SKILL_FILE_GENERATION_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
+      agentsToRun = ['A1_RETRIEVAL'];
+      includePeerComparison = false;  // No peer comparison for skill file
+      includeWebSearch = false;       // No web search for skill file
+      includeFeatureAdoption = false; // No feature tips for skill file
       break;
     case 'GENERAL':
     default:

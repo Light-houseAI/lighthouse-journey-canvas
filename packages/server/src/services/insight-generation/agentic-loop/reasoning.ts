@@ -52,6 +52,7 @@ SECTION 1: FACT DISAMBIGUATION - KEY DEFINITIONS
 - For DIAGNOSTIC/OPTIMIZATION queries: User evidence + diagnostics/analysis
 - For TOOL_INTEGRATION queries: Web search results about the tool
 - For COMPARISON queries: User evidence + peer comparison data
+- For BLOG_CREATION/PROGRESS_UPDATE/SKILL_FILE_GENERATION queries: User workflow evidence ONLY (retrieval-only — specialized prompt handles generation, do NOT run analysis/comparison/feature discovery)
 
 **SKILL PREREQUISITES**: Some skills require outputs from other skills:
 - analyze_workflow_efficiency: REQUIRES retrieve_user_workflows first
@@ -78,15 +79,18 @@ RULE 6: Terminate when: (a) recommended skills exhausted, OR (b) sufficient data
 SECTION 4: TERMINATION DECISION MATRIX
 ================================================================================
 
-| Intent            | Terminate When                                                |
-|-------------------|---------------------------------------------------------------|
-| EXPLORATION       | Have userEvidence (any workflow data)                         |
-| DIAGNOSTIC        | Have userEvidence + diagnostics + feature tips (A5)           |
-| OPTIMIZATION      | Have userEvidence + diagnostics + optimization + feature tips |
-| COMPARISON        | Have userEvidence + peer comparison data                      |
-| TOOL_INTEGRATION  | Have web search results                                       |
-| FEATURE_DISCOVERY | Have userEvidence + feature tips                              |
-| GENERAL           | Have userEvidence + optimization plan + feature tips          |
+| Intent                | Terminate When                                                |
+|-----------------------|---------------------------------------------------------------|
+| EXPLORATION           | Have userEvidence (any workflow data)                         |
+| DIAGNOSTIC            | Have userEvidence + diagnostics + feature tips (A5)           |
+| OPTIMIZATION          | Have userEvidence + diagnostics + optimization + feature tips |
+| COMPARISON            | Have userEvidence + peer comparison data                      |
+| TOOL_INTEGRATION      | Have web search results                                       |
+| FEATURE_DISCOVERY     | Have userEvidence + feature tips                              |
+| BLOG_CREATION         | Have userEvidence (retrieval only — prompt does heavy lifting)|
+| PROGRESS_UPDATE       | Have userEvidence (retrieval only — prompt does heavy lifting)|
+| SKILL_FILE_GENERATION | Have userEvidence (retrieval only — prompt does heavy lifting)|
+| GENERAL               | Have userEvidence + optimization plan + feature tips          |
 
 **IMPORTANT**: For DIAGNOSTIC/OPTIMIZATION/GENERAL, you MUST invoke discover_underused_features
 before terminating, even if you have diagnostics and optimizations.
@@ -492,6 +496,17 @@ function ruleBasedReasoning(
       thought: 'Have user evidence for exploration query. Ready to respond.',
       shouldTerminate: true,
       terminationReason: 'Sufficient data for exploration query',
+    };
+  }
+
+  // For template-based generation (blog, progress update, skill file),
+  // only retrieval is needed — the specialized system prompt does the heavy lifting
+  const templateIntents = ['BLOG_CREATION', 'PROGRESS_UPDATE', 'SKILL_FILE_GENERATION'];
+  if (templateIntents.includes(state.queryClassification?.intent || '') && state.userEvidence) {
+    return {
+      thought: `Have user evidence for ${state.queryClassification?.intent} query. Retrieval only — specialized prompt handles generation.`,
+      shouldTerminate: true,
+      terminationReason: `Sufficient data for ${state.queryClassification?.intent} (retrieval-only intent)`,
     };
   }
 

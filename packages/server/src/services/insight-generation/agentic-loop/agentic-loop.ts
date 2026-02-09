@@ -42,6 +42,7 @@ import { extractToolNames, validateToolInResults, generateUnknownToolResponse } 
 import { identifyResponseGaps, regenerateWithGapFixes, type ValidatorGraphDeps } from '../graphs/validator-graph.js';
 import { BLOG_GENERATION_SYSTEM_PROMPT } from '../prompts/blog-system-prompt.js';
 import { PROGRESS_UPDATE_SYSTEM_PROMPT } from '../prompts/progressupdate-system-prompt.js';
+import { SKILL_FILE_GENERATION_SYSTEM_PROMPT } from '../prompts/skillfile-system-prompt.js';
 
 // ============================================================================
 // TYPES
@@ -340,7 +341,7 @@ async function terminateNode(
     // system prompts (blog-system-prompt.ts, progressupdate-system-prompt.ts)
     // already enforce quality. A6 gap types are designed for workflow analysis.
     const queryIntent = state.queryClassification?.intent;
-    const SKIP_VALIDATION_INTENTS = ['BLOG_CREATION', 'PROGRESS_UPDATE'];
+    const SKIP_VALIDATION_INTENTS = ['BLOG_CREATION', 'PROGRESS_UPDATE', 'SKILL_FILE_GENERATION'];
     const shouldValidate = !SKIP_VALIDATION_INTENTS.includes(queryIntent as string);
 
     // Only run validation if we have an answer, workflows, and a validatable intent
@@ -1493,12 +1494,15 @@ Generate your response now. Remember:
   // Select appropriate system prompt based on intent
   // BLOG_CREATION uses the specialized blog generation prompt
   // PROGRESS_UPDATE uses the specialized progress update prompt
+  // SKILL_FILE_GENERATION uses the specialized skill file prompt
   // All other intents use the standard response agent prompt
   let systemPrompt: string;
   if (intent === 'BLOG_CREATION') {
     systemPrompt = BLOG_GENERATION_SYSTEM_PROMPT;
   } else if (intent === 'PROGRESS_UPDATE') {
     systemPrompt = PROGRESS_UPDATE_SYSTEM_PROMPT;
+  } else if (intent === 'SKILL_FILE_GENERATION') {
+    systemPrompt = SKILL_FILE_GENERATION_SYSTEM_PROMPT;
   } else {
     systemPrompt = RESPONSE_AGENT_SYSTEM_PROMPT;
   }
@@ -1514,6 +1518,7 @@ Generate your response now. Remember:
     promptFramework: 'fact-disambiguation-v1',
     usingBlogPrompt: intent === 'BLOG_CREATION',
     usingProgressUpdatePrompt: intent === 'PROGRESS_UPDATE',
+    usingSkillFilePrompt: intent === 'SKILL_FILE_GENERATION',
   });
 
   const response = await llmProvider.generateText([
@@ -2044,6 +2049,54 @@ Generate ONLY ONE downloadable markdown file:
 [Report content only - NOT the analysis narrative]
 \`\`\``;
 
+    case 'SKILL_FILE_GENERATION':
+      return `**INTENT: SKILL FILE GENERATION**
+The user wants to create a SKILL.md file that documents a repeatable workflow pattern from their session data.
+Use ALL user-selected sessions provided in context. If specific sessions are tagged, focus on those. Otherwise, identify the most impactful or recurring workflow pattern across all sessions.
+
+**REQUIRED APPROACH:**
+1. Identify all applications, tools, and transitions in the workflow data
+2. Trace the chronological workflow with timestamps
+3. Identify the core repeatable workflow pattern (Research → Create → Refine → Share, etc.)
+4. Abstract the specific session into a generalizable, topic-independent methodology
+5. Write as a SKILL.md with YAML frontmatter, methodology steps, tool table, and quality checks
+
+**CRITICAL FORMAT RULES:**
+❌ DO NOT use "Step 1:", "Step 2:" headers in the analysis narrative
+❌ DO NOT expose raw analysis steps — write flowing paragraphs
+✅ DO write a 2-3 paragraph flowing analysis narrative before the file
+✅ DO generalize from the specific session into a reusable pattern
+
+**OUTPUT STRUCTURE:**
+- Flowing narrative analysis (2-3 paragraphs)
+- YAML frontmatter (name + description with trigger conditions)
+- Title and overview
+- Methodology (step-by-step, imperative voice)
+- Tools & Integration Points (table)
+- AI Integration (if applicable)
+- Quality Checks (checklist)
+- Example (from actual session data)
+
+**ANTI-HALLUCINATION:**
+❌ DO NOT fabricate workflow steps not observed in the data
+❌ DO NOT invent tool features or integrations
+❌ DO NOT assume the user's intent without evidence
+❌ DO NOT add steps from general knowledge that weren't in the session
+✅ DO ground every methodology step in observed session data
+✅ DO reference actual tools and features used
+✅ DO quote visible content accurately (slide titles, document names)
+✅ DO distinguish between observed steps and inferred best practices
+
+**FILE GENERATION (MANDATORY):**
+Generate ONLY ONE downloadable markdown file:
+\`\`\`download:SKILL-[descriptive-name].md
+---
+name: [skill-name]
+description: [Description with trigger conditions]
+---
+[Full SKILL.md content]
+\`\`\``;
+
     default:
       return `**INTENT: GENERAL**
 This is a general query. Apply the standard evidence-grounded response approach.
@@ -2085,6 +2138,7 @@ function getIntentDescription(intent: string): string {
     PATTERN: 'User wants to understand their patterns',
     BLOG_CREATION: 'User wants to create a blog post from their workflow',
     PROGRESS_UPDATE: 'User wants to create a weekly progress update report from their workflow',
+    SKILL_FILE_GENERATION: 'User wants to create a SKILL.md file documenting a repeatable workflow pattern',
     GENERAL: 'General productivity query',
   };
   return descriptions[intent] || 'General query';

@@ -93,6 +93,28 @@ Output: Downloadable markdown blog post`,
     updatedAt: new Date().toISOString(),
   },
   {
+    id: 'skill-file-generation',
+    name: 'Skill File',
+    description: 'Create a reusable SKILL.md documenting your workflow patterns',
+    iconKey: 'Target',
+    query: 'Create a SKILL.md file from my recent workflow sessions that documents the repeatable workflow pattern as a structured, reusable skill',
+    promptPreview: `Prompt: Skill File Generation
+
+Analyzes your workflow session data and creates a structured SKILL.md file:
+- Identifies the core repeatable workflow pattern
+- Documents step-by-step methodology in imperative voice
+- Maps tools & integration points used
+- Captures AI integration patterns (if applicable)
+- Includes quality checks and common pitfalls
+- Provides a concrete example from your actual session data
+
+Output: Downloadable SKILL.md with YAML frontmatter`,
+    colorPreset: 'green',
+    isBuiltIn: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
     id: 'founders',
     name: 'Founders',
     description: 'Analyze a session for a founder — predict outcomes, assess optimality, rank opportunities',
