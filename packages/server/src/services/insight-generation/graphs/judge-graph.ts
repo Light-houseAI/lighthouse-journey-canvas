@@ -38,9 +38,9 @@ import { ConcurrencyLimiter, withRetry, isRateLimitError, withTimeout, TimeoutEr
 const LLM_PER_ATTEMPT_TIMEOUT_MS = 60000; // 60 seconds per attempt
 const LLM_TOTAL_TIMEOUT_MS = 120000; // 2 minutes total including retries
 
-// Global concurrency limiter for GPT-4o calls to prevent rate limiting
-// Limit to 2 concurrent calls to stay under 30K TPM limit
-const gpt4oConcurrencyLimiter = new ConcurrencyLimiter(2);
+// Global concurrency limiter for LLM calls (Gemini Flash) to prevent rate limiting
+// Increased to 4 to support parallel analysis calls (Gemini has 100K+ TPM)
+const gpt4oConcurrencyLimiter = new ConcurrencyLimiter(4);
 
 // ============================================================================
 // TYPES
@@ -285,15 +285,25 @@ async function diagnoseUserWorkflows(
       totalWorkflows: state.userEvidence.workflows.length,
     });
 
-    // Analyze ALL workflows in a single batched call
-    const primaryDiagnostics = await analyzeBatchedWorkflows(
-      state.userEvidence.workflows,
-      state.query,
-      llmProvider,
-      logger
-    );
+    // OPTIMIZATION: Run batched workflow analysis and effectiveness analysis in parallel.
+    // These are independent LLM calls — #1 analyzes efficiency (inefficiencies/opportunities),
+    // #3 analyzes effectiveness (quality/outcomes). Neither depends on the other.
+    const [primaryDiagnostics, effectivenessAnalysis] = await Promise.all([
+      analyzeBatchedWorkflows(
+        state.userEvidence.workflows,
+        state.query,
+        llmProvider,
+        logger
+      ),
+      analyzeWorkflowEffectiveness(
+        state.userEvidence.workflows,
+        state.query,
+        llmProvider,
+        logger
+      ),
+    ]);
 
-    logger.info('A2: Batched workflow analysis complete', {
+    logger.info('A2: Parallel workflow analysis complete', {
       workflowCount: state.userEvidence.workflows.length,
       durationMs: Date.now() - analysisStartTime,
     });
@@ -341,15 +351,6 @@ async function diagnoseUserWorkflows(
         possibleCause: 'LLM schema failure, empty workflow, or genuinely efficient workflow',
       });
     }
-
-    // ENHANCEMENT: Add EFFECTIVENESS analysis (quality and outcomes, not just efficiency)
-    // This provides step-by-step quality critique, missed activities, and content quality assessment
-    const effectivenessAnalysis = await analyzeWorkflowEffectiveness(
-      state.userEvidence.workflows,
-      state.query,
-      llmProvider,
-      logger
-    );
 
     if (effectivenessAnalysis) {
       primaryDiagnostics.effectivenessAnalysis = effectivenessAnalysis;

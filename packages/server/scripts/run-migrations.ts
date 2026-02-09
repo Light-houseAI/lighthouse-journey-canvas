@@ -116,6 +116,13 @@ async function runMigrations() {
     );
     await runSqlMigration(pool, platformInsightMigrationPath, 'platform_insight_tables');
 
+    // HNSW vector indexes (replaces IVFFlat, adds missing indexes on graphrag_chunks & session_mappings)
+    const hnswMigrationPath = path.join(
+      __dirname,
+      '../../schema/migrations/20260208000001_upgrade_vector_indexes_to_hnsw.sql'
+    );
+    await runSqlMigration(pool, hnswMigrationPath, 'upgrade_vector_indexes_to_hnsw');
+
     // Verify workflow_screenshots table
     const result = await pool.query(`
       SELECT table_name

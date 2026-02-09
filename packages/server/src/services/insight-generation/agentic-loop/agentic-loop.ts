@@ -64,6 +64,8 @@ export interface AgenticLoopDeps {
   agenticConfig?: Partial<AgenticLoopConfig>;
   /** Enable cross-session context stitching in retrieval */
   enableContextStitching?: boolean;
+  /** Callback to persist progress updates to database for frontend polling */
+  onProgressUpdate?: (progress: number, stage: string) => Promise<void>;
 }
 
 // ============================================================================
@@ -327,15 +329,22 @@ async function terminateNode(
     // =========================================================================
     // A6 VALIDATION LOOP: Recursive validation to catch response gaps
     // =========================================================================
-    const MAX_VALIDATION_ITERATIONS = 3;
+    const MAX_VALIDATION_ITERATIONS = 2;
     let validatedAnswer = response.userQueryAnswer;
     let validationIterationCount = 0;
 
     // Prepare user workflows for validation context
     const userWorkflows = state.userEvidence?.workflows || [];
 
-    // Only run validation if we have an answer and workflows to validate against
-    if (validatedAnswer && userWorkflows.length > 0) {
+    // Skip validation for creative/summarization intents — their specialized
+    // system prompts (blog-system-prompt.ts, progressupdate-system-prompt.ts)
+    // already enforce quality. A6 gap types are designed for workflow analysis.
+    const queryIntent = state.queryClassification?.intent;
+    const SKIP_VALIDATION_INTENTS = ['BLOG_CREATION', 'PROGRESS_UPDATE'];
+    const shouldValidate = !SKIP_VALIDATION_INTENTS.includes(queryIntent as string);
+
+    // Only run validation if we have an answer, workflows, and a validatable intent
+    if (shouldValidate && validatedAnswer && userWorkflows.length > 0) {
       const validatorDeps: ValidatorGraphDeps = {
         logger,
         llmProvider: responseLLMProvider,
@@ -399,7 +408,9 @@ async function terminateNode(
         finalLength: validatedAnswer.length,
       });
     } else {
-      logger.info('A6: Skipping validation (no answer or workflows)');
+      logger.info('A6: Skipping validation', {
+        reason: !shouldValidate ? `intent=${queryIntent}` : 'no answer or workflows',
+      });
     }
 
     // Strip internal FIXED comments from the final answer (these are for debugging, not for users)
@@ -1079,7 +1090,7 @@ ${session.highLevelSummary ? `  Summary: ${session.highLevelSummary}\n` : ''}
 ${workflowDetails}`;
     }).join('\n\n');
 
-    sections.push(`USER-SELECTED SESSIONS FOR ANALYSIS (FOCUS ON THESE):\n${attachedDetails}`);
+    sections.push(`USER-SELECTED SESSIONS FOR ANALYSIS (${state.attachedSessionContext.length} session${state.attachedSessionContext.length > 1 ? 's' : ''} — FOCUS ON THESE):\n${attachedDetails}`);
   }
 
   // -------------------------------------------------------------------------
@@ -1951,6 +1962,7 @@ The user wants to become more proficient with a specific tool.
     case 'BLOG_CREATION':
       return `**INTENT: BLOG CREATION**
 The user wants to create a blog post or article based on their workflow data.
+Use ALL user-selected sessions provided in context. The session count is stated in the "USER-SELECTED SESSIONS" header — cover every one of them.
 
 **REQUIRED APPROACH:**
 1. Analyze the workflow data as a documentary narrative
@@ -1988,13 +2000,14 @@ Generate ONLY ONE downloadable markdown file:
     case 'PROGRESS_UPDATE':
       return `**INTENT: PROGRESS UPDATE**
 The user wants to create a weekly progress update report based on their workflow data.
+Use ALL user-selected sessions provided in context. The session count is stated in the "USER-SELECTED SESSIONS" header — cover every one of them in the report.
 
 **REQUIRED APPROACH:**
 1. Write a flowing narrative analysis of the workflow data (NO step headers)
 2. Identify all applications and tools used
 3. Extract key activities with timestamps
 4. Identify key themes and deliverables
-5. Synthesize into a structured progress report
+5. Synthesize into a structured progress report covering ALL provided sessions
 
 **CRITICAL FORMAT RULES:**
 ❌ DO NOT use "Step 1:", "Step 2:", "Step 3:" headers
@@ -2089,12 +2102,25 @@ export function createAgenticLoopGraph(deps: AgenticLoopDeps) {
 
   logger.info('AgenticLoop: Creating graph');
 
+  // Wrap nodes to persist progress to DB for frontend polling
+  const withProgressWrite = (nodeFn: (state: AgenticState) => Promise<Partial<AgenticState>>) => {
+    return async (state: AgenticState): Promise<Partial<AgenticState>> => {
+      const update = await nodeFn(state);
+      if (deps.onProgressUpdate && (update.progress !== undefined || update.currentStage)) {
+        const progress = update.progress ?? state.progress;
+        const stage = update.currentStage || state.currentStage;
+        await deps.onProgressUpdate(progress, stage).catch(() => {});
+      }
+      return update;
+    };
+  };
+
   const graph = new StateGraph(AgenticStateAnnotation)
-    // Add nodes
-    .addNode('guardrail', (state) => guardrailNode(state, { logger, llmProvider: deps.llmProvider }))
-    .addNode('reason', (state) => reasoningNode(state, { logger, llmProvider: deps.llmProvider }))
-    .addNode('act', (state) => actionNode(state, deps))
-    .addNode('terminate', (state) => terminateNode(state, deps))
+    // Add nodes (wrapped to persist progress to DB)
+    .addNode('guardrail', withProgressWrite((state) => guardrailNode(state, { logger, llmProvider: deps.llmProvider })))
+    .addNode('reason', withProgressWrite((state) => reasoningNode(state, { logger, llmProvider: deps.llmProvider })))
+    .addNode('act', withProgressWrite((state) => actionNode(state, deps)))
+    .addNode('terminate', withProgressWrite((state) => terminateNode(state, deps)))
 
     // Add edges
     .addEdge('__start__', 'guardrail')

@@ -21,6 +21,13 @@ export async function createDatabaseConnection() {
     ...config.pgPoolOptions,
   });
 
+  // Set HNSW search parameter on each new connection for optimal vector search performance
+  pool.on('connect', (client) => {
+    client.query('SET hnsw.ef_search = 64').catch(() => {
+      // Silently ignore if pgvector/HNSW not available (e.g., test environments)
+    });
+  });
+
   const db = drizzle(pool, { schema });
 
   // Store pool reference on the db object for cleanup

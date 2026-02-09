@@ -40,7 +40,7 @@ import {
 } from '../services/chat-session-storage';
 import {
   startInsightGeneration,
-  pollForJobCompletion,
+  streamJobProgress,
   type InsightGenerationResult,
   type JobProgress,
   type AttachedSessionContext,
@@ -278,7 +278,7 @@ export default function InsightAssistant() {
       }));
 
       // Add session context to the query for display and fallback
-      const sessionContext = `[Analyzing sessions: ${sessionNames.join(', ')}]`;
+      const sessionContext = `[Analyzing ${sessionNames.length} session${sessionNames.length > 1 ? 's' : ''}: ${sessionNames.join(', ')}]`;
       query = query ? `${sessionContext} ${query}` : `${sessionContext} Analyze these work sessions and provide insights.`;
 
       // Display content shows the session tags
@@ -292,6 +292,7 @@ export default function InsightAssistant() {
       workflowContextData = [];
 
       // Add full workflows from sessions
+      const attachedSessionCount = selectedWorkSessions.length || 1;
       for (const w of selectedWorkflows) {
         workflowContextData.push({
           type: 'workflow',
@@ -300,7 +301,7 @@ export default function InsightAssistant() {
           intentCategory: w.intentCategory,
           description: w.approach,
           occurrenceCount: 1,
-          sessionCount: 1,
+          sessionCount: attachedSessionCount,
           avgDurationSeconds: Math.round(w.durationMs / 1000),
           blocks: w.steps.map(s => ({
             canonicalName: s.stepName,
@@ -396,28 +397,17 @@ export default function InsightAssistant() {
         },
       });
 
-      console.log('[InsightAssistant] Started insight job:', startResponse.jobId);
-
-      // Poll for completion with progress updates
-      // Timeout: 2000 polls × 2 seconds = ~67 minutes max
-      // This accommodates long-running multi-agent pipelines
-      const job = await pollForJobCompletion(
+      // Stream progress via SSE for real-time updates (falls back to polling if SSE unavailable)
+      const job = await streamJobProgress(
         startResponse.jobId,
-        (progress) => {
+        (progress: JobProgress) => {
           setInsightProgress(progress);
-          console.log('[InsightAssistant] Progress:', progress.currentStage, `${progress.progress}%`);
         },
-        2000, // Poll every 2 seconds
-        2000  // Max ~67 minutes (2000 × 2s)
+        600000 // 10 minute timeout
       );
 
       if (job.status === 'completed' && job.result) {
         setInsightResult(job.result);
-        console.log('[InsightAssistant] Insight generation completed:', job.result);
-        console.log(`[InsightAssistant] Optimization blocks: ${job.result.optimizationPlan?.blocks?.length ?? 0}`);
-        if (job.result.optimizationPlan?.blocks?.length) {
-          console.log('[InsightAssistant] Block details:', JSON.stringify(job.result.optimizationPlan.blocks.map(b => ({ id: b.blockId, whyThisMatters: b.whyThisMatters, timeSaved: b.timeSaved, transformations: b.stepTransformations?.length ?? 0 })), null, 2));
-        }
 
         // Add the direct answer message to chat with full insight result for interactive display
         const answerContent = job.result.userQueryAnswer;
@@ -697,7 +687,7 @@ export default function InsightAssistant() {
         )],
       }));
 
-      const sessionContext = `[Analyzing sessions: ${sessionNames.join(', ')}]`;
+      const sessionContext = `[Analyzing ${sessionNames.length} session${sessionNames.length > 1 ? 's' : ''}: ${sessionNames.join(', ')}]`;
       query = `${sessionContext} ${templateQuery}`;
       displayContent = `${sessionNames.map(n => `@${n}`).join(' ')} ${templateName}`.trim();
     }
@@ -708,6 +698,7 @@ export default function InsightAssistant() {
     if (selectedWorkflows.length > 0 || selectedBlocks.length > 0) {
       workflowContextData = [];
 
+      const templateAttachedSessionCount = selectedWorkSessions.length || 1;
       for (const w of selectedWorkflows) {
         workflowContextData.push({
           type: 'workflow',
@@ -716,7 +707,7 @@ export default function InsightAssistant() {
           intentCategory: w.intentCategory,
           description: w.approach,
           occurrenceCount: 1,
-          sessionCount: 1,
+          sessionCount: templateAttachedSessionCount,
           avgDurationSeconds: Math.round(w.durationMs / 1000),
           blocks: w.steps.map(s => ({
             canonicalName: s.stepName,
@@ -802,16 +793,13 @@ export default function InsightAssistant() {
         },
       });
 
-      console.log('[InsightAssistant] Started template job:', startResponse.jobId, 'template:', templateName);
-
-      const job = await pollForJobCompletion(
+      // Stream progress via SSE for real-time updates (falls back to polling if SSE unavailable)
+      const job = await streamJobProgress(
         startResponse.jobId,
-        (progress) => {
+        (progress: JobProgress) => {
           setInsightProgress(progress);
-          console.log('[InsightAssistant] Progress:', progress.currentStage, `${progress.progress}%`);
         },
-        2000,
-        2000
+        600000 // 10 minute timeout
       );
 
       if (job.status === 'completed' && job.result) {
@@ -1038,9 +1026,7 @@ export default function InsightAssistant() {
               style={{ maxHeight: 'calc(100vh - 180px)' }}
             >
               <div className="mx-auto max-w-3xl space-y-4">
-                {messages.map((message, index) => {
-                  console.log(`[InsightAssistant] Rendering message ${index}: type=${message.type}, hasInsightResult=${!!message.insightResult}, blockCount=${message.insightResult?.optimizationPlan?.blocks?.length ?? 0}`);
-                  return (
+                {messages.map((message, index) => (
                   <React.Fragment key={message.id}>
                     <InteractiveMessage
                       content={message.content}
@@ -1064,42 +1050,33 @@ export default function InsightAssistant() {
                       </div>
                     )}
                   </React.Fragment>
-                  );
-                })}
+                ))}
 
-                {/* Loading indicator */}
+                {/* Progress indicator with percentage bar */}
                 {isGeneratingProposals && (
                   <div className="flex justify-start">
                     <div
-                      className="rounded-2xl px-4 py-3"
-                      style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" />
-                        <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: '0.1s' }} />
-                        <div className="h-2 w-2 animate-bounce rounded-full bg-gray-400" style={{ animationDelay: '0.2s' }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Multi-agent progress indicator */}
-                {isGeneratingProposals && insightProgress && (
-                  <div className="flex justify-start">
-                    <div
-                      className="rounded-2xl px-4 py-3"
+                      className="w-full max-w-md rounded-2xl px-5 py-4"
                       style={{ background: '#EEF2FF', border: '1px solid #C7D2FE' }}
                     >
                       <div className="flex items-center gap-3">
-                        <Sparkles className="h-4 w-4 animate-pulse" style={{ color: '#4F46E5' }} />
-                        <div>
-                          <p className="text-sm font-medium" style={{ color: '#4F46E5' }}>
-                            {insightProgress.currentStage}
-                          </p>
-                          <div className="mt-1 h-1.5 w-32 overflow-hidden rounded-full bg-indigo-200">
+                        <Sparkles className="h-5 w-5 shrink-0 animate-pulse" style={{ color: '#4F46E5' }} />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium" style={{ color: '#4F46E5' }}>
+                              {insightProgress?.currentStage || 'Starting analysis...'}
+                            </p>
+                            <span className="ml-2 text-sm font-semibold tabular-nums" style={{ color: '#4F46E5' }}>
+                              {insightProgress?.progress ?? 0}%
+                            </span>
+                          </div>
+                          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-indigo-200">
                             <div
-                              className="h-full rounded-full bg-indigo-600 transition-all duration-300"
-                              style={{ width: `${insightProgress.progress}%` }}
+                              className="h-full rounded-full transition-all duration-500 ease-out"
+                              style={{
+                                width: `${insightProgress?.progress ?? 0}%`,
+                                background: 'linear-gradient(90deg, #6366F1, #4F46E5)',
+                              }}
                             />
                           </div>
                         </div>

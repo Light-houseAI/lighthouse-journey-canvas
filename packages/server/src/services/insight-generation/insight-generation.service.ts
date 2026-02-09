@@ -377,6 +377,22 @@ export class InsightGenerationService {
           userId: record.userId,
         });
 
+        // Human-readable stage descriptions for frontend display
+        const stageDescriptions: Record<string, string> = {
+          'agentic_initializing': 'Initializing analysis...',
+          'agentic_guardrail': 'Classifying query...',
+          'agentic_guardrail_passed': 'Query classified, planning...',
+          'agentic_reasoning': 'Reasoning about next action...',
+          'agentic_reasoning_complete': 'Planning next step...',
+          'agentic_action_started': 'Executing skill...',
+          'agentic_action_complete': 'Skill completed, analyzing...',
+          'agentic_action_failed': 'Retrying skill...',
+          'agentic_action_skipped': 'Skipping, continuing...',
+          'agentic_terminating': 'Generating final response...',
+          'agentic_complete': 'Finalizing results...',
+          'agentic_failed': 'Processing failed',
+        };
+
         const agenticDeps: AgenticLoopDeps = {
           logger: this.logger,
           llmProvider: this.llmProvider,
@@ -393,6 +409,11 @@ export class InsightGenerationService {
           modelConfig: options?.modelConfig,
           agenticConfig: agenticOptions?.agenticConfig,
           enableContextStitching: this.enableContextStitching,
+          // Write progress to DB so frontend polling can read it
+          onProgressUpdate: async (progress: number, stage: string) => {
+            const readableStage = stageDescriptions[stage] || stage;
+            await this.updateJobInDb(jobId, { progress, currentStage: readableStage });
+          },
         };
 
         const agenticGraph = createAgenticLoopGraph(agenticDeps);
@@ -412,50 +433,10 @@ export class InsightGenerationService {
           _traceId: traceId,
         });
 
-        // MT3: Stream progress with faster polling interval (500ms) for more responsive SSE updates
-        let lastProgress = 0;
-        let lastStage = '';
-        const progressInterval = setInterval(async () => {
-          const currentRecord = await this.jobRepository.findById(jobId);
-          if (currentRecord && currentRecord.status === 'processing') {
-            const progress = currentRecord.progress ?? 0;
-            const stage = currentRecord.currentStage ?? 'processing';
-
-            if (progress !== lastProgress || stage !== lastStage) {
-              lastProgress = progress;
-              lastStage = stage;
-
-              // Agentic loop stage descriptions
-              const stageDescriptions: Record<string, string> = {
-                'agentic_initializing': 'Initializing agentic loop...',
-                'agentic_guardrail': 'Classifying query...',
-                'agentic_reasoning': 'Reasoning about next action...',
-                'agentic_action_started': 'Executing skill...',
-                'agentic_action_complete': 'Skill completed, analyzing results...',
-                'agentic_action_failed': 'Skill execution failed, recovering...',
-                'agentic_action_skipped': 'Skipping action, continuing...',
-                'agentic_complete': 'Generating final response...',
-                'agentic_failed': 'Processing failed',
-              };
-
-              const readableStage = stageDescriptions[stage] || stage;
-
-              this.notifyListeners(jobId, {
-                jobId,
-                status: currentRecord.status as JobStatus,
-                progress,
-                currentStage: readableStage,
-              });
-            }
-          }
-        }, 500);
-
-        // Run the agentic loop graph
+        // Run the agentic loop graph (progress written to DB via onProgressUpdate callback)
         const graphStartTime = Date.now();
         result = await agenticGraph.invoke(initialAgenticState);
         graphElapsedMs = Date.now() - graphStartTime;
-
-        clearInterval(progressInterval);
 
         this.logger.info('Agentic loop completed', {
           jobId,

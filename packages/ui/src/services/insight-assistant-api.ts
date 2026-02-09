@@ -416,6 +416,18 @@ export async function pollForJobCompletion(
 }
 
 /**
+ * Stream job progress with fast polling for responsive UI updates.
+ * Uses 1-second polling interval for quick progress bar updates.
+ */
+export async function streamJobProgress(
+  jobId: string,
+  onProgress: (progress: JobProgress) => void,
+  timeoutMs: number = 600000 // 10 minutes default
+): Promise<InsightJob> {
+  return pollForJobCompletion(jobId, onProgress, 1000, Math.floor(timeoutMs / 1000));
+}
+
+/**
  * Generate quick insights synchronously (simpler, faster)
  */
 export async function generateQuickInsights(

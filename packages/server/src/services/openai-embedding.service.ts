@@ -16,6 +16,12 @@ export class OpenAIEmbeddingService implements EmbeddingService {
   private dimensions = 1536;
   private logger?: Logger;
 
+  // In-memory cache for query embeddings (same query text → same embedding)
+  // Avoids redundant OpenAI API calls when the same text is embedded multiple
+  // times across NLQ, GraphRAG, and session search within a short window.
+  private static embeddingCache = new Map<string, { embedding: Float32Array; expiry: number }>();
+  private static readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
   constructor({ logger }: { logger?: Logger } = {}) {
     this.logger = logger;
 
@@ -31,9 +37,15 @@ export class OpenAIEmbeddingService implements EmbeddingService {
   }
 
   /**
-   * Generate embedding for a single text
+   * Generate embedding for a single text (with caching)
    */
   async generateEmbedding(text: string): Promise<Float32Array> {
+    // Check cache first
+    const cached = OpenAIEmbeddingService.embeddingCache.get(text);
+    if (cached && cached.expiry > Date.now()) {
+      return cached.embedding;
+    }
+
     try {
       const response = await this.openai.embeddings.create({
         model: this.model,
@@ -41,8 +53,23 @@ export class OpenAIEmbeddingService implements EmbeddingService {
         dimensions: this.dimensions,
       });
 
-      const embedding = response.data[0].embedding;
-      return new Float32Array(embedding);
+      const embedding = new Float32Array(response.data[0].embedding);
+
+      // Cache the result
+      OpenAIEmbeddingService.embeddingCache.set(text, {
+        embedding,
+        expiry: Date.now() + OpenAIEmbeddingService.CACHE_TTL_MS,
+      });
+
+      // Evict expired entries periodically (every 100 cache sets)
+      if (OpenAIEmbeddingService.embeddingCache.size % 100 === 0) {
+        const now = Date.now();
+        for (const [key, val] of OpenAIEmbeddingService.embeddingCache) {
+          if (val.expiry <= now) OpenAIEmbeddingService.embeddingCache.delete(key);
+        }
+      }
+
+      return embedding;
     } catch (error) {
       this.logger?.error(
         'Failed to generate embedding',

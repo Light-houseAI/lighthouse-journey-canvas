@@ -326,6 +326,7 @@ async function retrieveUserEvidence(
   const { maxResults, useSemanticSearch } = queryClassification.routing;
 
   // Normal NLQ retrieval when no sessions attached
+  const userEvidenceStartMs = Date.now();
   logger.info('A1: Retrieving user evidence via NLQ', {
     userId: state.userId,
     query: state.query,
@@ -343,6 +344,7 @@ async function retrieveUserEvidence(
 
   try {
     // Use existing NLQ service for Hybrid RAG
+    const nlqStartMs = Date.now();
     const nlqResult = await nlqService.query(state.userId, {
       query: state.query,
       nodeId: state.nodeId || undefined,
@@ -352,13 +354,18 @@ async function retrieveUserEvidence(
       includeVectors: true,
     });
 
+    logger.info(`A1 PROFILING: NLQ query took ${Date.now() - nlqStartMs}ms`);
+
     // Fetch full session data with chapters from session_mappings
+    const sessionChaptersStartMs = Date.now();
     const sessionChaptersMap = await fetchSessionChapters(
       state.userId,
       nlqResult.relatedWorkSessions || [],
       sessionMappingRepository,
       logger
     );
+
+    logger.info(`A1 PROFILING: Session chapters fetch took ${Date.now() - sessionChaptersStartMs}ms`);
 
     // Transform NLQ result to EvidenceBundle format with chapter data
     let userEvidence = transformNLQToEvidence(nlqResult, logger, sessionChaptersMap);
@@ -424,10 +431,12 @@ async function retrieveUserEvidence(
       };
     }
 
+    const userEvidenceTotalMs = Date.now() - userEvidenceStartMs;
     logger.info('A1: User evidence retrieved', {
       workflowCount: userEvidence.workflows.length,
       stepCount: userEvidence.totalStepCount,
       sessionCount: userEvidence.sessions.length,
+      elapsedMs: userEvidenceTotalMs,
     });
 
     // === DOWNSTREAM DATA LOGGING ===
@@ -551,6 +560,7 @@ async function retrievePeerEvidence(
     };
   }
 
+  const peerEvidenceStartMs = Date.now();
   logger.info('A1: Retrieving peer evidence from platform');
 
   try {
@@ -596,250 +606,98 @@ async function retrievePeerEvidence(
     // Convert Float32Array to number[] for repository compatibility
     const embeddingArray = Array.from(queryEmbedding);
 
-    // STRATEGY 1: Search platform_workflow_patterns table (curated patterns)
-    // NOTE: Domain filtering is applied POST-retrieval (not at SQL level) for better recall
-    // The filterWorkflowsByDomain function handles this after we get results
-    let peerPatterns = await platformWorkflowRepository.searchByEmbedding(
-      embeddingArray,
-      {
-        workflowType,
-        minEfficiencyScore: 50,
-        limit: PEER_WORKFLOW_LIMIT,
-        // No SQL-level domain filter - we filter after retrieval for better control
+    // PARALLEL PEER RETRIEVAL: Run all 3 strategies concurrently for speed
+    // Pick the first strategy (by priority) that returns results
+    // Priority: Strategy 1 (curated patterns) > Strategy 2 (cross-user) > Strategy 3 (graph)
+
+    // Extract entities for Strategy 3 upfront
+    const userEntities = state.userEvidence?.entities?.map(e => e.name) ||
+      state.userEvidence?.workflows.flatMap(w => w.tools || []) || [];
+
+    // Helper: apply domain filtering to evidence
+    const applyDomainFilter = (evidence: EvidenceBundle, source: string): EvidenceBundle => {
+      if (!state.queryClassification?.routing.strictDomainMatching || evidence.workflows.length === 0) {
+        return evidence;
       }
+      const filtered = filterWorkflowsByDomain(evidence.workflows, state.queryClassification, logger);
+      logger.info(`A1: Applied domain filtering to peer evidence (${source})`, {
+        originalCount: evidence.workflows.length,
+        filteredCount: filtered.length,
+      });
+      return {
+        ...evidence,
+        workflows: filtered,
+        totalStepCount: filtered.reduce((sum, w) => sum + (w.steps?.length || 0), 0),
+      };
+    };
+
+    // Strategy 1: Platform curated patterns
+    const strategy1Promise = platformWorkflowRepository.searchByEmbedding(
+      embeddingArray,
+      { workflowType, minEfficiencyScore: 50, limit: PEER_WORKFLOW_LIMIT }
+    ).then(patterns => {
+      if (patterns.length === 0) return null;
+      let evidence = transformPeerPatternsToEvidence(patterns, logger);
+      evidence = applyDomainFilter(evidence, 'platform_patterns');
+      return evidence.workflows.length > 0 ? evidence : null;
+    }).catch(() => null);
+
+    // Strategy 2: Cross-user session search
+    const strategy2Promise = (state.userId
+      ? sessionMappingRepository.searchPeerSessionsByEmbedding(
+          state.userId,
+          queryEmbedding,
+          { minSimilarity: 0.35, limit: PEER_WORKFLOW_LIMIT }
+        ).then(sessions => {
+          if (sessions.length === 0) return null;
+          let evidence = transformPeerSessionsToEvidence(sessions, logger);
+          evidence = applyDomainFilter(evidence, 'cross_user');
+          return evidence.workflows.length > 0 ? evidence : null;
+        }).catch(() => null)
+      : Promise.resolve(null)
     );
 
-    // STRATEGY 2: Fall back to cross-user session search if no curated patterns
-    if (peerPatterns.length === 0 && state.userId) {
-      logger.info('A1: No curated peer patterns, trying cross-user session search');
-
-      // Search for similar sessions from OTHER users using vector similarity
-      // NOTE: Domain filtering is applied POST-retrieval (not at SQL level) for better recall
-      // The filterWorkflowsByDomain function handles this after we get results
-      const peerSessions = await sessionMappingRepository.searchPeerSessionsByEmbedding(
-        state.userId,
-        queryEmbedding,
-        {
-          minSimilarity: 0.35,
-          limit: PEER_WORKFLOW_LIMIT,
-          // No SQL-level domain filter - we filter after retrieval for better control
-        }
-      );
-
-      if (peerSessions.length > 0) {
-        logger.info('A1: Found peer sessions from cross-user search', {
-          count: peerSessions.length,
-          topSimilarity: peerSessions[0]?.similarity,
-        });
-
-        // Transform peer sessions to EvidenceBundle format
-        let peerEvidence = transformPeerSessionsToEvidence(peerSessions, logger);
-
-        // LEVEL 2a FIX: Apply domain filtering to peer evidence (same as user evidence)
-        // This prevents irrelevant peer workflows (e.g., "chat app") from appearing
-        // when user queries about a specific domain (e.g., "Apple iOS build")
-        if (state.queryClassification?.routing.strictDomainMatching && peerEvidence.workflows.length > 0) {
-          const domainFilteredWorkflows = filterWorkflowsByDomain(
-            peerEvidence.workflows,
-            state.queryClassification,
-            logger
-          );
-
-          logger.info('A1: Applied domain filtering to peer evidence (cross-user)', {
-            originalCount: peerEvidence.workflows.length,
-            filteredCount: domainFilteredWorkflows.length,
-            domainKeywords: state.queryClassification.filters.domainKeywords,
-          });
-
-          peerEvidence = {
-            ...peerEvidence,
-            workflows: domainFilteredWorkflows,
-            totalStepCount: domainFilteredWorkflows.reduce((sum, w) => sum + (w.steps?.length || 0), 0),
-          };
-        }
-
-        if (peerEvidence.workflows.length > 0) {
-          logger.info('A1: Peer evidence retrieved from cross-user sessions', {
-            workflowCount: peerEvidence.workflows.length,
-            source: 'cross_user_sessions',
-          });
-
-          // Log detailed output for debugging
-          if (process.env.INSIGHT_DEBUG === 'true') {
-            logger.debug('=== A1 RETRIEVAL AGENT OUTPUT (Peer Evidence - Cross-User) ===');
-            logger.debug(JSON.stringify({
-              agent: 'A1_RETRIEVAL',
-              outputType: 'peerEvidence',
-              source: 'cross_user_sessions',
-              summary: {
-                workflowCount: peerEvidence.workflows.length,
-                totalStepCount: peerEvidence.totalStepCount,
-              },
-              workflows: peerEvidence.workflows.slice(0, 3).map(w => ({
-                workflowId: w.workflowId,
-                title: w.title,
-                stepCount: w.steps?.length || 0,
-              })),
-            }));
-            logger.debug('=== END A1 PEER EVIDENCE OUTPUT ===');
-          }
-
-          // LEVEL 3: Anonymize peer evidence before returning (privacy protection)
-          const anonymizedPeerEvidence = anonymizePeerEvidence(peerEvidence);
-
-          // AI4 OPTIMIZATION: Cache anonymized peer evidence from cross-user sessions
-          cacheManager.peerWorkflows.set(peerCacheKey, anonymizedPeerEvidence);
-          logger.debug('A1: Cached cross-user peer evidence', { cacheKey: peerCacheKey });
-
-          return {
-            peerEvidence: anonymizedPeerEvidence,
-            currentStage: 'a1_peer_evidence_complete',
-            progress: 25,
-          };
-        }
-      }
-
-      // STRATEGY 3: Try graph-based peer retrieval (structural similarity via shared entities)
-      if (graphService) {
-        logger.info('A1: Trying graph-based peer retrieval');
-
-        // Extract entities from user's workflow to find similar peer sessions
-        const userEntities = state.userEvidence?.entities?.map(e => e.name) ||
-          state.userEvidence?.workflows.flatMap(w => w.tools || []) || [];
-
-        const graphPeerPatterns = await graphService.getPeerWorkflowPatterns(
+    // Strategy 3: Graph-based retrieval
+    const strategy3Promise = (graphService && state.userId
+      ? graphService.getPeerWorkflowPatterns(
           state.userId,
-          {
-            workflowType,
-            entities: userEntities.slice(0, 10),
-            minOccurrences: 2,
-            limit: 10,
-          }
-        );
+          { workflowType, entities: userEntities.slice(0, 10), minOccurrences: 2, limit: 10 }
+        ).then(patterns => {
+          if (patterns.length === 0) return null;
+          let evidence = transformGraphPeerPatternsToEvidence(patterns, logger);
+          evidence = applyDomainFilter(evidence, 'graph');
+          return evidence.workflows.length > 0 ? evidence : null;
+        }).catch(() => null)
+      : Promise.resolve(null)
+    );
 
-        if (graphPeerPatterns.length > 0) {
-          logger.info('A1: Found peer patterns from graph', {
-            count: graphPeerPatterns.length,
-            topPattern: graphPeerPatterns[0]?.workflowType,
-          });
+    // Run all strategies in parallel
+    const [s1Result, s2Result, s3Result] = await Promise.all([
+      strategy1Promise,
+      strategy2Promise,
+      strategy3Promise,
+    ]);
 
-          let peerEvidence = transformGraphPeerPatternsToEvidence(graphPeerPatterns, logger);
+    // Pick best result by priority order
+    const peerEvidence = s1Result || s2Result || s3Result;
+    const peerSource = s1Result ? 'platform_patterns' : s2Result ? 'cross_user_sessions' : s3Result ? 'arangodb_graph' : 'none';
 
-          // LEVEL 2a FIX: Apply domain filtering to graph-based peer evidence
-          if (state.queryClassification?.routing.strictDomainMatching && peerEvidence.workflows.length > 0) {
-            const domainFilteredWorkflows = filterWorkflowsByDomain(
-              peerEvidence.workflows,
-              state.queryClassification,
-              logger
-            );
+    const peerEvidenceElapsedMs = Date.now() - peerEvidenceStartMs;
 
-            logger.info('A1: Applied domain filtering to peer evidence (graph)', {
-              originalCount: peerEvidence.workflows.length,
-              filteredCount: domainFilteredWorkflows.length,
-              domainKeywords: state.queryClassification.filters.domainKeywords,
-            });
-
-            peerEvidence = {
-              ...peerEvidence,
-              workflows: domainFilteredWorkflows,
-              totalStepCount: domainFilteredWorkflows.reduce((sum, w) => sum + (w.steps?.length || 0), 0),
-            };
-          }
-
-          if (peerEvidence.workflows.length > 0) {
-            logger.info('A1: Peer evidence retrieved from graph', {
-              workflowCount: peerEvidence.workflows.length,
-              source: 'arangodb_graph',
-            });
-
-            // LEVEL 3: Anonymize peer evidence before returning (privacy protection)
-            const anonymizedPeerEvidence = anonymizePeerEvidence(peerEvidence);
-
-            // AI4 OPTIMIZATION: Cache anonymized peer evidence from graph patterns
-            cacheManager.peerWorkflows.set(peerCacheKey, anonymizedPeerEvidence);
-            logger.debug('A1: Cached graph peer evidence', { cacheKey: peerCacheKey });
-
-            return {
-              peerEvidence: anonymizedPeerEvidence,
-              currentStage: 'a1_peer_evidence_complete',
-              progress: 25,
-            };
-          }
-        }
-      }
-
-      logger.info('A1: No peer sessions found from any source');
+    if (!peerEvidence) {
+      logger.info(`A1 PROFILING: Peer evidence retrieval took ${peerEvidenceElapsedMs}ms (no results)`);
       return {
         peerEvidence: null,
         currentStage: 'a1_peer_evidence_none_found',
         progress: 25,
-      };
-    }
-
-    if (peerPatterns.length === 0) {
-      logger.info('A1: No peer patterns found');
-      return {
-        peerEvidence: null,
-        currentStage: 'a1_peer_evidence_none_found',
-        progress: 25,
-      };
-    }
-
-    // Transform peer patterns to EvidenceBundle format
-    let peerEvidence = transformPeerPatternsToEvidence(peerPatterns, logger);
-
-    // LEVEL 2a FIX: Apply domain filtering to platform peer patterns
-    if (state.queryClassification?.routing.strictDomainMatching && peerEvidence.workflows.length > 0) {
-      const domainFilteredWorkflows = filterWorkflowsByDomain(
-        peerEvidence.workflows,
-        state.queryClassification,
-        logger
-      );
-
-      logger.info('A1: Applied domain filtering to peer evidence (platform patterns)', {
-        originalCount: peerEvidence.workflows.length,
-        filteredCount: domainFilteredWorkflows.length,
-        domainKeywords: state.queryClassification.filters.domainKeywords,
-      });
-
-      peerEvidence = {
-        ...peerEvidence,
-        workflows: domainFilteredWorkflows,
-        totalStepCount: domainFilteredWorkflows.reduce((sum, w) => sum + (w.steps?.length || 0), 0),
       };
     }
 
     logger.info('A1: Peer evidence retrieved', {
       workflowCount: peerEvidence.workflows.length,
-      avgEfficiencyScore: peerPatterns.reduce(
-        (sum, p) => sum + (p.efficiencyScore || 0),
-        0
-      ) / peerPatterns.length,
+      source: peerSource,
+      elapsedMs: peerEvidenceElapsedMs,
     });
-
-    // Log detailed output for debugging (only when INSIGHT_DEBUG is enabled)
-    if (process.env.INSIGHT_DEBUG === 'true') {
-      logger.debug('=== A1 RETRIEVAL AGENT OUTPUT (Peer Evidence) ===');
-      logger.debug(JSON.stringify({
-        agent: 'A1_RETRIEVAL',
-        outputType: 'peerEvidence',
-        source: 'platform_patterns',
-        summary: {
-          workflowCount: peerEvidence.workflows.length,
-          totalStepCount: peerEvidence.totalStepCount,
-          avgEfficiencyScore: peerPatterns.reduce((sum, p) => sum + (p.efficiencyScore || 0), 0) / peerPatterns.length,
-        },
-        workflows: peerEvidence.workflows.map(w => ({
-          workflowId: w.workflowId,
-          title: w.title,
-          intent: w.intent,
-          stepCount: w.steps.length,
-          totalDurationSeconds: w.totalDurationSeconds,
-          tools: w.tools,
-        })),
-      }));
-      logger.debug('=== END A1 PEER EVIDENCE OUTPUT ===');
-    }
 
     // LEVEL 3: Anonymize peer evidence before returning (privacy protection)
     const anonymizedPeerEvidence = anonymizePeerEvidence(peerEvidence);

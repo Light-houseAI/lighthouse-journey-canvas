@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Start server with logs captured to file (with remote Helix DB)
+# Start server with logs captured to file (with ArangoDB)
 # Usage: ./start-server-with-logs.sh
 #
 # Logs are saved to: server-logs-YYYY-MM-DD_HH-MM-SS.log
@@ -17,24 +17,15 @@ mkdir -p logs
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 LOG_FILE="logs/server-logs-${TIMESTAMP}.log"
 
-# Remote Helix DB on GCP (static IP)
-export HELIX_URL="http://136.118.249.68:6969"
-export GRAPH_DB_PROVIDER="helix"
+# ArangoDB Configuration (Graph RAG)
+export GRAPH_DB_PROVIDER="arango"
 export ENABLE_GRAPH_RAG="true"
 export ENABLE_CROSS_SESSION_CONTEXT="true"
 
 echo "==================================="
-echo "Checking remote Helix DB connection..."
-echo "HELIX_URL: ${HELIX_URL}"
+echo "Using ArangoDB for Graph RAG"
+echo "GRAPH_DB_PROVIDER: ${GRAPH_DB_PROVIDER}"
 echo "==================================="
-
-# Check if Helix DB is reachable (using POST to GetUserCount endpoint)
-if curl -s --connect-timeout 5 -X POST "${HELIX_URL}/GetUserCount" -H "Content-Type: application/json" -d '{}' | grep -q "count"; then
-    echo "Helix DB is reachable!"
-else
-    echo "Warning: Could not reach Helix DB at ${HELIX_URL}"
-    echo "Server will start anyway but graph features may not work."
-fi
 
 echo ""
 echo "==================================="

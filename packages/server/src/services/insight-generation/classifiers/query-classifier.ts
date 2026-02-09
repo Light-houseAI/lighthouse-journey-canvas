@@ -372,7 +372,8 @@ const TASK_ALIASES: Record<string, string> = {
  */
 export function classifyQuery(
   query: string,
-  hasAttachedSessions: boolean = false
+  hasAttachedSessions: boolean = false,
+  attachedSessionCount: number = 0
 ): QueryClassification {
   const normalizedQuery = query.toLowerCase().trim();
 

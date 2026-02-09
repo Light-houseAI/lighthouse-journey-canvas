@@ -248,6 +248,7 @@ export class InsightAssistantController {
       res.status(200).json({
         success: true,
         data: {
+          id: job.id,
           jobId: job.id,
           status: job.status,
           progress: job.progress,

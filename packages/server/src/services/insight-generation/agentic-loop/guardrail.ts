@@ -208,7 +208,8 @@ export async function guardrailNode(
   // Also run full query classification for routing hints
   const queryClassification = classifyQuery(
     state.query,
-    !!state.attachedSessionContext?.length
+    !!state.attachedSessionContext?.length,
+    state.attachedSessionContext?.length ?? 0
   );
 
   return {

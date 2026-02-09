@@ -30,7 +30,7 @@ import { RESPONSE_IMPROVEMENT_SYSTEM_PROMPT } from '../prompts/response-improvem
 // ============================================================================
 
 const LLM_TIMEOUT_MS = 60000; // 60 seconds per LLM call
-const MAX_VALIDATION_ITERATIONS = 3; // Prevent infinite loops
+const MAX_VALIDATION_ITERATIONS = 2; // Prevent infinite loops
 
 // ============================================================================
 // TYPES
