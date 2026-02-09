@@ -2,109 +2,50 @@
  * Template Mention Popup Component
  *
  * Appears when user types "/" in the chat input.
- * Shows template buttons (Weekly Progress Update, Blog Creation).
+ * Shows template buttons from the template store (editable, persisted).
  * Each template has an expandable chevron to preview the prompt with a copy button.
  * Clicking the template name immediately sends the corresponding query.
+ * Users can edit, create, and delete templates via a modal.
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Zap, FileText, BookOpen, ChevronRight, Copy, Check, Rocket } from 'lucide-react';
+import {
+  X, Zap, FileText, BookOpen, ChevronRight, Copy, Check, Rocket,
+  Sparkles, Brain, Target, Lightbulb, Pencil, Trash2, Plus, RotateCcw,
+} from 'lucide-react';
+import { useTemplateStore, COLOR_PRESETS, type StoredTemplate, type TemplateIconKey } from '../../stores/template-store';
+
+// ============================================================================
+// ICON MAP
+// ============================================================================
+
+const ICON_MAP: Record<TemplateIconKey, typeof FileText> = {
+  FileText,
+  BookOpen,
+  Rocket,
+  Sparkles,
+  Zap,
+  Brain,
+  Target,
+  Lightbulb,
+};
+
+export function getTemplateIcon(key: TemplateIconKey) {
+  return ICON_MAP[key] ?? FileText;
+}
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
-export interface SlashTemplate {
-  id: string;
-  name: string;
-  description: string;
-  icon: typeof FileText;
-  /** The query string sent to the server */
-  query: string;
-  /** User-facing preview of the prompt template */
-  promptPreview: string;
-  colors: { bg: string; text: string; iconBg: string };
-}
-
 export interface TemplateMentionPopupProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectTemplate: (templateQuery: string, templateName: string) => void;
+  onEditTemplate?: (template: StoredTemplate) => void;
+  onCreateTemplate?: () => void;
   disabled?: boolean;
 }
-
-// ============================================================================
-// TEMPLATE DEFINITIONS
-// ============================================================================
-
-const SLASH_TEMPLATES: SlashTemplate[] = [
-  {
-    id: 'weekly-progress-update',
-    name: 'Weekly Progress Update',
-    description: 'Generate a structured progress report from your recent workflows',
-    icon: FileText,
-    query: 'Create a weekly progress update report from my recent workflows',
-    promptPreview: `Prompt: Weekly Progress Update
-
-Transforms your workflow session data into a professional weekly progress report covering:
-- Key accomplishments and activities
-- Tools & platforms utilized
-- Collaboration and deliverables
-- Upcoming priorities based on observed patterns
-- Workflow insights (strengths & areas for improvement)
-
-Output: Downloadable markdown report`,
-    colors: {
-      bg: 'hover:bg-blue-50',
-      text: 'text-blue-700',
-      iconBg: 'bg-blue-100',
-    },
-  },
-  {
-    id: 'blog-creation',
-    name: 'Blog Creation',
-    description: 'Transform your workflow insights into an engaging blog post',
-    icon: BookOpen,
-    query: 'Create a blog post based on my recent workflow patterns and insights',
-    promptPreview: `Prompt: Blog Creation
-
-Transforms your workflow data into an engaging, publishable blog post featuring:
-- Compelling narrative about how you worked
-- Tool usage patterns and productivity insights
-- AI integration observations (if applicable)
-- Key takeaways for readers
-- Forward-looking conclusions about modern work practices
-
-Output: Downloadable markdown blog post`,
-    colors: {
-      bg: 'hover:bg-purple-50',
-      text: 'text-purple-700',
-      iconBg: 'bg-purple-100',
-    },
-  },
-  {
-    id: 'founders',
-    name: 'Founders',
-    description: 'Analyze a session for a founder — predict outcomes, assess optimality, rank opportunities',
-    icon: Rocket,
-    query: `Analyze this Krama session for a Founder. For each captured step: (1) Predict the likely outcome user is trying to achieve in this session (2) assess if steps taken by the user were done optimally, (3) identify what could be better (4) Only state an observation to do something better if you can point to a page + timestamp segment in the session (5) The suggested improvement should create meaningful difference to get user a better outcome. Ignore the PDF filename; it's a screen-capture timeline. Then provide the top 3-5 opportunities ranked by effort vs. impact, formatted as a priority matrix.`,
-    promptPreview: `Prompt: Founders Session Analysis
-
-Analyzes your Krama session from a Founder's perspective:
-- Predicts the likely outcome you're trying to achieve
-- Assesses if steps were done optimally
-- Identifies what could be better (with page + timestamp evidence)
-- Only suggests improvements that create meaningful difference
-- Provides top 3-5 opportunities as an effort vs. impact priority matrix
-
-Output: Priority matrix with evidence-backed recommendations`,
-    colors: {
-      bg: 'hover:bg-orange-50',
-      text: 'text-orange-700',
-      iconBg: 'bg-orange-100',
-    },
-  },
-];
 
 // ============================================================================
 // COMPONENT
@@ -114,8 +55,11 @@ export function TemplateMentionPopup({
   isOpen,
   onClose,
   onSelectTemplate,
+  onEditTemplate,
+  onCreateTemplate,
   disabled = false,
 }: TemplateMentionPopupProps) {
+  const { templates, deleteTemplate, resetTemplate } = useTemplateStore();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -138,7 +82,7 @@ export function TemplateMentionPopup({
       switch (e.key) {
         case 'ArrowDown':
           e.preventDefault();
-          setSelectedIndex((prev) => (prev < SLASH_TEMPLATES.length - 1 ? prev + 1 : prev));
+          setSelectedIndex((prev) => (prev < templates.length - 1 ? prev + 1 : prev));
           break;
         case 'ArrowUp':
           e.preventDefault();
@@ -146,8 +90,8 @@ export function TemplateMentionPopup({
           break;
         case 'Enter':
           e.preventDefault();
-          if (SLASH_TEMPLATES[selectedIndex] && !disabled) {
-            onSelectTemplate(SLASH_TEMPLATES[selectedIndex].query, SLASH_TEMPLATES[selectedIndex].name);
+          if (templates[selectedIndex] && !disabled) {
+            onSelectTemplate(templates[selectedIndex].query, templates[selectedIndex].name);
           }
           break;
         case 'Escape':
@@ -160,7 +104,7 @@ export function TemplateMentionPopup({
           break;
       }
     },
-    [isOpen, selectedIndex, expandedId, onSelectTemplate, onClose, disabled]
+    [isOpen, selectedIndex, expandedId, onSelectTemplate, onClose, disabled, templates]
   );
 
   useEffect(() => {
@@ -186,12 +130,31 @@ export function TemplateMentionPopup({
     setExpandedId((prev) => (prev === templateId ? null : templateId));
   }, []);
 
-  const handleCopyPrompt = useCallback((e: React.MouseEvent, template: SlashTemplate) => {
+  const handleCopyPrompt = useCallback((e: React.MouseEvent, template: StoredTemplate) => {
     e.stopPropagation();
     navigator.clipboard.writeText(template.promptPreview);
     setCopiedId(template.id);
     setTimeout(() => setCopiedId(null), 2000);
   }, []);
+
+  const handleEdit = useCallback((e: React.MouseEvent, template: StoredTemplate) => {
+    e.stopPropagation();
+    onEditTemplate?.(template);
+  }, [onEditTemplate]);
+
+  const handleDelete = useCallback((e: React.MouseEvent, template: StoredTemplate) => {
+    e.stopPropagation();
+    if (!template.isBuiltIn) {
+      deleteTemplate(template.id);
+    }
+  }, [deleteTemplate]);
+
+  const handleReset = useCallback((e: React.MouseEvent, template: StoredTemplate) => {
+    e.stopPropagation();
+    if (template.isBuiltIn) {
+      resetTemplate(template.id);
+    }
+  }, [resetTemplate]);
 
   if (!isOpen) return null;
 
@@ -206,18 +169,30 @@ export function TemplateMentionPopup({
           <Zap className="h-4 w-4 text-gray-400" />
           <span className="text-sm font-medium text-gray-700">Templates</span>
         </div>
-        <button
-          onClick={onClose}
-          className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
-        >
-          <X className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          {onCreateTemplate && (
+            <button
+              onClick={onCreateTemplate}
+              className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+              title="Create new template"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Template List */}
       <div className="max-h-[400px] overflow-y-auto py-1">
-        {SLASH_TEMPLATES.map((template, index) => {
-          const Icon = template.icon;
+        {templates.map((template, index) => {
+          const Icon = getTemplateIcon(template.iconKey);
+          const colors = COLOR_PRESETS[template.colorPreset] ?? COLOR_PRESETS.blue;
           const isExpanded = expandedId === template.id;
           const isCopied = copiedId === template.id;
 
@@ -242,9 +217,9 @@ export function TemplateMentionPopup({
 
                 {/* Icon */}
                 <div
-                  className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${template.colors.iconBg}`}
+                  className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${colors.iconBg}`}
                 >
-                  <Icon className={`h-4 w-4 ${template.colors.text}`} />
+                  <Icon className={`h-4 w-4 ${colors.text}`} />
                 </div>
 
                 {/* Name + description — clickable to select */}
@@ -259,9 +234,42 @@ export function TemplateMentionPopup({
                     }`}
                   >
                     {template.name}
+                    {!template.isBuiltIn && (
+                      <span className="ml-1.5 text-[10px] font-normal text-gray-400">custom</span>
+                    )}
                   </p>
                   <p className="mt-0.5 text-xs text-gray-500">{template.description}</p>
                 </button>
+
+                {/* Action buttons */}
+                <div className="flex flex-shrink-0 items-center gap-0.5">
+                  {onEditTemplate && (
+                    <button
+                      onClick={(e) => handleEdit(e, template)}
+                      className="rounded p-1 text-gray-300 hover:bg-gray-200 hover:text-gray-600"
+                      title="Edit template"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  {template.isBuiltIn ? (
+                    <button
+                      onClick={(e) => handleReset(e, template)}
+                      className="rounded p-1 text-gray-300 hover:bg-gray-200 hover:text-gray-600"
+                      title="Reset to default"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => handleDelete(e, template)}
+                      className="rounded p-1 text-gray-300 hover:bg-red-50 hover:text-red-500"
+                      title="Delete template"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Expanded Prompt Preview */}

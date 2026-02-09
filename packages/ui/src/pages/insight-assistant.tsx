@@ -24,6 +24,8 @@ import { PastConversationsPanel } from '../components/insight-assistant/PastConv
 import { PersonaSuggestions } from '../components/insight-assistant/PersonaSuggestions';
 import { SessionMentionPopup } from '../components/insight-assistant/SessionMentionPopup';
 import { TemplateMentionPopup } from '../components/insight-assistant/TemplateMentionPopup';
+import { TemplateEditorModal } from '../components/insight-assistant/TemplateEditorModal';
+import type { StoredTemplate } from '../stores/template-store';
 import { SessionDetailsModal } from '../components/insight-assistant/SessionDetailsModal';
 import { StrategyProposalDetailsModal } from '../components/insight-assistant/StrategyProposalDetailsModal';
 import type { SessionMappingItem } from '@journey/schema';
@@ -121,6 +123,10 @@ export default function InsightAssistant() {
   // Template slash popup state
   const [isTemplatePopupOpen, setIsTemplatePopupOpen] = useState(false);
   const [slashStartIndex, setSlashStartIndex] = useState<number | null>(null);
+
+  // Template editor modal state
+  const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<StoredTemplate | null>(null);
 
   // Selected work sessions (displayed as tags in input area)
   const [selectedWorkSessions, setSelectedWorkSessions] = useState<SessionMappingItem[]>([]);
@@ -631,6 +637,24 @@ export default function InsightAssistant() {
     setSlashStartIndex(null);
   }, []);
 
+  // Handle opening the template editor (edit or create)
+  const handleEditTemplate = useCallback((template: StoredTemplate) => {
+    setIsTemplatePopupOpen(false);
+    setEditingTemplate(template);
+    setIsTemplateEditorOpen(true);
+  }, []);
+
+  const handleCreateTemplate = useCallback(() => {
+    setIsTemplatePopupOpen(false);
+    setEditingTemplate(null);
+    setIsTemplateEditorOpen(true);
+  }, []);
+
+  const handleCloseTemplateEditor = useCallback(() => {
+    setIsTemplateEditorOpen(false);
+    setEditingTemplate(null);
+  }, []);
+
   // Handle template selection from slash popup (auto-submit)
   const handleTemplateSelect = useCallback(async (templateQuery: string, templateName: string) => {
     if (isGeneratingProposals) return;
@@ -1127,6 +1151,8 @@ export default function InsightAssistant() {
                     isOpen={isTemplatePopupOpen}
                     onClose={handleCloseTemplatePopup}
                     onSelectTemplate={handleTemplateSelect}
+                    onEditTemplate={handleEditTemplate}
+                    onCreateTemplate={handleCreateTemplate}
                     disabled={isGeneratingProposals}
                   />
 
@@ -1279,6 +1305,13 @@ export default function InsightAssistant() {
         isOpen={viewingWorkSession !== null}
         onClose={handleCloseWorkSessionDetails}
         session={viewingWorkSession}
+      />
+
+      {/* Template Editor Modal */}
+      <TemplateEditorModal
+        isOpen={isTemplateEditorOpen}
+        onClose={handleCloseTemplateEditor}
+        editingTemplate={editingTemplate}
       />
     </div>
   );
