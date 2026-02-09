@@ -3,11 +3,12 @@
  *
  * Appears when user types "/" in the chat input.
  * Shows template buttons (Weekly Progress Update, Blog Creation).
- * Clicking a template immediately sends the corresponding query.
+ * Each template has an expandable chevron to preview the prompt with a copy button.
+ * Clicking the template name immediately sends the corresponding query.
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { X, Zap, FileText, BookOpen } from 'lucide-react';
+import { X, Zap, FileText, BookOpen, ChevronRight, Copy, Check } from 'lucide-react';
 
 // ============================================================================
 // TYPES
@@ -28,7 +29,7 @@ export interface SlashTemplate {
 export interface TemplateMentionPopupProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelectTemplate: (templateQuery: string, templateName: string, promptPreview: string) => void;
+  onSelectTemplate: (templateQuery: string, templateName: string) => void;
   disabled?: boolean;
 }
 
@@ -43,7 +44,7 @@ const SLASH_TEMPLATES: SlashTemplate[] = [
     description: 'Generate a structured progress report from your recent workflows',
     icon: FileText,
     query: 'Create a weekly progress update report from my recent workflows',
-    promptPreview: `**Prompt:** Weekly Progress Update
+    promptPreview: `Prompt: Weekly Progress Update
 
 Transforms your workflow session data into a professional weekly progress report covering:
 - Key accomplishments and activities
@@ -65,7 +66,7 @@ Output: Downloadable markdown report`,
     description: 'Transform your workflow insights into an engaging blog post',
     icon: BookOpen,
     query: 'Create a blog post based on my recent workflow patterns and insights',
-    promptPreview: `**Prompt:** Blog Creation
+    promptPreview: `Prompt: Blog Creation
 
 Transforms your workflow data into an engaging, publishable blog post featuring:
 - Compelling narrative about how you worked
@@ -94,11 +95,17 @@ export function TemplateMentionPopup({
   disabled = false,
 }: TemplateMentionPopupProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  // Reset selected index when popup opens
+  // Reset state when popup opens
   useEffect(() => {
-    if (isOpen) setSelectedIndex(0);
+    if (isOpen) {
+      setSelectedIndex(0);
+      setExpandedId(null);
+      setCopiedId(null);
+    }
   }, [isOpen]);
 
   // Keyboard navigation
@@ -118,16 +125,20 @@ export function TemplateMentionPopup({
         case 'Enter':
           e.preventDefault();
           if (SLASH_TEMPLATES[selectedIndex] && !disabled) {
-            onSelectTemplate(SLASH_TEMPLATES[selectedIndex].query, SLASH_TEMPLATES[selectedIndex].name, SLASH_TEMPLATES[selectedIndex].promptPreview);
+            onSelectTemplate(SLASH_TEMPLATES[selectedIndex].query, SLASH_TEMPLATES[selectedIndex].name);
           }
           break;
         case 'Escape':
           e.preventDefault();
-          onClose();
+          if (expandedId) {
+            setExpandedId(null);
+          } else {
+            onClose();
+          }
           break;
       }
     },
-    [isOpen, selectedIndex, onSelectTemplate, onClose, disabled]
+    [isOpen, selectedIndex, expandedId, onSelectTemplate, onClose, disabled]
   );
 
   useEffect(() => {
@@ -147,6 +158,18 @@ export function TemplateMentionPopup({
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isOpen, onClose]);
+
+  const handleToggleExpand = useCallback((e: React.MouseEvent, templateId: string) => {
+    e.stopPropagation();
+    setExpandedId((prev) => (prev === templateId ? null : templateId));
+  }, []);
+
+  const handleCopyPrompt = useCallback((e: React.MouseEvent, template: SlashTemplate) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(template.promptPreview);
+    setCopiedId(template.id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -170,34 +193,84 @@ export function TemplateMentionPopup({
       </div>
 
       {/* Template List */}
-      <div className="py-1">
+      <div className="max-h-[400px] overflow-y-auto py-1">
         {SLASH_TEMPLATES.map((template, index) => {
           const Icon = template.icon;
+          const isExpanded = expandedId === template.id;
+          const isCopied = copiedId === template.id;
+
           return (
-            <button
-              key={template.id}
-              onClick={() => onSelectTemplate(template.query, template.name, template.promptPreview)}
-              disabled={disabled}
-              className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors ${
-                index === selectedIndex ? 'bg-gray-100' : template.colors.bg
-              } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
+            <div key={template.id}>
+              {/* Template Row */}
               <div
-                className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${template.colors.iconBg}`}
+                className={`flex w-full items-center gap-3 px-3 py-2.5 transition-colors ${
+                  index === selectedIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
+                } ${disabled ? 'opacity-50' : ''}`}
               >
-                <Icon className={`h-4 w-4 ${template.colors.text}`} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p
-                  className={`text-sm font-medium ${
-                    index === selectedIndex ? 'text-gray-900' : 'text-gray-800'
-                  }`}
+                {/* Expand chevron */}
+                <button
+                  onClick={(e) => handleToggleExpand(e, template.id)}
+                  className="flex-shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                  title="View prompt"
                 >
-                  {template.name}
-                </p>
-                <p className="mt-0.5 text-xs text-gray-500">{template.description}</p>
+                  <ChevronRight
+                    className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                  />
+                </button>
+
+                {/* Icon */}
+                <div
+                  className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${template.colors.iconBg}`}
+                >
+                  <Icon className={`h-4 w-4 ${template.colors.text}`} />
+                </div>
+
+                {/* Name + description — clickable to select */}
+                <button
+                  onClick={() => onSelectTemplate(template.query, template.name)}
+                  disabled={disabled}
+                  className={`min-w-0 flex-1 text-left ${disabled ? 'cursor-not-allowed' : ''}`}
+                >
+                  <p
+                    className={`text-sm font-medium ${
+                      index === selectedIndex ? 'text-gray-900' : 'text-gray-800'
+                    }`}
+                  >
+                    {template.name}
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-500">{template.description}</p>
+                </button>
               </div>
-            </button>
+
+              {/* Expanded Prompt Preview */}
+              {isExpanded && (
+                <div className="mx-3 mb-2 rounded-lg border border-gray-200 bg-gray-50">
+                  <div className="flex items-center justify-between border-b border-gray-200 px-3 py-1.5">
+                    <span className="text-xs font-medium text-gray-500">Prompt Template</span>
+                    <button
+                      onClick={(e) => handleCopyPrompt(e, template)}
+                      className="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+                      title="Copy prompt"
+                    >
+                      {isCopied ? (
+                        <>
+                          <Check className="h-3 w-3 text-green-500" />
+                          <span className="text-green-600">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <pre className="whitespace-pre-wrap px-3 py-2 text-xs leading-relaxed text-gray-700">
+                    {template.promptPreview}
+                  </pre>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
