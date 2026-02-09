@@ -1229,7 +1229,7 @@ export default function InsightAssistant() {
                       placeholder={
                         (selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0)
                           ? "Ask about the selected context..."
-                          : "Ask about your workflows... (@ to add context, / for templates)"
+                          : "@ add context first, then / to use templates"
                       }
                       className="flex-1 text-base outline-none"
                       style={{ color: '#1E293B' }}
