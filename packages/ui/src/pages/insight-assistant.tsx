@@ -7,7 +7,9 @@
 import {
   Activity,
   ArrowLeft,
+  Check,
   FolderOpen,
+  Loader2,
   Mic,
   Paperclip,
   Send,
@@ -109,6 +111,22 @@ export default function InsightAssistant() {
   // Multi-agent insight generation state
   const [insightProgress, setInsightProgress] = useState<JobProgress | null>(null);
   const [insightResult, setInsightResult] = useState<InsightGenerationResult | null>(null);
+  const [completedStages, setCompletedStages] = useState<string[]>([]);
+  const prevStageRef = useRef<string | null>(null);
+
+  // Track completed thinking stages as they change
+  useEffect(() => {
+    const currentStage = insightProgress?.currentStage;
+    if (currentStage && prevStageRef.current && currentStage !== prevStageRef.current) {
+      setCompletedStages((prev) => {
+        if (!prev.includes(prevStageRef.current!)) {
+          return [...prev, prevStageRef.current!];
+        }
+        return prev;
+      });
+    }
+    prevStageRef.current = currentStage ?? null;
+  }, [insightProgress?.currentStage]);
 
   // Proposal details modal state
   const [selectedProposal, setSelectedProposal] = useState<StrategyProposal | null>(null);
@@ -383,6 +401,8 @@ export default function InsightAssistant() {
     setIsGeneratingProposals(true);
     setInsightProgress(null);
     setInsightResult(null);
+    setCompletedStages([]);
+    prevStageRef.current = null;
     try {
       // Start async multi-agent insight generation job
       const startResponse = await startInsightGeneration({
@@ -779,6 +799,8 @@ export default function InsightAssistant() {
     setIsGeneratingProposals(true);
     setInsightProgress(null);
     setInsightResult(null);
+    setCompletedStages([]);
+    prevStageRef.current = null;
 
     try {
       const startResponse = await startInsightGeneration({
@@ -1052,33 +1074,35 @@ export default function InsightAssistant() {
                   </React.Fragment>
                 ))}
 
-                {/* Progress indicator with percentage bar */}
+                {/* Thinking steps indicator */}
                 {isGeneratingProposals && (
                   <div className="flex justify-start">
                     <div
                       className="w-full max-w-md rounded-2xl px-5 py-4"
                       style={{ background: '#EEF2FF', border: '1px solid #C7D2FE' }}
                     >
-                      <div className="flex items-center gap-3">
-                        <Sparkles className="h-5 w-5 shrink-0 animate-pulse" style={{ color: '#4F46E5' }} />
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium" style={{ color: '#4F46E5' }}>
-                              {insightProgress?.currentStage || 'Starting analysis...'}
-                            </p>
-                            <span className="ml-2 text-sm font-semibold tabular-nums" style={{ color: '#4F46E5' }}>
-                              {insightProgress?.progress ?? 0}%
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles className="h-4 w-4 shrink-0 animate-pulse" style={{ color: '#4F46E5' }} />
+                        <p className="text-sm font-semibold" style={{ color: '#4F46E5' }}>
+                          Thinking...
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {completedStages
+                          .filter((stage) => stage !== insightProgress?.currentStage)
+                          .map((stage, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <Check className="h-3.5 w-3.5 shrink-0" style={{ color: '#22C55E' }} />
+                            <span className="text-xs" style={{ color: '#6B7280' }}>
+                              {stage.replace(/\.{3}$/, '')}
                             </span>
                           </div>
-                          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-indigo-200">
-                            <div
-                              className="h-full rounded-full transition-all duration-500 ease-out"
-                              style={{
-                                width: `${insightProgress?.progress ?? 0}%`,
-                                background: 'linear-gradient(90deg, #6366F1, #4F46E5)',
-                              }}
-                            />
-                          </div>
+                        ))}
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" style={{ color: '#4F46E5' }} />
+                          <span className="text-xs font-medium" style={{ color: '#4F46E5' }}>
+                            {(insightProgress?.currentStage || 'Starting analysis').replace(/\.{3}$/, '')}
+                          </span>
                         </div>
                       </div>
                     </div>
