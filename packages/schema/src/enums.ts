@@ -642,6 +642,30 @@ export const WORK_TRACK_CATEGORY_GROUPS: Record<string, { label: string; categor
   },
 };
 
+// ============================================================================
+// NANO AGENT ENUMS
+// ============================================================================
+
+/**
+ * Source type for how a nano agent flow was created
+ */
+export enum NanoAgentFlowSourceType {
+  Custom = 'custom',
+  WorkflowPattern = 'workflow_pattern',
+  Hybrid = 'hybrid',
+}
+
+/**
+ * Execution status for a nano agent run
+ */
+export enum NanoAgentExecutionStatus {
+  Pending = 'pending',
+  Running = 'running',
+  Completed = 'completed',
+  Failed = 'failed',
+  Aborted = 'aborted',
+}
+
 /**
  * Classification signals for each category (keywords and app patterns)
  */

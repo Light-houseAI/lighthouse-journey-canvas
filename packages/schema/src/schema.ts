@@ -34,6 +34,8 @@ import {
   VisibilityLevel,
   WaitlistStatus,
   WorkTrackCategory,
+  NanoAgentFlowSourceType,
+  NanoAgentExecutionStatus,
 } from './enums';
 
 // Onboarding type enum for PostgreSQL
@@ -1210,3 +1212,116 @@ export type Waitlist = typeof waitlist.$inferSelect;
 export type InsertWaitlist = typeof waitlist.$inferInsert;
 export type InviteCode = typeof inviteCodes.$inferSelect;
 export type InsertInviteCode = typeof inviteCodes.$inferInsert;
+
+// ============================================================================
+// NANO AGENT SYSTEM
+// ============================================================================
+
+/**
+ * Flow source type enum for PostgreSQL
+ */
+export const nanoAgentFlowSourceTypeEnum = pgEnum('nano_agent_flow_source_type', [
+  NanoAgentFlowSourceType.Custom,
+  NanoAgentFlowSourceType.WorkflowPattern,
+  NanoAgentFlowSourceType.Hybrid,
+]);
+
+/**
+ * Execution status enum for PostgreSQL
+ */
+export const nanoAgentExecutionStatusEnum = pgEnum('nano_agent_execution_status', [
+  NanoAgentExecutionStatus.Pending,
+  NanoAgentExecutionStatus.Running,
+  NanoAgentExecutionStatus.Completed,
+  NanoAgentExecutionStatus.Failed,
+  NanoAgentExecutionStatus.Aborted,
+]);
+
+/**
+ * Nano Agent Flows Table
+ * Stores reusable automation flows created by users.
+ * Flows can be created from natural language, imported from detected workflow patterns, or both.
+ * Actions are stored as JSONB array of ExecutableAction objects.
+ */
+export const nanoAgentFlows = pgTable('nano_agent_flows', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+
+  // Flow identity
+  name: text('name').notNull(),
+  description: text('description').notNull().default(''),
+
+  // Source tracking
+  sourceType: nanoAgentFlowSourceTypeEnum('source_type')
+    .notNull()
+    .default(NanoAgentFlowSourceType.Custom),
+  sourcePatternId: text('source_pattern_id'), // ArangoDB workflow_patterns._key, if derived
+
+  // Actions - the core automation steps
+  actions: jsonb('actions').$type<Record<string, any>[]>().notNull().default([]),
+
+  // Sharing
+  isTemplate: boolean('is_template').notNull().default(false),
+  orgId: integer('org_id').references(() => organizations.id, {
+    onDelete: 'set null',
+  }),
+
+  // Discovery
+  tags: text('tags').array().notNull().default([]),
+
+  // Usage metrics
+  runCount: integer('run_count').notNull().default(0),
+  lastRunAt: timestamp('last_run_at', { withTimezone: true }),
+
+  // Timestamps
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/**
+ * Nano Agent Executions Table
+ * Tracks individual execution runs of a flow.
+ * Each execution records per-step results as JSONB.
+ */
+export const nanoAgentExecutions = pgTable('nano_agent_executions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  flowId: uuid('flow_id')
+    .notNull()
+    .references(() => nanoAgentFlows.id, { onDelete: 'cascade' }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+
+  // Execution state
+  status: nanoAgentExecutionStatusEnum('status')
+    .notNull()
+    .default(NanoAgentExecutionStatus.Pending),
+  currentStep: integer('current_step').notNull().default(0),
+  totalSteps: integer('total_steps').notNull().default(0),
+
+  // Per-step results
+  stepResults: jsonb('step_results').$type<Record<string, any>[]>().notNull().default([]),
+
+  // Error tracking
+  error: text('error'),
+
+  // Timing
+  startedAt: timestamp('started_at', { withTimezone: true }),
+  completedAt: timestamp('completed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Type exports for nano agent system
+export type NanoAgentFlow = typeof nanoAgentFlows.$inferSelect;
+export type InsertNanoAgentFlow = typeof nanoAgentFlows.$inferInsert;
+export type NanoAgentExecution = typeof nanoAgentExecutions.$inferSelect;
+export type InsertNanoAgentExecution = typeof nanoAgentExecutions.$inferInsert;

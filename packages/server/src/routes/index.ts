@@ -19,7 +19,9 @@ import updatesRoutes from './updates.routes.js';
 import uploadsRoutes from './uploads.routes.js';
 import userRoutes from './user.routes.js';
 import waitlistRoutes from './waitlist.routes.js';
+import nanoAgentRoutes from './nano-agent.routes.js';
 import workflowAnalysisRoutes from './workflow-analysis.routes.js';
+import contextStitchingRoutes from './context-stitching.routes.js';
 
 const router: any = Router();
 
@@ -45,6 +47,8 @@ router.use('/v2/feedback', feedbackRoutes);
 router.use('/v2/privacy', privacyRoutes);
 router.use('/v2/insight-assistant', insightAssistantRoutes);
 router.use('/v2/company-docs', companyDocumentsRoutes());
+router.use('/v2/nano-agent', nanoAgentRoutes);
+router.use('/v2/context-stitching', contextStitchingRoutes);
 router.use('/waitlist', waitlistRoutes);
 
 // Node permissions are now integrated into hierarchy routes at /api/v2/timeline

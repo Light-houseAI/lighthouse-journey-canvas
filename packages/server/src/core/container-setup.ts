@@ -108,6 +108,14 @@ import { DocumentParserService } from '../services/document-parser.service';
 import { DocumentChunkerService } from '../services/document-chunker.service';
 import { CompanyDocumentProcessingService } from '../services/company-document-processing.service';
 import { CompanyDocumentSearchService } from '../services/company-document-search.service';
+// Nano Agent Services
+import { ActionPlanGeneratorService } from '../services/nano-agent/action-plan-generator.service.js';
+import { FlowService } from '../services/nano-agent/flow.service.js';
+import { NanoAgentService } from '../services/nano-agent/nano-agent.service.js';
+import { ContextStitchingService } from '../services/insight-generation/context-stitching.service.js';
+import { ContextStitchingPersistenceService } from '../services/context-stitching-persistence.service.js';
+import { NanoAgentController } from '../controllers/nano-agent.controller.js';
+
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -448,6 +456,17 @@ export class Container {
         [CONTAINER_TOKENS.WORKFLOW_ANONYMIZER_SERVICE]: asClass(
           WorkflowAnonymizerService
         ).singleton(),
+        // Context Stitching Services (Tier 1, 2, 3) - MUST come before InsightGenerationService
+        [CONTAINER_TOKENS.CONTEXT_STITCHING_SERVICE]: asClass(ContextStitchingService).singleton(),
+        [CONTAINER_TOKENS.CONTEXT_STITCHING_PERSISTENCE_SERVICE]: asFunction(({
+          arangoDBGraphService,
+          logger,
+        }) => {
+          logger.info('🔧 Creating ContextStitchingPersistenceService', {
+            hasArangoDBGraphService: !!arangoDBGraphService,
+          });
+          return new ContextStitchingPersistenceService(arangoDBGraphService, logger);
+        }).singleton(),
         // Multi-Agent Insight Generation Service
         // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
         [CONTAINER_TOKENS.INSIGHT_GENERATION_SERVICE]: asFunction(({
@@ -461,7 +480,11 @@ export class Container {
           personaService,
           memoryService,
           graphService,
+          contextStitchingPersistenceService,
         }) => {
+          logger.info('🔧 Creating InsightGenerationService', {
+            hasContextStitchingPersistenceService: !!contextStitchingPersistenceService,
+          });
           return new InsightGenerationService({
             logger,
             llmProvider,
@@ -476,6 +499,7 @@ export class Container {
             memoryService,
             graphService,
             enableContextStitching: process.env.ENABLE_CONTEXT_STITCHING !== 'false', // Default to true
+            contextStitchingPersistenceService,
           });
         }).singleton(),
         // Company Documents Services (RAG document processing)
@@ -558,6 +582,12 @@ export class Container {
             },
           });
         }).singleton(),
+        // Nano Agent Services
+        [CONTAINER_TOKENS.ACTION_PLAN_GENERATOR_SERVICE]: asClass(
+          ActionPlanGeneratorService
+        ).singleton(),
+        [CONTAINER_TOKENS.FLOW_SERVICE]: asClass(FlowService).singleton(),
+        [CONTAINER_TOKENS.NANO_AGENT_SERVICE]: asClass(NanoAgentService).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
@@ -610,6 +640,10 @@ export class Container {
         // Company Documents Controller
         [CONTAINER_TOKENS.COMPANY_DOCUMENTS_CONTROLLER]: asClass(
           CompanyDocumentsController
+        ).transient(),
+        // Nano Agent Controller
+        [CONTAINER_TOKENS.NANO_AGENT_CONTROLLER]: asClass(
+          NanoAgentController
         ).transient(),
       });
 

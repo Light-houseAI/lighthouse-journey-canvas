@@ -65,7 +65,7 @@ This is typically the FIRST skill to invoke when you need to understand what the
     state: InsightState,
     deps: SkillDependencies
   ): Promise<SkillExecutionResult> {
-    const { logger, nlqService, platformWorkflowRepository, sessionMappingRepository, embeddingService, noiseFilterService, graphService, modelConfig, enableContextStitching } = deps;
+    const { logger, nlqService, platformWorkflowRepository, sessionMappingRepository, embeddingService, noiseFilterService, graphService, modelConfig, enableContextStitching, contextStitchingPersistenceService } = deps;
     const startTime = Date.now();
 
     logger.info('Retrieval Skill: Starting execution', {
@@ -95,6 +95,7 @@ This is typically the FIRST skill to invoke when you need to understand what the
         noiseFilterService,
         graphService,
         enableContextStitching,
+        contextStitchingPersistenceService,
       };
 
       // Create and invoke the A1 retrieval graph

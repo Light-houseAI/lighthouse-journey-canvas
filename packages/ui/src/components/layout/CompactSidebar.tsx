@@ -1,5 +1,5 @@
 import { Button } from '@journey/components';
-import { Home, Search, Settings, Sparkles } from 'lucide-react';
+import { Home, Search, Settings, Sparkles, Zap } from 'lucide-react';
 import React from 'react';
 import { useLocation } from 'wouter';
 
@@ -51,6 +51,12 @@ export function CompactSidebar() {
       label: 'Insight Assistant',
       path: '/insight-assistant',
       isActive: location === '/insight-assistant',
+    },
+    {
+      icon: <Zap className="h-5 w-5" />,
+      label: 'Nano Agent',
+      path: '/nano-agent',
+      isActive: location === '/nano-agent',
     },
   ];
 

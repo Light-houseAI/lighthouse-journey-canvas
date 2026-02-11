@@ -592,6 +592,65 @@ const tier2OutputSchema = z.object({
 });
 
 // ============================================================================
+// TIER 3: PROCESS PATTERN DETECTION (Cross-Tool Workflow Sequences)
+// ============================================================================
+
+const TIER3_PROCESS_PATTERN_SYSTEM_PROMPT = `You are a PROCESS PATTERN DETECTOR. Your job is to identify repetitive cross-tool workflow sequences that occur across multiple sessions.
+
+DETECTION CRITERIA:
+1. **Sequence**: Must be an ordered series of 2-4 tools (e.g., Chrome → Docs → Gmail)
+2. **Repetition**: Pattern must occur in at least 2 separate sessions
+3. **Coherence**: Tools in sequence should represent logical workflow steps
+4. **Time-bounded**: Each pattern instance should complete within same session/day
+
+WHAT TO DETECT:
+✅ "Chrome research → Google Docs document → Gmail send" (repeated 5x)
+✅ "Figma design → Notion document → Slack discussion" (repeated 3x)
+✅ "Terminal debug → VS Code fix → GitHub commit" (repeated 4x)
+
+WHAT NOT TO DETECT:
+❌ Single tool repeated (that's tool mastery, not a process)
+❌ Random tool combinations without logical flow
+❌ One-off sequences (must repeat 2+ times)
+❌ Sequences longer than 4 steps (too complex to automate)
+
+OUTPUT FORMAT:
+For each detected pattern, provide:
+- **patternName**: Descriptive name (e.g., "Research-Document-Communicate")
+- **workflow**: Ordered array of steps with tools and duration
+- **frequency**: How many times pattern occurred
+- **sessionIds**: Which sessions contained this pattern
+- **optimization**: Automation potential + suggestions
+
+Keep descriptions evidence-based and concise.`;
+
+const workflowStepSchema = z.object({
+  stepName: z.string().describe('Step name like "Research", "Document", "Communicate"'),
+  toolsUsed: z.array(z.string()).describe('Tools used in this step'),
+  avgDurationSeconds: z.number().describe('Average duration of this step'),
+  order: z.number().describe('Step order (1, 2, 3...)'),
+});
+
+const processPatternSchema = z.object({
+  patternId: z.string().describe('Unique ID for pattern'),
+  patternName: z.string().describe('Descriptive name like "Research-Document-Share"'),
+  workflow: z.array(workflowStepSchema).describe('Ordered workflow steps'),
+  frequency: z.number().describe('How many times pattern occurred'),
+  avgDurationSeconds: z.number().describe('Average total duration of pattern'),
+  sessionIds: z.array(z.string()).describe('Sessions where pattern was detected'),
+  firstSeen: z.string().describe('ISO timestamp of first occurrence'),
+  lastSeen: z.string().describe('ISO timestamp of last occurrence'),
+  optimization: z.object({
+    automationPotential: z.enum(['high', 'medium', 'low']).describe('Automation potential'),
+    suggestions: z.array(z.string()).describe('Optimization suggestions'),
+  }),
+});
+
+const tier3OutputSchema = z.object({
+  processPatterns: z.array(processPatternSchema),
+});
+
+// ============================================================================
 // SERVICE IMPLEMENTATION
 // ============================================================================
 
@@ -642,10 +701,11 @@ export class ContextStitchingService {
       );
     }
 
-    // Execute both tiers in parallel
-    const [tier1Result, tier2Result] = await Promise.all([
+    // Execute all three tiers in parallel
+    const [tier1Result, tier2Result, tier3Result] = await Promise.all([
       this.executeTier1Stitching(targetSessions, minConfidence),
       this.executeTier2Stitching(targetSessions),
+      this.executeTier3Stitching(targetSessions),
     ]);
 
     const processingTimeMs = Date.now() - startTime;
@@ -657,6 +717,7 @@ export class ContextStitchingService {
     this.logger.info('ContextStitching: Complete', {
       workstreamCount: tier1Result.workstreams.length,
       toolGroupCount: tier2Result.toolMasteryGroups.length,
+      processPatternCount: tier3Result.processPatterns.length,
       ungroupedCount: tier1Result.ungroupedSessionIds.length,
       processingTimeMs,
     });
@@ -664,12 +725,14 @@ export class ContextStitchingService {
     return {
       workstreams: tier1Result.workstreams,
       toolMasteryGroups: tier2Result.toolMasteryGroups,
+      processPatterns: tier3Result.processPatterns,
       ungroupedSessionIds: tier1Result.ungroupedSessionIds,
       metadata: {
         totalSessions: sessions.length,
         sessionsStitched: stitchedSessionIds.size,
         workstreamCount: tier1Result.workstreams.length,
         toolGroupCount: tier2Result.toolMasteryGroups.length,
+        processPatternCount: tier3Result.processPatterns.length,
         processingTimeMs,
         stitchingVersion: '1.0.0',
       },
@@ -931,6 +994,141 @@ Return JSON with toolMasteryGroups array. Keep descriptions short (under 50 word
   }
 
   /**
+   * Execute Tier 3: Process Pattern Detection
+   * Identifies repetitive cross-tool workflow sequences (e.g., "Chrome → Docs → Gmail")
+   */
+  private async executeTier3Stitching(
+    sessions: SessionForStitching[]
+  ): Promise<{ processPatterns: ProcessPattern[] }> {
+    this.logger.info('ContextStitching: Executing Tier 3 (Process Patterns)');
+
+    if (sessions.length < 2) {
+      this.logger.info('ContextStitching: Tier 3 skipped - need 2+ sessions for pattern detection');
+      return { processPatterns: [] };
+    }
+
+    // Extract workflow sequences from sessions
+    // A sequence is an ordered list of tools used in a workflow
+    const sequences: Array<{
+      sessionId: string;
+      tools: string[];
+      timestamp: string;
+      duration: number;
+    }> = [];
+
+    for (const session of sessions) {
+      for (const workflow of session.workflows) {
+        // Extract unique tools in order from workflow steps
+        const toolSequence: string[] = [];
+        const seenTools = new Set<string>();
+
+        for (const step of workflow.steps || []) {
+          const tool = this.normalizeTool(step.app || 'unknown');
+          if (!seenTools.has(tool)) {
+            toolSequence.push(tool);
+            seenTools.add(tool);
+          }
+        }
+
+        // Only consider sequences of 2-4 tools
+        if (toolSequence.length >= 2 && toolSequence.length <= 4) {
+          sequences.push({
+            sessionId: session.sessionId,
+            tools: toolSequence,
+            timestamp: session.timestamp,
+            duration: workflow.steps?.reduce((sum, s) => sum + (s.durationSeconds || 0), 0) || 0,
+          });
+        }
+      }
+    }
+
+    if (sequences.length < 2) {
+      this.logger.info('ContextStitching: Tier 3 found no multi-tool sequences');
+      return { processPatterns: [] };
+    }
+
+    // Group sequences by tool pattern (order matters)
+    const patternGroups = new Map<string, typeof sequences>();
+    for (const seq of sequences) {
+      const patternKey = seq.tools.join(' → ');
+      if (!patternGroups.has(patternKey)) {
+        patternGroups.set(patternKey, []);
+      }
+      patternGroups.get(patternKey)!.push(seq);
+    }
+
+    // Filter to patterns that repeat (2+ occurrences)
+    const repeatingPatterns = Array.from(patternGroups.entries())
+      .filter(([_, instances]) => instances.length >= 2)
+      .sort((a, b) => b[1].length - a[1].length); // Sort by frequency
+
+    if (repeatingPatterns.length === 0) {
+      this.logger.info('ContextStitching: Tier 3 found no repeating patterns');
+      return { processPatterns: [] };
+    }
+
+    // Format top patterns for LLM analysis (limit to top 10 to avoid token limits)
+    const patternsToAnalyze = repeatingPatterns.slice(0, 10);
+    const patternDescriptions = patternsToAnalyze.map(([pattern, instances]) => {
+      const avgDuration = instances.reduce((sum, i) => sum + i.duration, 0) / instances.length;
+      const timestamps = instances.map(i => new Date(i.timestamp).toISOString().slice(0, 10));
+      return `Pattern: ${pattern}
+Frequency: ${instances.length}x
+Avg Duration: ${Math.round(avgDuration / 60)}min
+Sessions: ${instances.map(i => i.sessionId).join(', ')}
+Dates: ${timestamps.slice(0, 3).join(', ')}${timestamps.length > 3 ? ` (+${timestamps.length - 3} more)` : ''}`;
+    }).join('\n\n');
+
+    const userPrompt = `Analyze these repetitive cross-tool workflow patterns:
+
+${patternDescriptions}
+
+For each pattern:
+1. Give it a descriptive name (e.g., "Research-Document-Share")
+2. Break down into workflow steps with tools
+3. Assess automation potential (high/medium/low)
+4. Suggest specific optimizations
+
+Return JSON with processPatterns array.`;
+
+    try {
+      const result = await this.llmProvider.generateStructuredResponse(
+        [
+          { role: 'system', content: TIER3_PROCESS_PATTERN_SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt },
+        ],
+        tier3OutputSchema,
+        { temperature: 0.1, maxTokens: 8000 }
+      );
+
+      // Enrich with actual data from our analysis
+      const enrichedPatterns = result.content.processPatterns.map((pattern, idx) => {
+        const [patternKey, instances] = patternsToAnalyze[idx] || [null, []];
+        if (!instances || instances.length === 0) return pattern;
+
+        const timestamps = instances.map(i => new Date(i.timestamp).getTime());
+        return {
+          ...pattern,
+          frequency: instances.length,
+          sessionIds: instances.map(i => i.sessionId),
+          firstSeen: new Date(Math.min(...timestamps)).toISOString(),
+          lastSeen: new Date(Math.max(...timestamps)).toISOString(),
+          avgDurationSeconds: instances.reduce((sum, i) => sum + i.duration, 0) / instances.length,
+        };
+      });
+
+      this.logger.info('ContextStitching: Tier 3 complete', {
+        patternCount: enrichedPatterns.length,
+      });
+
+      return { processPatterns: enrichedPatterns };
+    } catch (error) {
+      this.logger.error('ContextStitching: Tier 3 failed', error instanceof Error ? error : new Error(String(error)));
+      return { processPatterns: [] };
+    }
+  }
+
+  /**
    * Identify which workstream a new session belongs to
    * Called when opening a new session to recognize existing workstreams
    */
@@ -1082,12 +1280,14 @@ Return JSON: { "workstreamId": "id or null", "confidence": 0-1, "reason": "evide
     return {
       workstreams: [],
       toolMasteryGroups: [],
+      processPatterns: [],
       ungroupedSessionIds: [],
       metadata: {
         totalSessions: 0,
         sessionsStitched: 0,
         workstreamCount: 0,
         toolGroupCount: 0,
+        processPatternCount: 0,
         processingTimeMs: Date.now() - startTime,
         stitchingVersion: '1.0.0',
       },
