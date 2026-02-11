@@ -1051,6 +1051,31 @@ function formatInefficiencyType(type: string): string {
 }
 
 /**
+ * Strip internal numeric references from descriptions before showing to users.
+ * Removes patterns like "Workflow 18", "Session 2", "step-wf-1-3", "(steps 1-5)", etc.
+ */
+function sanitizeDescriptionForUser(description: string): string {
+  return description
+    // "Workflow 18" or "Workflows 18, 23, and 25" → remove
+    .replace(/\bWorkflows?\s+\d+(?:\s*,\s*\d+)*(?:\s*(?:,\s*)?and\s+\d+)?/gi, '')
+    // "Session 2" or "Sessions 1, 2, and 3" → remove
+    .replace(/\bSessions?\s+\d+(?:\s*,\s*\d+)*(?:\s*(?:,\s*)?and\s+\d+)?/gi, '')
+    // "(steps 1-5)" or "(steps 1, 4, 6)" or "(step-1)" or "(Workflows 18, 23, 25)" → remove parenthesized refs
+    .replace(/\((?:steps?|Workflows?)\s*[\w\-,\s]+\)/gi, '')
+    // "step-wf-1-3" or "step-0" style IDs → remove
+    .replace(/\bstep-[\w-]+/gi, '')
+    // Clean up empty parentheses, double spaces, orphaned commas
+    .replace(/\(\s*\)/g, '')
+    .replace(/,\s*,/g, ',')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+,/g, ',')
+    .replace(/,\s*\./g, '.')
+    .replace(/^\s*,\s*/, '')
+    .replace(/\s*,\s*$/, '')
+    .trim();
+}
+
+/**
  * Build rich, source-attributed context from all gathered data
  * Ported from orchestrator-graph.ts for consistent output quality
  */
@@ -1165,7 +1190,7 @@ ${workflowDetails}`;
       .slice(0, MAX_RECOMMENDATIONS)
       .map(i => {
         const wastedTime = i.estimatedWastedSeconds ? ` (~${Math.round(i.estimatedWastedSeconds / 60)}min wasted)` : '';
-        return `- **${formatInefficiencyType(i.type)}**: ${i.description}${wastedTime}`;
+        return `- **${formatInefficiencyType(i.type)}**: ${sanitizeDescriptionForUser(i.description)}${wastedTime}`;
       })
       .join('\n');
     sections.push(`DETECTED INEFFICIENCIES [Source: Workflow Analysis]:\nThese patterns were identified in YOUR captured sessions:\n${ineffSummary}`);
@@ -1217,7 +1242,7 @@ ${workflowDetails}`;
     if (eff.stepAnalysis && eff.stepAnalysis.length > 0) {
       const stepDetails = eff.stepAnalysis.slice(0, 5).map(s => {
         const rating = s.qualityRating.toUpperCase();
-        return `- **[${s.stepId}]** ${s.whatUserDid}\n    Quality: ${rating}\n    Could improve: ${s.couldHaveDoneDifferently}\n    Why better: ${s.whyBetter}`;
+        return `- **${s.whatUserDid}**\n    Quality: ${rating}\n    Could improve: ${s.couldHaveDoneDifferently}\n    Why better: ${s.whyBetter}`;
       }).join('\n');
       effectivenessParts.push(`\n**Step-by-Step Quality Analysis**:\n${stepDetails}`);
     }
@@ -1328,7 +1353,7 @@ async function generateFinalResponse(
   const sessionReferences = state.userEvidence?.sessions?.slice(0, 5).map((s, i) => {
     const summary = s.highLevelSummary || s.startActivity || 'Work Session';
     const date = s.startTime ? new Date(s.startTime).toLocaleDateString() : '';
-    return `- Session ${i + 1}: "${summary.substring(0, 80)}${summary.length > 80 ? '...' : ''}"${date ? ` (${date})` : ''}`;
+    return `- "${summary.substring(0, 80)}${summary.length > 80 ? '...' : ''}"${date ? ` (${date})` : ''}`;
   }).join('\n') || 'No sessions found';
 
   // Build persona-aware instructions
@@ -1448,6 +1473,7 @@ Follow these requirements STRICTLY for workflow analysis responses:
 4. **EXACT SHORTCUTS**: Include complete keyboard shortcuts (e.g., \`Cmd+Shift+F\`, not "use search")
 5. **THEIR TOOLS ONLY**: Only recommend features in tools they actually use
 6. **SKIP EMPTY SECTIONS**: If no data exists for a section (peer insights, company docs), omit it entirely
+7. **NO INTERNAL IDS**: NEVER use "Workflow 18", "Session 2", "step-wf-1-3", or any numeric/internal identifiers. Always use the workflow description, session summary, or action name instead (e.g., "your development environment setup", "the prompt engineering session on 2/3")
 
 ### Required Structure for Workflow Queries:
 

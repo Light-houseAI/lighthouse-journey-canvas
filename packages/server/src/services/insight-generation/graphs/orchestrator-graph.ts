@@ -1187,6 +1187,26 @@ export function createOrchestratorGraph(deps: OrchestratorGraphDeps) {
 // ============================================================================
 
 /**
+ * Strip internal numeric references from descriptions before showing to users.
+ * Removes patterns like "Workflow 18", "Session 2", "step-wf-1-3", "(steps 1-5)", etc.
+ */
+function sanitizeDescriptionForUser(description: string): string {
+  return description
+    .replace(/\bWorkflows?\s+\d+(?:\s*,\s*\d+)*(?:\s*(?:,\s*)?and\s+\d+)?/gi, '')
+    .replace(/\bSessions?\s+\d+(?:\s*,\s*\d+)*(?:\s*(?:,\s*)?and\s+\d+)?/gi, '')
+    .replace(/\((?:steps?|Workflows?)\s*[\w\-,\s]+\)/gi, '')
+    .replace(/\bstep-[\w-]+/gi, '')
+    .replace(/\(\s*\)/g, '')
+    .replace(/,\s*,/g, ',')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+,/g, ',')
+    .replace(/,\s*\./g, '.')
+    .replace(/^\s*,\s*/, '')
+    .replace(/\s*,\s*$/, '')
+    .trim();
+}
+
+/**
  * Build aggregated context string from all agent outputs for answer generation
  */
 function buildAggregatedContext(state: InsightState): string {
@@ -1285,7 +1305,7 @@ ${workflowDetails}`;
       .slice(0, 5) // Show more for better context
       .map(i => {
         const wastedTime = i.estimatedWastedSeconds ? ` (~${Math.round(i.estimatedWastedSeconds / 60)}min wasted)` : '';
-        return `- **${i.type}**: ${i.description}${wastedTime}`;
+        return `- **${i.type}**: ${sanitizeDescriptionForUser(i.description)}${wastedTime}`;
       })
       .join('\n');
     sections.push(`DETECTED INEFFICIENCIES [Source: A2 - Your Workflow Analysis]:\nThese patterns were identified in YOUR captured sessions:\n${ineffSummary}`);
@@ -1548,7 +1568,7 @@ ${webSearchResult.citations.length > 0 ? `AVAILABLE SOURCES (use these exact mar
   const sessionReferences = state.userEvidence?.sessions?.slice(0, 5).map((s, i) => {
     const summary = s.highLevelSummary || s.startActivity || 'Work Session';
     const date = s.startTime ? new Date(s.startTime).toLocaleDateString() : '';
-    return `- Session ${i + 1}: "${summary.substring(0, 80)}${summary.length > 80 ? '...' : ''}"${date ? ` (${date})` : ''}`;
+    return `- "${summary.substring(0, 80)}${summary.length > 80 ? '...' : ''}"${date ? ` (${date})` : ''}`;
   }).join('\n') || 'No sessions found';
 
   // Check if this is a follow-up question (has conversation memory)
@@ -1633,7 +1653,8 @@ CRITICAL REQUIREMENTS:
 3. **SPECIFIC SHORTCUTS**: Always include exact keyboard shortcuts (e.g., "Cmd+Shift+C")
 4. **REFERENCE THEIR DATA**: Quote their actual workflows, tools, and sessions from the context
 5. **INCLUDE ALL SOURCE SECTIONS**: If a context section has data (PEER INSIGHTS, TOOL FEATURES, etc.), include that section in your response
-${hasWebSearchContent ? '6. Include web source links formatted as [Title](URL)' : ''}
+6. **NO INTERNAL IDS**: NEVER use "Workflow 18", "Session 2", "step-wf-1-3", or any numeric/internal identifiers. Always use the workflow description, session summary, or action name (e.g., "your development environment setup", "the prompt engineering session on 2/3")
+${hasWebSearchContent ? '7. Include web source links formatted as [Title](URL)' : ''}
 
 PRIVACY: Do NOT mention company name, job title, or role. Use "your work" or "your projects" instead.`;
 
@@ -3866,7 +3887,7 @@ function buildFinalResult(
     topInefficiencies:
       state.userDiagnostics?.inefficiencies
         .slice(0, 3)
-        .map((i) => `${i.type}: ${i.description}`) || [],
+        .map((i) => `${i.type}: ${sanitizeDescriptionForUser(i.description)}`) || [],
     claudeCodeInsertionPoints: mergedPlan.blocks
       .flatMap((b) =>
         b.stepTransformations

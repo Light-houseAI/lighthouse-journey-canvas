@@ -907,8 +907,9 @@ async function identifyBatchedInefficiencies(
       )
       .join('\n');
 
+    const workflowName = workflow.name || workflow.title || 'Unnamed';
     return `
-### Workflow ${wIndex + 1}: ${workflow.name || workflow.title || 'Unnamed'}
+### "${workflowName}"
 Intent: ${workflow.intent || 'Unknown'}
 Tools: ${workflow.tools?.join(', ') || workflow.primaryApp || 'Unknown'}
 Steps:
@@ -1722,6 +1723,11 @@ For every inefficiency you identify, ground claims in the highest available evid
 
 ## ANTI-HALLUCINATION RULES (MANDATORY)
 
+### Rule 0: Always Use Human-Readable Names in Descriptions
+❌ WRONG: "In Workflow 18 and Workflow 25, duplicate actions..."
+✅ RIGHT: "In 'Set up development environment' and 'Debug auth flow', duplicate actions..."
+In description and evidence fields, reference workflows by their quoted name, not numeric index. Use stepIds only in the stepIds array field.
+
 ### Rule 1: Never Fabricate Content
 ❌ WRONG: "User was debugging React hooks in the auth component"
 ✅ RIGHT: "Step-3 shows 'Editing auth.ts' (45s)" — only reference actual step text
@@ -1798,7 +1804,7 @@ const A2_JUDGE_INEFFICIENCY_EXAMPLES = `
 **CORRECT JUDGMENT:**
 {
   "type": "repetitive_search",
-  "description": "Identical 'AuthService' search performed 3 times (steps 1, 4, 6). First search (12s) was necessary; subsequent searches (18s total) could be avoided by using Cmd+Shift+F for persistent results or Cmd+G to cycle matches.",
+  "description": "Identical 'AuthService' search performed 3 times. First search (12s) was necessary; subsequent searches (18s total) could be avoided by using Cmd+Shift+F for persistent results or Cmd+G to cycle matches.",
   "stepIds": ["step-1", "step-4", "step-6"],
   "estimatedWastedSeconds": 18,
   "confidence": 0.92,
@@ -1830,7 +1836,7 @@ const A2_JUDGE_INEFFICIENCY_EXAMPLES = `
 **CORRECT JUDGMENT:**
 {
   "type": "context_switching",
-  "description": "Payment API work (step-1) interrupted by unrelated activities: Slack #random (step-2, 45s) and Twitter (step-3, 120s). Step-5 shows 60s context reload cost (re-reading code after return). Total disruption: 225s.",
+  "description": "Payment API implementation interrupted by unrelated activities: Slack #random (45s) and Twitter scrolling (120s). Re-reading payment code afterward shows 60s context reload cost. Total disruption: 225s.",
   "stepIds": ["step-2", "step-3", "step-5"],
   "estimatedWastedSeconds": 225,
   "confidence": 0.88,
@@ -1880,7 +1886,7 @@ NO INEFFICIENCY — This is normal, efficient workflow.
 **CORRECT JUDGMENT:**
 {
   "type": "longcut_path",
-  "description": "User navigated through 5 folder clicks (steps 1-5, 10s total) to open AuthForm.tsx. Cmd+P 'AuthForm' would open the file in ~1s.",
+  "description": "User navigated through 5 folder clicks (10s total) to open AuthForm.tsx. Cmd+P 'AuthForm' would open the file in ~1s.",
   "stepIds": ["step-1", "step-2", "step-3", "step-4", "step-5"],
   "estimatedWastedSeconds": 9,
   "confidence": 0.95,
@@ -1925,7 +1931,7 @@ NO INEFFICIENCY — This is healthy TDD workflow.
 **CORRECT JUDGMENT:**
 {
   "type": "rework_loop",
-  "description": "Four consecutive edits to config.ts (steps 1-4, total 110s) may indicate trial-and-error configuration. However, step descriptions lack detail on what changed — this could also be valid incremental development.",
+  "description": "Four consecutive edits to config.ts (total 110s) may indicate trial-and-error configuration. However, step descriptions lack detail on what changed — this could also be valid incremental development.",
   "stepIds": ["step-1", "step-2", "step-3", "step-4"],
   "estimatedWastedSeconds": 35,
   "confidence": 0.40,
@@ -1981,7 +1987,7 @@ const A2_JUDGE_OPPORTUNITY_EXAMPLES = `
 ### EXAMPLE 1: Shortcut Opportunity — CORRECT ✓
 
 **INPUT INEFFICIENCY:**
-[ineff-abc] repetitive_search: "AuthService" searched 3 times (steps 1,4,6), 18s wasted
+[ineff-abc] repetitive_search: "AuthService" searched 3 times, 18s wasted
 
 **CORRECT OPPORTUNITY:**
 {
@@ -2007,7 +2013,7 @@ const A2_JUDGE_OPPORTUNITY_EXAMPLES = `
 ### EXAMPLE 2: AI Integration — CORRECT ✓
 
 **INPUT INEFFICIENCY:**
-[ineff-crud] manual_automation: Wrote 5 similar CRUD handlers manually (steps 12-16), 300s
+[ineff-crud] manual_automation: Wrote 5 similar CRUD handlers manually, 300s
 
 **CORRECT OPPORTUNITY:**
 {
@@ -2032,7 +2038,7 @@ const A2_JUDGE_OPPORTUNITY_EXAMPLES = `
 ### EXAMPLE 3: Tool Feature — CORRECT ✓
 
 **INPUT INEFFICIENCY:**
-[ineff-nav] longcut_path: 5 navigation clicks to open file (steps 1-5), 9s wasted
+[ineff-nav] longcut_path: 5 navigation clicks to open file, 9s wasted
 
 **CORRECT OPPORTUNITY:**
 {
@@ -2216,7 +2222,7 @@ async function identifyOpportunities(
     .slice(0, 15)
     .map(
       (s: any, i: number) =>
-        `${i + 1}. [${s.stepId || `step-${i}`}] ${s.app || s.tool}: ${s.description || 'No description'} (${s.durationSeconds || 0}s)`
+        `${i + 1}. ${s.app || s.tool}: ${s.description || 'No description'} (${s.durationSeconds || 0}s)`
     )
     .join('\n');
 
@@ -2592,8 +2598,9 @@ async function analyzeWorkflowEffectiveness(
       )
       .join('\n');
 
+    const workflowName = workflow.name || workflow.title || 'Unnamed';
     return `
-### Workflow ${wIndex + 1}: ${workflow.name || workflow.title || 'Unnamed'}
+### "${workflowName}"
 **Intent**: ${workflow.intent || 'Unknown'}
 **Approach**: ${workflow.approach || 'Unknown'}
 **Summary**: ${workflow.summary || 'No summary'}

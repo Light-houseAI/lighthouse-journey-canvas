@@ -801,8 +801,8 @@ export class ContextStitchingService {
     const sessionDescriptions = sessions.map((s, idx) => {
       const workflowIntents = s.workflows.map(w => w.intent).join(', ');
       const tools = s.toolsUsed.join(', ');
-      return `Session ${idx + 1} (ID: ${s.sessionId}):
-  Title: "${s.title}"
+      const sessionLabel = s.title || s.highLevelSummary || 'Work Session';
+      return `"${sessionLabel}" (ID: ${s.sessionId}):
   Summary: "${s.highLevelSummary}"
   Workflow Intents: ${workflowIntents || 'None specified'}
   Tools: ${tools || 'None recorded'}
