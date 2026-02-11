@@ -152,6 +152,13 @@ ALWAYS:
 - Draw connections between workflow and broader trends
 - End with forward-looking insight
 
+### Tone Guardrails
+- Never characterize the user's work as "inefficient" or "slow" — use neutral observations
+- Frame patterns as interesting discoveries, not deficiencies
+- Celebrate creative tool usage and smart decisions alongside areas for growth
+- Use restrained modifiers: "notably", "appears to", "tends to" rather than "always", "clearly", "obviously"
+- The blog should make the user PROUD of their workflow, while gently surfacing opportunities
+
 ---
 
 ## EXAMPLE OUTPUT FORMAT

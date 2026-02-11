@@ -237,6 +237,31 @@ Look for patterns like:
 - No structure check
 - No backup/save verification
 
+### BLAME_LANGUAGE
+Reframe from psychological judgment to behavioral observation. Describe the WORKFLOW gap, not the USER gap.
+
+BEFORE (user-blaming):
+"You struggle to understand the deployment logs, wasting 3 minutes each time."
+
+AFTER (workflow-focused):
+"The deployment logs don't surface the key signals clearly — 3 minutes currently goes to reading through noise. Here's a grep pattern that pulls out only what matters."
+
+BEFORE:
+"You're inefficient at context switching, costing you 12 minutes."
+
+AFTER:
+"Context switches between Chrome and Terminal consumed 12 minutes. Batching browser tasks together would reclaim most of that time."
+
+Reframing rules:
+- "You struggle" → "The [workflow/output/interface] doesn't make it easy to..."
+- "You lack" → "The process lacks..."
+- "You wasted" / "You lost" → "[Time] went to [activity]"
+- "cost you" → "consumed" or "accounted for"
+- "You failed to" → "This step wasn't included" or "This wasn't part of the session"
+- "You always/never" → "In [N] of [M] sessions, [pattern]"
+
+Also: Before any critique, add one positive observation about what the user did well in the workflow.
+
 ## Important Rules
 
 1. **Preserve good parts** - Don't rewrite sections without gaps

@@ -59,10 +59,10 @@ Red flags:
 - Severity: HIGH (response doesn't solve the actual problem)
 
 Bottleneck types:
-- INTERPRETATION: User struggles to understand what they're looking at
-- EXECUTION: User knows what to do but doing it is tedious
-- RECALL: User can't find/remember commands, files, or locations
-- DECISION: User is uncertain which path to take
+- INTERPRETATION: The output/interface doesn't surface key signals clearly (observed: long pauses, repeated reading)
+- EXECUTION: The task requires tedious repetitive actions (observed: same keystroke sequences, copy-paste patterns)
+- RECALL: The workflow lacks easy access to commands, files, or locations (observed: history searching, tab-switching)
+- DECISION: The decision criteria aren't evident from context (observed: pausing, backtracking, consulting references)
 
 Solution mismatches:
 - INTERPRETATION bottleneck + navigation shortcut = MISMATCH
@@ -176,6 +176,27 @@ DO NOT flag if:
 - Query is not about workflow optimization
 - Session is too short to have meaningful missing steps
 - User is asking a conceptual question
+
+### 11. BLAME_LANGUAGE
+- Response uses psychological framing or assigns blame to the user instead of describing workflow gaps
+- Detect: Language that characterizes user abilities/deficiencies rather than workflow characteristics
+- Severity: HIGH (makes users feel judged rather than helped)
+
+Blame phrases to flag:
+- "You struggle with..." (should be "The workflow shows repeated attempts at...")
+- "You lack understanding of..." (should be "The output doesn't surface...")
+- "You're inefficient at..." (should be "This sequence currently takes X seconds")
+- "You failed to..." (should be "This step wasn't included in the session")
+- "You wasted X minutes" (should be "X minutes went to [activity]")
+- "cost you X minutes" (should be "consumed X minutes")
+- "You always/never..." (should use frequency: "in N of M sessions")
+
+The fix is reframing: describe the WORKFLOW gap, not the USER gap.
+Test: If you can point to it in the data, it's behavioral (OK). If you have to guess about the person, it's psychological (NOT OK).
+
+DO NOT flag if:
+- Response uses "you" in neutral, non-judgmental context (e.g., "your workflow", "your session")
+- The language is factual and data-grounded (e.g., "you spent 180 seconds" is OK)
 
 ## Analysis Process
 

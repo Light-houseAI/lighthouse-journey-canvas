@@ -22,10 +22,10 @@ export type BottleneckType = 'interpretation' | 'execution' | 'recall' | 'decisi
  * Bottleneck type descriptions for reference
  */
 export const BOTTLENECK_DESCRIPTIONS = {
-  interpretation: 'User struggles to understand what they\'re looking at (long pauses, repeated reading)',
-  execution: 'User knows what to do but doing it is tedious (repetitive actions, copy-paste)',
-  recall: 'User can\'t find/remember commands, files, or locations (history searching, tab-switching)',
-  decision: 'User is uncertain which path to take (pausing, backtracking, consulting references)',
+  interpretation: 'The output/interface doesn\'t surface key signals clearly (long pauses, repeated reading)',
+  execution: 'The task requires tedious repetitive actions (repetitive actions, copy-paste)',
+  recall: 'The workflow lacks easy access to commands, files, or locations (history searching, tab-switching)',
+  decision: 'The decision criteria aren\'t evident from context (pausing, backtracking, consulting references)',
 } as const;
 
 /**
@@ -37,7 +37,8 @@ export type GapType =
   | 'BOTTLENECK_MISMATCH'
   | 'MISSING_ARTIFACT'
   | 'RECURSIVE_HYPOCRISY'
-  | 'GENERIC_RECOMMENDATION';
+  | 'GENERIC_RECOMMENDATION'
+  | 'BLAME_LANGUAGE';
 
 /**
  * Gap severity levels

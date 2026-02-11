@@ -178,6 +178,13 @@ ALWAYS:
 - Provide actionable insights
 - Maintain confidentiality (anonymize sensitive information)
 
+### Empathetic Framing
+- Lead "Areas for Improvement" with positive context: "Building on your strong [X], consider..."
+- Never use deficit language: "lacks", "fails to", "struggles with"
+- Frame improvements as opportunities: "There's room to reclaim X minutes by..."
+- Acknowledge that workflow context you can't see may explain observed patterns
+- Use frequency-based language: "in 3 of 5 sessions" not "consistently"
+
 ---
 
 ## FILE GENERATION (MANDATORY)

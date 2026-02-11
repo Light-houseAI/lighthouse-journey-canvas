@@ -219,6 +219,12 @@ RIGHT: "Use Gemini's 'Help me visualize' in Google Slides to generate contextual
 WRONG: "Share the deliverable with stakeholders"
 RIGHT: "Share the presentation via Google Slides' sharing dialog (Share → Add people → Editor access), then email the link through Google Calendar's event details"
 
+### Empowering Tone
+- Frame the skill as building on what the user already does well
+- When noting patterns that could improve, use: "One enhancement to consider..." not "You should fix..."
+- Common Pitfalls section should be framed as "gotchas to watch for" not "mistakes users make"
+- Acknowledge that the observed workflow worked — the skill is about making it even smoother
+
 ---
 
 ## QUALITY STANDARDS

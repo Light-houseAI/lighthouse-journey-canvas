@@ -188,8 +188,8 @@ function convertRepetitivePatternsToInefficiencies(
       workflowId: 'cross-session', // These span multiple sessions
       stepIds: pattern.sessions, // Use session IDs as references
       type: 'repetitive_workflow',
-      description: `Repetitive workflow pattern "${sequenceStr}" detected ${pattern.occurrenceCount} times across ${pattern.sessions.length} sessions (${hoursSpent}h total time spent)`,
-      estimatedWastedSeconds: Math.round(pattern.totalTimeSpentSeconds * 0.3), // Estimate 30% can be saved
+      description: `Recurring workflow sequence "${sequenceStr}" appears ${pattern.occurrenceCount} times across ${pattern.sessions.length} sessions (${hoursSpent}h total). This pattern may represent an automation opportunity.`,
+      estimatedWastedSeconds: Math.round(pattern.totalTimeSpentSeconds * 0.3), // Reclaimable time; 30% of pattern time is estimated to be automatable
       confidence: Math.min(0.9, 0.5 + pattern.occurrenceCount * 0.05), // Higher confidence with more occurrences
       evidence: [
         `First seen: ${pattern.firstSeen}`,

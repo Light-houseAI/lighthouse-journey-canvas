@@ -111,25 +111,25 @@ Example violation:
 Every user friction falls into one of these categories:
 
 ### 1. INTERPRETATION Bottleneck
-User's friction: Understanding what they're looking at
+Workflow friction: The output/interface doesn't surface key signals clearly
 - Symptoms: Long pauses, repeated reading, searching for patterns
 - Solution type: Parsers, grep patterns, checklists of what to look for
 - WRONG solution: Navigation shortcuts (doesn't help interpretation)
 
 ### 2. EXECUTION Bottleneck
-User's friction: Performing repetitive mechanical actions
+Workflow friction: Task requires tedious repetitive mechanical actions
 - Symptoms: Same keystroke sequences, copy-paste patterns
 - Solution type: Automation, scripts, macros, aliases
 - WRONG solution: "Read the docs" (they know what to do, doing it is the problem)
 
 ### 3. RECALL Bottleneck
-User's friction: Finding or remembering commands/files/locations
+Workflow friction: Commands, files, and locations aren't easily accessible
 - Symptoms: History searching, tab-switching, asking for help
 - Solution type: Shortcuts, fuzzy finders, bookmarks, cheat sheets
 - CORRECT use of Ctrl+R, Cmd+K, etc.
 
 ### 4. DECISION Bottleneck
-User's friction: Choosing between options or determining next step
+Workflow friction: Decision criteria aren't evident from context
 - Symptoms: Pausing, backtracking, consulting references
 - Solution type: Decision trees, rubrics, pre-defined criteria
 - WRONG solution: Faster navigation (they're not slow, they're uncertain)
