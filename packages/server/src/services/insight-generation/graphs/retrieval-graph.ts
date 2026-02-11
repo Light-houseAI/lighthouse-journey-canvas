@@ -277,6 +277,8 @@ export interface RetrievalGraphDeps {
   noiseFilterService?: NoiseFilterService;
   /** Whether to enable context stitching (default: false for backward compatibility) */
   enableContextStitching?: boolean;
+  /** Context stitching persistence service for saving results to graph */
+  contextStitchingPersistenceService?: any; // Type will be ContextStitchingPersistenceService
 }
 
 // ============================================================================
@@ -1148,6 +1150,51 @@ async function stitchContextAcrossSessions(
       ungroupedCount: stitchedContext.ungroupedSessionIds.length,
       processingTimeMs: stitchedContext.metadata.processingTimeMs,
     });
+
+    // Persist stitching results to graph if persistence service is available
+    logger.info('A1: Checking persistence prerequisites', {
+      hasPersistenceService: !!deps.contextStitchingPersistenceService,
+      hasUserId: !!state.userId,
+      userId: state.userId,
+    });
+
+    if (deps.contextStitchingPersistenceService && state.userId) {
+      try {
+        logger.info('A1: Persisting stitching results to graph', {
+          userId: state.userId,
+          workstreamCount: stitchedContext.workstreams.length,
+          toolGroupCount: stitchedContext.toolMasteryGroups.length,
+          processPatternCount: stitchedContext.processPatterns.length,
+        });
+
+        await deps.contextStitchingPersistenceService.persistWorkstreams(
+          state.userId,
+          stitchedContext.workstreams
+        );
+        await deps.contextStitchingPersistenceService.persistToolMasteryGroups(
+          state.userId,
+          stitchedContext.toolMasteryGroups
+        );
+        await deps.contextStitchingPersistenceService.persistProcessPatterns(
+          state.userId,
+          stitchedContext.processPatterns
+        );
+
+        logger.info('A1: Successfully persisted stitching results to graph', {
+          userId: state.userId,
+        });
+      } catch (error) {
+        logger.error('A1: Failed to persist stitching results', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Don't fail the pipeline - persistence is non-critical
+      }
+    } else {
+      logger.warn('A1: Skipping persistence - missing prerequisites', {
+        hasPersistenceService: !!deps.contextStitchingPersistenceService,
+        hasUserId: !!state.userId,
+      });
+    }
 
     // Log detailed output for debugging
     if (process.env.INSIGHT_DEBUG === 'true') {

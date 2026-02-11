@@ -176,6 +176,13 @@
       "when": 1769126400000,
       "tag": "20260204000001_add_waitlist_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1770663987795,
+      "tag": "20260209190627_safe_venus",
+      "breakpoints": true
     }
   ]
 }

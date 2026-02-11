@@ -65,6 +65,8 @@ export interface AgenticLoopDeps {
   agenticConfig?: Partial<AgenticLoopConfig>;
   /** Enable cross-session context stitching in retrieval */
   enableContextStitching?: boolean;
+  /** Context stitching persistence service for saving results to graph */
+  contextStitchingPersistenceService?: any; // Type will be ContextStitchingPersistenceService
   /** Callback to persist progress updates to database for frontend polling */
   onProgressUpdate?: (progress: number, stage: string) => Promise<void>;
 }
@@ -131,6 +133,7 @@ async function actionNode(
     perplexityApiKey: deps.perplexityApiKey,
     modelConfig: deps.modelConfig,
     enableContextStitching: deps.enableContextStitching,
+    contextStitchingPersistenceService: deps.contextStitchingPersistenceService,
   };
 
   try {

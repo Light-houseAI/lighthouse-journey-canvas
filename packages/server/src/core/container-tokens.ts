@@ -132,6 +132,13 @@ export const SERVICE_TOKENS = {
   PERSONA_SUGGESTION_SERVICE: 'personaSuggestionService',
   // Conversation Memory Service (Mem0 integration for follow-up questions)
   MEMORY_SERVICE: 'memoryService',
+  // Nano Agent Services
+  ACTION_PLAN_GENERATOR_SERVICE: 'actionPlanGeneratorService',
+  FLOW_SERVICE: 'flowService',
+  NANO_AGENT_SERVICE: 'nanoAgentService',
+  // Context Stitching Services (Tier 1, 2, 3)
+  CONTEXT_STITCHING_SERVICE: 'contextStitchingService',
+  CONTEXT_STITCHING_PERSISTENCE_SERVICE: 'contextStitchingPersistenceService',
 } as const;
 
 /**
@@ -163,6 +170,8 @@ export const CONTROLLER_TOKENS = {
   INSIGHT_ASSISTANT_CONTROLLER: 'insightAssistantController',
   // Company Documents Controller
   COMPANY_DOCUMENTS_CONTROLLER: 'companyDocumentsController',
+  // Nano Agent Controller
+  NANO_AGENT_CONTROLLER: 'nanoAgentController',
 } as const;
 
 /**

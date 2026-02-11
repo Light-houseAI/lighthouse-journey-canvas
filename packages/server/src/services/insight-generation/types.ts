@@ -1431,6 +1431,36 @@ export interface ToolMasteryGroup {
 }
 
 /**
+ * Workflow step in a process pattern (Tier 3)
+ */
+export interface WorkflowStep {
+  stepName: string;          // "Research", "Document", "Communicate"
+  toolsUsed: string[];       // ["Chrome"], ["Google Docs"], ["Gmail"]
+  avgDurationSeconds: number;
+  order: number;             // 1, 2, 3...
+}
+
+/**
+ * Process pattern detected across sessions (Tier 3)
+ * Represents repetitive cross-tool workflow sequences like:
+ * "Chrome research → Docs summarize → Gmail email" (10x in 4 days)
+ */
+export interface ProcessPattern {
+  patternId: string;
+  patternName: string;       // "Research-Document-Communicate"
+  workflow: WorkflowStep[];
+  frequency: number;         // How many times this pattern occurred
+  avgDurationSeconds: number;
+  sessionIds: string[];      // Sessions where this pattern was detected
+  firstSeen: string;
+  lastSeen: string;
+  optimization: {
+    automationPotential: 'high' | 'medium' | 'low';
+    suggestions: string[];
+  };
+}
+
+/**
  * Session data prepared for stitching analysis
  */
 export interface SessionForStitching {
@@ -1450,13 +1480,15 @@ export interface SessionForStitching {
 }
 
 /**
- * Stitched context result containing both tiers
+ * Stitched context result containing all three tiers
  */
 export interface StitchedContext {
   /** Tier 1: Outcome-based workstreams */
   workstreams: Workstream[];
   /** Tier 2: Tool mastery groups */
   toolMasteryGroups: ToolMasteryGroup[];
+  /** Tier 3: Process patterns (cross-tool sequences) */
+  processPatterns: ProcessPattern[];
   /** Sessions that couldn't be grouped (orphans) */
   ungroupedSessionIds: string[];
   /** Stitching metadata */
@@ -1465,6 +1497,7 @@ export interface StitchedContext {
     sessionsStitched: number;
     workstreamCount: number;
     toolGroupCount: number;
+    processPatternCount: number;
     processingTimeMs: number;
     stitchingVersion: string;
   };
