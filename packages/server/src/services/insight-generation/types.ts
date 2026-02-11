@@ -868,6 +868,13 @@ export interface AgentDiagnostics {
 
   /** Total processing time in milliseconds */
   totalProcessingMs?: number;
+
+  /** Per-phase timing breakdown for performance diagnostics */
+  timings?: Array<{
+    phase: string;
+    skill?: string;
+    durationMs: number;
+  }>;
 }
 
 // ============================================================================

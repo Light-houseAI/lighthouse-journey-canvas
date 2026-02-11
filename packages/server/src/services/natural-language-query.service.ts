@@ -144,7 +144,8 @@ export class NaturalLanguageQueryService {
    */
   async query(
     userId: number,
-    request: NaturalLanguageQueryRequest
+    request: NaturalLanguageQueryRequest,
+    options?: { skipLLMGeneration?: boolean }
   ): Promise<NaturalLanguageQueryResult> {
     const startTime = Date.now();
 
@@ -218,14 +219,20 @@ export class NaturalLanguageQueryService {
         screenshotContext.sessions
       );
 
-      // Step 5: Generate LLM response
-      const llmStart = Date.now();
-      const llmResponse = await this.generateLLMResponse(
-        request.query,
-        aggregatedSources,
-        relatedWorkSessions
-      );
-      llmGenerationTimeMs = Date.now() - llmStart;
+      // Step 5: Generate LLM response (skipped when called from A1 retrieval — A1 only needs sources)
+      let llmResponse: { answer: string; confidence: number; suggestedFollowUps: string[] };
+      if (options?.skipLLMGeneration) {
+        this.logger.info('NLQ: Skipping LLM generation (skipLLMGeneration=true)');
+        llmResponse = { answer: '', confidence: 0.5, suggestedFollowUps: [] };
+      } else {
+        const llmStart = Date.now();
+        llmResponse = await this.generateLLMResponse(
+          request.query,
+          aggregatedSources,
+          relatedWorkSessions
+        );
+        llmGenerationTimeMs = Date.now() - llmStart;
+      }
 
       const totalTimeMs = Date.now() - startTime;
 

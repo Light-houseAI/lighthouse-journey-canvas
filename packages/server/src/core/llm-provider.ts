@@ -294,14 +294,18 @@ export class AISDKLLMProvider implements LLMProvider {
         json = json.trim() + '""';
       }
 
-      // Close unclosed arrays first (inner structures)
-      if (openBrackets > closeBrackets) {
-        json += ']'.repeat(openBrackets - closeBrackets);
-      }
-
-      // Close unclosed objects (outer structures)
-      if (openBraces > closeBraces) {
-        json += '}'.repeat(openBraces - closeBraces);
+      // Use stack-based closing for correct nesting order
+      const closingSeq = buildRepairClosingSequence(json);
+      if (closingSeq) {
+        json += closingSeq;
+      } else {
+        // Fallback: simple bracket counting
+        if (openBrackets > closeBrackets) {
+          json += ']'.repeat(openBrackets - closeBrackets);
+        }
+        if (openBraces > closeBraces) {
+          json += '}'.repeat(openBraces - closeBraces);
+        }
       }
 
       return json;
@@ -380,6 +384,32 @@ export class AISDKLLMProvider implements LLMProvider {
       throw new Error(`LLM streaming failed: ${error}`);
     }
   }
+}
+
+/**
+ * Build the correct closing sequence for truncated JSON using a stack-based parser.
+ * Ensures proper nesting order (e.g., `]}` not `}]`).
+ */
+function buildRepairClosingSequence(json: string): string | null {
+  const stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < json.length; i++) {
+    const ch = json[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '\\' && inString) { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') stack.push('}');
+    else if (ch === '[') stack.push(']');
+    else if ((ch === '}' || ch === ']') && stack.length > 0 && stack[stack.length - 1] === ch) {
+      stack.pop();
+    }
+  }
+
+  if (stack.length === 0) return null;
+  return stack.reverse().join('');
 }
 
 // Factory function for creating LLM providers

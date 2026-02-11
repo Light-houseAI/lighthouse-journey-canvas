@@ -203,50 +203,7 @@ export class InsightGenerationService {
       this.workflowContextCache.set(jobId, workflowContext);
     }
 
-    // Retrieve relevant conversation memories for follow-up context
-    if (this.memoryService) {
-      try {
-        const memorySearchResult = await this.memoryService.searchMemories({
-          query,
-          userId,
-          limit: 5,
-          nodeId: options?.nodeId,
-        });
-
-        if (memorySearchResult.memories.length > 0) {
-          const retrievedMemories: RetrievedMemories = {
-            memories: memorySearchResult.memories.map((m) => ({
-              id: m.id,
-              content: m.memory,
-              userId,
-              relevanceScore: m.score,
-              createdAt: m.createdAt,
-              topics: m.metadata?.topics,
-              originalQuery: m.metadata?.query,
-              sessionIds: m.metadata?.sessionIds,
-            })),
-            totalFound: memorySearchResult.totalFound,
-            retrievalTimeMs: memorySearchResult.searchTimeMs,
-            formattedContext: this.memoryService.formatMemoriesForContext(memorySearchResult.memories),
-          };
-
-          this.memoryContextCache.set(jobId, retrievedMemories);
-
-          this.logger.info('Retrieved conversation memories for job', {
-            jobId,
-            userId,
-            memoriesFound: retrievedMemories.memories.length,
-            retrievalTimeMs: retrievedMemories.retrievalTimeMs,
-          });
-        }
-      } catch (memoryError) {
-        this.logger.warn('Failed to retrieve conversation memories', {
-          jobId,
-          error: memoryError instanceof Error ? memoryError.message : String(memoryError),
-        });
-        // Continue without memories - this is not a critical failure
-      }
-    }
+    // Memory search moved to processJob() to avoid blocking the 202 response
 
     this.logger.info('Starting insight generation job', {
       jobId,
@@ -321,9 +278,55 @@ export class InsightGenerationService {
       return;
     }
 
-    // Get cached options, session context, and memory context
+    // Get cached options and session context
     const options = this.jobOptionsCache.get(jobId);
     const sessionContext = this.sessionContextCache.get(jobId);
+
+    // Retrieve conversation memories here (moved from startJob to avoid blocking 202 response)
+    if (this.memoryService && !this.memoryContextCache.has(jobId)) {
+      try {
+        const memorySearchResult = await this.memoryService.searchMemories({
+          query: record.query,
+          userId: record.userId,
+          limit: 5,
+          nodeId: options?.nodeId,
+        });
+
+        if (memorySearchResult.memories.length > 0) {
+          const retrievedMemories: RetrievedMemories = {
+            memories: memorySearchResult.memories.map((m) => ({
+              id: m.id,
+              content: m.memory,
+              userId: record.userId,
+              relevanceScore: m.score,
+              createdAt: m.createdAt,
+              topics: m.metadata?.topics,
+              originalQuery: m.metadata?.query,
+              sessionIds: m.metadata?.sessionIds,
+            })),
+            totalFound: memorySearchResult.totalFound,
+            retrievalTimeMs: memorySearchResult.searchTimeMs,
+            formattedContext: this.memoryService.formatMemoriesForContext(memorySearchResult.memories),
+          };
+
+          this.memoryContextCache.set(jobId, retrievedMemories);
+
+          this.logger.info('Retrieved conversation memories for job', {
+            jobId,
+            userId: record.userId,
+            memoriesFound: retrievedMemories.memories.length,
+            retrievalTimeMs: retrievedMemories.retrievalTimeMs,
+          });
+        }
+      } catch (memoryError) {
+        this.logger.warn('Failed to retrieve conversation memories', {
+          jobId,
+          error: memoryError instanceof Error ? memoryError.message : String(memoryError),
+        });
+        // Continue without memories - this is not a critical failure
+      }
+    }
+
     const memoryContext = this.memoryContextCache.get(jobId);
 
     await this.updateJobInDb(jobId, {
@@ -595,6 +598,7 @@ export class InsightGenerationService {
           totalElapsedSec: Math.round(totalElapsedMs / 1000),
           blockCount: finalResult.optimizationPlan?.blocks?.length || 0,
           passesThreshold: finalResult.executiveSummary?.passesQualityThreshold,
+          timingPhases: finalResult.agentDiagnostics?.timings?.length || 0,
         });
 
         // Complete query trace

@@ -354,7 +354,7 @@ async function retrieveUserEvidence(
       maxResults,
       includeGraph: true,
       includeVectors: true,
-    });
+    }, { skipLLMGeneration: true }); // A1 only needs sources/sessions, not the NLQ answer
 
     logger.info(`A1 PROFILING: NLQ query took ${Date.now() - nlqStartMs}ms`);
 

@@ -24,13 +24,14 @@ import {
   type GapSeverityType,
 } from '../prompts/gap-identification-prompt.js';
 import { RESPONSE_IMPROVEMENT_SYSTEM_PROMPT } from '../prompts/response-improvement-prompt.js';
+import { repairAndParseJson } from '../utils/json-repair.js';
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
 const LLM_TIMEOUT_MS = 60000; // 60 seconds per LLM call
-const MAX_VALIDATION_ITERATIONS = 2; // Prevent infinite loops
+const MAX_VALIDATION_ITERATIONS = 1; // Reduced from 2 - single pass is sufficient
 
 // ============================================================================
 // TYPES
@@ -309,7 +310,8 @@ ${JSON.stringify(state.userWorkflows || [], null, 2)}
 Return the improved response with all gaps fixed.`,
           },
         ],
-        improvedResponseSchema
+        improvedResponseSchema,
+        { maxTokens: 10000 } // Explicit limit to prevent truncation
       ),
       LLM_TIMEOUT_MS,
       'A6 response improvement timed out'
@@ -327,7 +329,7 @@ Return the improved response with all gaps fixed.`,
     // SAFEGUARD: Reject truncated responses
     // If the "improved" response is less than 50% of the original length,
     // it's likely truncated due to JSON parsing issues - keep the original
-    const MIN_LENGTH_RATIO = 0.5;
+    const MIN_LENGTH_RATIO = 0.3; // Lowered from 0.5 — shorter but complete responses are valid
     if (originalLength > 0 && newLength < originalLength * MIN_LENGTH_RATIO) {
       logger.warn('A6: Rejecting truncated response, keeping original', {
         originalLength,
@@ -586,7 +588,9 @@ Identify all gaps following the gap types defined. Output JSON with the gaps arr
       );
 
       const jsonText = extractJsonFromText(textResult.content);
-      const parsed = JSON.parse(jsonText);
+      // Use repairAndParseJson for robust handling of truncated LLM output
+      const repairResult = repairAndParseJson<{ gaps: unknown[] }>(jsonText);
+      const parsed = repairResult.success ? repairResult.data : JSON.parse(jsonText);
       const validated = gapIdentificationSchema.parse(parsed);
 
       logger.info('A6: Gap identification succeeded with text fallback', {
@@ -643,7 +647,8 @@ ${JSON.stringify(userWorkflows, null, 2)}
 Return the improved response with all gaps fixed.`,
           },
         ],
-        improvedResponseSchema
+        improvedResponseSchema,
+        { maxTokens: 10000 } // Explicit limit to prevent truncation
       ),
       LLM_TIMEOUT_MS,
       'Response improvement timed out'
@@ -654,9 +659,9 @@ Return the improved response with all gaps fixed.`,
     const newLength = improvedResponse?.length || 0;
 
     // SAFEGUARD: Reject truncated responses
-    // If the "improved" response is less than 50% of the original length,
+    // If the "improved" response is less than 30% of the original length,
     // it's likely truncated due to JSON parsing issues - keep the original
-    const MIN_LENGTH_RATIO = 0.5;
+    const MIN_LENGTH_RATIO = 0.3; // Lowered from 0.5 — shorter but complete responses are valid
     if (originalLength > 0 && newLength < originalLength * MIN_LENGTH_RATIO) {
       logger.warn('regenerateWithGapFixes: Rejecting truncated response, keeping original', {
         originalLength,

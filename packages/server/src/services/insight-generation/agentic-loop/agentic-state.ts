@@ -150,6 +150,22 @@ export const AgenticStateAnnotation = Annotation.Root({
     reducer: (_, b) => b,
     default: () => [],
   }),
+
+  // -------------------------------------------------------------------------
+  // PERFORMANCE DIAGNOSTICS
+  // -------------------------------------------------------------------------
+
+  /** Per-phase timing breakdown (append-only) */
+  phaseTiming: Annotation<Array<{ phase: string; skill?: string; durationMs: number }>>({
+    reducer: (a, b) => [...a, ...b],
+    default: () => [],
+  }),
+
+  /** Batch of skills to execute in parallel (set by reasoning node after A1) */
+  batchSkills: Annotation<SkillId[] | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
 });
 
 // ============================================================================
@@ -299,6 +315,12 @@ export function createInitialAgenticState(params: {
     // Tool validation (for TOOL_INTEGRATION queries)
     toolSearchRelevance: null,
     missingTools: [],
+
+    // Performance diagnostics
+    phaseTiming: [],
+
+    // Parallel execution
+    batchSkills: null,
   };
 }
 

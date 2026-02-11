@@ -74,7 +74,19 @@ export function repairAndParseJson<T>(
     // Continue to fallback
   }
 
-  // Step 7: Use fallback extractor if provided
+  // Step 7: Try extracting the last complete object/array from truncated text
+  // This handles cases where the LLM output was truncated mid-array
+  try {
+    const truncationRepaired = extractLastCompleteStructure(noTrailingCommas);
+    if (truncationRepaired) {
+      const parsed = JSON.parse(truncationRepaired);
+      return { success: true, data: parsed, repaired: true, repairMethod: 'extract_last_complete_structure' };
+    }
+  } catch (truncError) {
+    // Continue to fallback
+  }
+
+  // Step 8: Use fallback extractor if provided
   if (fallbackExtractor) {
     try {
       const fallbackData = fallbackExtractor(text);
@@ -156,47 +168,105 @@ function extractJsonStructure(text: string): string {
 
 /**
  * Repair truncated JSON by closing unclosed structures
+ *
+ * Handles:
+ * - Truncation mid-string value (unclosed quotes)
+ * - Truncation mid-property (trailing comma/colon)
+ * - Truncation mid-array/object (unclosed brackets/braces)
+ * - Truncation mid-key-value pair (incomplete property after closing quote)
  */
 function repairTruncatedJson(text: string): string {
   let json = text.trim();
 
-  // Count opening and closing brackets
+  // Check for unclosed strings (odd number of unescaped quotes)
+  const unescapedQuotes = json.match(/(?<!\\)"/g) || [];
+  if (unescapedQuotes.length % 2 !== 0) {
+    // We're inside a string — close it
+    json = json + '"';
+  }
+
+  // After closing any open string, clean up trailing artifacts
+  // Remove trailing patterns that indicate truncation mid-value:
+  // - Trailing comma: `..., ` (item was about to start)
+  // - Trailing colon: `"key": ` (value was about to start)
+  // - Trailing comma after value inside object: `"key": "val",` (next key was about to start)
+  const trimmed = json.trimEnd();
+  const lastChar = trimmed.slice(-1);
+
+  if (lastChar === ':') {
+    // Truncated right after a key's colon — add empty string value
+    json = trimmed + '""';
+  } else if (lastChar === ',') {
+    // Truncated after a comma — remove the trailing comma
+    json = trimmed.slice(0, -1);
+  }
+
+  // Count opening and closing brackets/braces AFTER string and comma repairs
   const openBrackets = (json.match(/\[/g) || []).length;
   const closeBrackets = (json.match(/\]/g) || []).length;
   const openBraces = (json.match(/\{/g) || []).length;
   const closeBraces = (json.match(/\}/g) || []).length;
 
-  // Check for unclosed strings (odd number of unescaped quotes)
-  const unescapedQuotes = json.match(/(?<!\\)"/g) || [];
-  if (unescapedQuotes.length % 2 !== 0) {
-    // Try to close the string
-    json = json + '"';
-  }
-
-  // Check if we're in the middle of a value and close appropriately
-  const lastChar = json.slice(-1);
-  const lastNonWhitespaceMatch = json.match(/\S(?=\s*$)/);
-  const lastNonWhitespace = lastNonWhitespaceMatch ? lastNonWhitespaceMatch[0] : '';
-
-  // If ends with comma or colon, likely truncated mid-value
-  if (lastNonWhitespace === ',' || lastNonWhitespace === ':') {
-    // Remove trailing comma/colon
-    json = json.slice(0, json.lastIndexOf(lastNonWhitespace));
-  }
-
-  // Close unclosed arrays first (inner structures)
-  const missingBrackets = openBrackets - closeBrackets;
-  if (missingBrackets > 0) {
-    json += ']'.repeat(missingBrackets);
-  }
-
-  // Close unclosed objects (outer structures)
-  const missingBraces = openBraces - closeBraces;
-  if (missingBraces > 0) {
-    json += '}'.repeat(missingBraces);
+  // Build the correct closing sequence using a stack-based approach
+  // This ensures proper nesting order (inner structures closed before outer)
+  const closingSequence = buildClosingSequence(json);
+  if (closingSequence) {
+    json += closingSequence;
+  } else {
+    // Fallback: simple bracket counting (less accurate for nesting)
+    const missingBrackets = openBrackets - closeBrackets;
+    if (missingBrackets > 0) {
+      json += ']'.repeat(missingBrackets);
+    }
+    const missingBraces = openBraces - closeBraces;
+    if (missingBraces > 0) {
+      json += '}'.repeat(missingBraces);
+    }
   }
 
   return json;
+}
+
+/**
+ * Build the correct closing sequence for truncated JSON using a stack-based parser.
+ * This ensures proper nesting order (e.g., `]}` not `}]`).
+ */
+function buildClosingSequence(json: string): string | null {
+  const stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < json.length; i++) {
+    const ch = json[i];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (ch === '\\' && inString) {
+      escaped = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) continue;
+
+    if (ch === '{') stack.push('}');
+    else if (ch === '[') stack.push(']');
+    else if (ch === '}' || ch === ']') {
+      if (stack.length > 0 && stack[stack.length - 1] === ch) {
+        stack.pop();
+      }
+    }
+  }
+
+  if (stack.length === 0) return null;
+  return stack.reverse().join('');
 }
 
 /**
@@ -328,6 +398,44 @@ export function createBestPracticesFallbackExtractor() {
 
     return null;
   };
+}
+
+/**
+ * Extract the last complete JSON structure from truncated text.
+ * Scans backwards from the end to find the last complete `}` or `]`
+ * that produces valid JSON when paired with the beginning of the text.
+ */
+function extractLastCompleteStructure(text: string): string | null {
+  // Find the first opening delimiter
+  const firstBrace = text.indexOf('{');
+  const firstBracket = text.indexOf('[');
+
+  if (firstBrace === -1 && firstBracket === -1) return null;
+
+  const start = firstBrace >= 0 && firstBracket >= 0
+    ? Math.min(firstBrace, firstBracket)
+    : firstBrace >= 0 ? firstBrace : firstBracket;
+
+  const openChar = text[start];
+  const closeChar = openChar === '{' ? '}' : ']';
+
+  // Scan backwards for each closing delimiter and try to parse
+  let searchFrom = text.length - 1;
+  for (let attempts = 0; attempts < 5; attempts++) {
+    const lastClose = text.lastIndexOf(closeChar, searchFrom);
+    if (lastClose <= start) break;
+
+    const candidate = text.slice(start, lastClose + 1);
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      // Try the next-to-last closing delimiter
+      searchFrom = lastClose - 1;
+    }
+  }
+
+  return null;
 }
 
 /**

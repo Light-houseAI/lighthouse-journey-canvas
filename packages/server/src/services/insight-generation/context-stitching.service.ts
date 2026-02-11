@@ -701,12 +701,44 @@ export class ContextStitchingService {
       );
     }
 
-    // Execute all three tiers in parallel
-    const [tier1Result, tier2Result, tier3Result] = await Promise.all([
+    // Cap sessions to reduce LLM input size (most relevant first, by recency)
+    const MAX_STITCHING_SESSIONS = 10;
+    if (targetSessions.length > MAX_STITCHING_SESSIONS) {
+      this.logger.info('ContextStitching: Capping sessions', {
+        original: targetSessions.length,
+        capped: MAX_STITCHING_SESSIONS,
+      });
+      // Sort by timestamp descending (most recent first) and take top N
+      targetSessions = [...targetSessions]
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, MAX_STITCHING_SESSIONS);
+    }
+
+    // Execute all three tiers in parallel with a hard timeout
+    const STITCHING_TIMEOUT_MS = 25000; // 25s hard cap
+    const stitchingPromise = Promise.all([
       this.executeTier1Stitching(targetSessions, minConfidence),
       this.executeTier2Stitching(targetSessions),
       this.executeTier3Stitching(targetSessions),
     ]);
+
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => {
+        this.logger.warn('ContextStitching: Timeout reached, using partial results');
+        resolve(null);
+      }, STITCHING_TIMEOUT_MS);
+    });
+
+    const stitchResult = await Promise.race([stitchingPromise, timeoutPromise]);
+
+    // Handle timeout — use empty results for tiers that didn't complete
+    const [tier1Result, tier2Result, tier3Result] = stitchResult
+      ? stitchResult
+      : [
+          { workstreams: [], ungroupedSessionIds: targetSessions.map(s => s.sessionId) },
+          { toolMasteryGroups: [] },
+          { processPatterns: [] },
+        ];
 
     const processingTimeMs = Date.now() - startTime;
 
@@ -797,13 +829,17 @@ export class ContextStitchingService {
   ): Promise<{ workstreams: Workstream[]; ungroupedSessionIds: string[] }> {
     this.logger.info('ContextStitching: Executing Tier 1 (Outcome-Based)');
 
-    // Format sessions for the prompt
+    // Format sessions for the prompt (truncate summaries to reduce token count)
+    const MAX_SUMMARY_LENGTH = 300;
     const sessionDescriptions = sessions.map((s, idx) => {
       const workflowIntents = s.workflows.map(w => w.intent).join(', ');
-      const tools = s.toolsUsed.join(', ');
+      const tools = s.toolsUsed.slice(0, 5).join(', '); // Cap tools at 5
+      const summary = s.highLevelSummary.length > MAX_SUMMARY_LENGTH
+        ? s.highLevelSummary.slice(0, MAX_SUMMARY_LENGTH) + '...'
+        : s.highLevelSummary;
       return `Session ${idx + 1} (ID: ${s.sessionId}):
   Title: "${s.title}"
-  Summary: "${s.highLevelSummary}"
+  Summary: "${summary}"
   Workflow Intents: ${workflowIntents || 'None specified'}
   Tools: ${tools || 'None recorded'}
   Duration: ${Math.round(s.totalDurationSeconds / 60)}min
@@ -830,7 +866,7 @@ Return your analysis as valid JSON.`;
           { role: 'user', content: userPrompt },
         ],
         tier1OutputSchema,
-        { temperature: 0.1, maxTokens: 8000 } // Low temperature for consistency, explicit maxTokens to prevent truncation
+        { temperature: 0.1, maxTokens: 10000 } // Low temperature for consistency, increased maxTokens to prevent truncation
       );
 
       // Validate and filter by confidence
@@ -955,7 +991,7 @@ Return JSON with toolMasteryGroups array. Keep descriptions short (under 50 word
             { role: 'user', content: userPrompt },
           ],
           tier2OutputSchema,
-          { temperature: 0.1, maxTokens: 8000 }
+          { temperature: 0.1, maxTokens: 10000 } // Increased to prevent truncation
         );
 
         this.logger.info('ContextStitching: Tier 2 succeeded', {
@@ -1098,7 +1134,7 @@ Return JSON with processPatterns array.`;
           { role: 'user', content: userPrompt },
         ],
         tier3OutputSchema,
-        { temperature: 0.1, maxTokens: 8000 }
+        { temperature: 0.1, maxTokens: 10000 } // Increased to prevent truncation
       );
 
       // Enrich with actual data from our analysis

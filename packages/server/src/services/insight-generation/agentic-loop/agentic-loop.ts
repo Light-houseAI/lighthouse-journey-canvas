@@ -76,49 +76,10 @@ export interface AgenticLoopDeps {
 // ============================================================================
 
 /**
- * Action node - executes the selected skill
+ * Build shared skill dependencies from agentic loop deps
  */
-async function actionNode(
-  state: AgenticState,
-  deps: AgenticLoopDeps
-): Promise<Partial<AgenticState>> {
-  const { logger } = deps;
-
-  if (!state.selectedSkill) {
-    logger.warn('Action: No skill selected, skipping');
-    return {
-      currentStage: 'agentic_action_skipped',
-    };
-  }
-
-  logger.info('Action: Executing skill', {
-    skill: state.selectedSkill,
-    iteration: state.currentIteration,
-  });
-
-  const startTime = Date.now();
-  const registry = createSkillRegistry();
-  const skill = getSkill(registry, state.selectedSkill);
-
-  if (!skill) {
-    logger.error('Action: Skill not found', new Error(`Skill not found: ${state.selectedSkill}`));
-    const actionResult: AgenticActionResult = {
-      stepNumber: state.currentIteration,
-      skill: state.selectedSkill,
-      success: false,
-      observation: `Skill not found: ${state.selectedSkill}`,
-      error: 'Skill not found in registry',
-      executionTimeMs: Date.now() - startTime,
-      timestamp: new Date().toISOString(),
-    };
-    return {
-      actionResults: [actionResult],
-      currentStage: 'agentic_action_failed',
-    };
-  }
-
-  // Build skill dependencies
-  const skillDeps: SkillDependencies = {
+function buildSkillDeps(deps: AgenticLoopDeps): SkillDependencies {
+  return {
     logger: deps.logger,
     llmProvider: deps.llmProvider,
     nlqService: deps.nlqService,
@@ -135,13 +96,87 @@ async function actionNode(
     enableContextStitching: deps.enableContextStitching,
     contextStitchingPersistenceService: deps.contextStitchingPersistenceService,
   };
+}
+
+/**
+ * Run tool validation for TOOL_INTEGRATION queries after web search
+ */
+function runToolValidation(
+  skillId: SkillId,
+  query: string,
+  queryIntent: string | undefined,
+  resultSuccess: boolean,
+  resultStateUpdates: Partial<import('./agentic-state.js').AgenticState> | undefined,
+  existingWebPlan: import('../types.js').StepOptimizationPlan | null,
+  logger: Logger
+): Partial<AgenticState> {
+  if (
+    skillId !== 'search_web_best_practices' ||
+    queryIntent !== 'TOOL_INTEGRATION' ||
+    !resultSuccess
+  ) {
+    return {};
+  }
+
+  const toolNames = extractToolNames(query);
+  if (toolNames.length === 0) return {};
+
+  const webPlan = (resultStateUpdates?.webOptimizationPlan as import('../types.js').StepOptimizationPlan | null) || existingWebPlan;
+  const validationResult = validateToolInResults(toolNames, webPlan);
+
+  logger.info('Action: Tool validation for TOOL_INTEGRATION query', {
+    toolNames,
+    found: validationResult.found,
+    confidence: validationResult.confidence,
+    foundTools: validationResult.foundTools,
+    missingTools: validationResult.missingTools,
+    mentionCount: validationResult.mentionCount,
+  });
+
+  if (!validationResult.found) {
+    return { toolSearchRelevance: 'not_found' as const, missingTools: validationResult.missingTools };
+  } else if (validationResult.confidence === 'low') {
+    return { toolSearchRelevance: 'uncertain' as const, missingTools: validationResult.missingTools };
+  }
+  return { toolSearchRelevance: 'found' as const, missingTools: [] };
+}
+
+/**
+ * Execute a single skill and return the action result + state updates
+ */
+async function executeSingleSkill(
+  skillId: SkillId,
+  state: AgenticState,
+  deps: AgenticLoopDeps,
+  skillDeps: SkillDependencies,
+  config: AgenticLoopConfig
+): Promise<{ actionResult: AgenticActionResult; stateUpdates: Partial<AgenticState>; toolValidation: Partial<AgenticState> }> {
+  const { logger } = deps;
+  const startTime = Date.now();
+  const registry = createSkillRegistry();
+  const skill = getSkill(registry, skillId);
+
+  if (!skill) {
+    logger.error('Action: Skill not found', new Error(`Skill not found: ${skillId}`));
+    return {
+      actionResult: {
+        stepNumber: state.currentIteration,
+        skill: skillId,
+        success: false,
+        observation: `Skill not found: ${skillId}`,
+        error: 'Skill not found in registry',
+        executionTimeMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      },
+      stateUpdates: {},
+      toolValidation: {},
+    };
+  }
 
   try {
-    // Execute skill with timeout
-    const config = { ...DEFAULT_AGENTIC_CONFIG, ...deps.agenticConfig };
     const result = await executeSkillWithTimeout(
       skill,
-      state.selectedSkillInput || { query: state.query },
+      { query: state.query },
       state,
       skillDeps,
       config.skillTimeoutMs
@@ -149,107 +184,165 @@ async function actionNode(
 
     const executionTimeMs = Date.now() - startTime;
 
-    const actionResult: AgenticActionResult = {
-      stepNumber: state.currentIteration,
-      skill: state.selectedSkill,
-      success: result.success,
-      observation: result.observation,
-      error: result.error,
-      executionTimeMs,
-      timestamp: new Date().toISOString(),
-    };
-
     logger.info('Action: Skill execution complete', {
-      skill: state.selectedSkill,
+      skill: skillId,
       success: result.success,
       executionTimeMs,
     });
 
-    // =========================================================================
-    // TOOL VALIDATION: Check if web search found relevant tool info
-    // =========================================================================
-    let toolValidationUpdates: Partial<AgenticState> = {};
-
-    if (
-      state.selectedSkill === 'search_web_best_practices' &&
-      state.queryClassification?.intent === 'TOOL_INTEGRATION' &&
-      result.success
-    ) {
-      // Extract tool names from the query
-      const toolNames = extractToolNames(state.query);
-
-      if (toolNames.length > 0) {
-        // Validate whether the tools appear in the web search results
-        // Cast to StepOptimizationPlan since we know this is from web search skill
-        const webPlan = (result.stateUpdates?.webOptimizationPlan as import('../types.js').StepOptimizationPlan | null) || state.webOptimizationPlan;
-        const validationResult = validateToolInResults(toolNames, webPlan);
-
-        logger.info('Action: Tool validation for TOOL_INTEGRATION query', {
-          toolNames,
-          found: validationResult.found,
-          confidence: validationResult.confidence,
-          foundTools: validationResult.foundTools,
-          missingTools: validationResult.missingTools,
-          mentionCount: validationResult.mentionCount,
-        });
-
-        if (!validationResult.found) {
-          // Tool not found in results - flag it for honest response
-          toolValidationUpdates = {
-            toolSearchRelevance: 'not_found',
-            missingTools: validationResult.missingTools,
-          };
-        } else if (validationResult.confidence === 'low') {
-          // Tool found but with low confidence - flag as uncertain
-          toolValidationUpdates = {
-            toolSearchRelevance: 'uncertain',
-            missingTools: validationResult.missingTools,
-          };
-        } else {
-          // Tool found with good confidence
-          toolValidationUpdates = {
-            toolSearchRelevance: 'found',
-            missingTools: [],
-          };
-        }
-      }
-    }
+    const toolValidation = runToolValidation(
+      skillId, state.query, state.queryClassification?.intent,
+      result.success, result.stateUpdates, state.webOptimizationPlan, logger
+    );
 
     return {
-      ...result.stateUpdates,
-      ...toolValidationUpdates,
-      actionResults: [actionResult],
-      usedSkills: [state.selectedSkill],
-      selectedSkill: null, // Clear for next iteration
-      selectedSkillInput: null,
-      // On success, omit currentStage so the skill-specific stage from reasoning
-      // stays visible until the next reasoning node sets a new one
-      ...(result.success ? {} : { currentStage: 'agentic_action_failed' }),
+      actionResult: {
+        stepNumber: state.currentIteration,
+        skill: skillId,
+        success: result.success,
+        observation: result.observation,
+        error: result.error,
+        executionTimeMs,
+        timestamp: new Date().toISOString(),
+      },
+      stateUpdates: result.stateUpdates || {},
+      toolValidation,
     };
   } catch (error) {
     const executionTimeMs = Date.now() - startTime;
     const errorMessage = error instanceof Error ? error.message : String(error);
-
-    logger.error(`Action: Skill execution error for ${state.selectedSkill}`, error instanceof Error ? error : new Error(errorMessage));
-
-    const actionResult: AgenticActionResult = {
-      stepNumber: state.currentIteration,
-      skill: state.selectedSkill,
-      success: false,
-      observation: `Skill execution failed: ${errorMessage}`,
-      error: errorMessage,
-      executionTimeMs,
-      timestamp: new Date().toISOString(),
-    };
+    logger.error(`Action: Skill execution error for ${skillId}`, error instanceof Error ? error : new Error(errorMessage));
 
     return {
-      actionResults: [actionResult],
-      usedSkills: [state.selectedSkill],
-      selectedSkill: null,
-      selectedSkillInput: null,
-      currentStage: 'agentic_action_error',
+      actionResult: {
+        stepNumber: state.currentIteration,
+        skill: skillId,
+        success: false,
+        observation: `Skill execution failed: ${errorMessage}`,
+        error: errorMessage,
+        executionTimeMs,
+        timestamp: new Date().toISOString(),
+      },
+      stateUpdates: {},
+      toolValidation: {},
     };
   }
+}
+
+/**
+ * Action node - executes the selected skill (or batch of skills in parallel)
+ */
+async function actionNode(
+  state: AgenticState,
+  deps: AgenticLoopDeps
+): Promise<Partial<AgenticState>> {
+  const { logger } = deps;
+
+  if (!state.selectedSkill) {
+    logger.warn('Action: No skill selected, skipping');
+    return {
+      currentStage: 'agentic_action_skipped',
+    };
+  }
+
+  const config = { ...DEFAULT_AGENTIC_CONFIG, ...deps.agenticConfig };
+  const skillDeps = buildSkillDeps(deps);
+
+  // =========================================================================
+  // PARALLEL BATCH MODE: Execute multiple skills concurrently
+  // =========================================================================
+  if (state.batchSkills && state.batchSkills.length > 1) {
+    logger.info('Action: PARALLEL BATCH MODE — executing skills concurrently', {
+      skills: state.batchSkills,
+      count: state.batchSkills.length,
+      iteration: state.currentIteration,
+    });
+
+    const batchStartTime = Date.now();
+
+    // Execute all batch skills in parallel
+    const settledResults = await Promise.allSettled(
+      state.batchSkills.map(skillId =>
+        executeSingleSkill(skillId, state, deps, skillDeps, config)
+      )
+    );
+
+    // Collect results
+    const allActionResults: AgenticActionResult[] = [];
+    const allUsedSkills: SkillId[] = [];
+    let mergedStateUpdates: Partial<AgenticState> = {};
+    let mergedToolValidation: Partial<AgenticState> = {};
+    let anySuccess = false;
+
+    for (let i = 0; i < settledResults.length; i++) {
+      const settled = settledResults[i];
+      const skillId = state.batchSkills[i];
+
+      if (settled.status === 'fulfilled') {
+        const { actionResult, stateUpdates, toolValidation } = settled.value;
+        allActionResults.push(actionResult);
+        allUsedSkills.push(skillId);
+        if (actionResult.success) anySuccess = true;
+        // Merge state updates (later skills overwrite conflicting keys, but each skill writes to different state fields)
+        mergedStateUpdates = { ...mergedStateUpdates, ...stateUpdates };
+        mergedToolValidation = { ...mergedToolValidation, ...toolValidation };
+      } else {
+        // Promise.allSettled rejected — should be rare since executeSingleSkill catches errors
+        logger.error(`Action: Batch skill ${skillId} rejected`, settled.reason instanceof Error ? settled.reason : new Error(String(settled.reason)));
+        allActionResults.push({
+          stepNumber: state.currentIteration,
+          skill: skillId,
+          success: false,
+          observation: `Batch execution rejected: ${settled.reason}`,
+          error: String(settled.reason),
+          executionTimeMs: Date.now() - batchStartTime,
+          timestamp: new Date().toISOString(),
+        });
+        allUsedSkills.push(skillId);
+      }
+    }
+
+    const totalBatchMs = Date.now() - batchStartTime;
+    logger.info('Action: PARALLEL BATCH COMPLETE', {
+      totalMs: totalBatchMs,
+      skills: allUsedSkills,
+      successes: allActionResults.filter(r => r.success).length,
+      failures: allActionResults.filter(r => !r.success).length,
+    });
+
+    return {
+      ...mergedStateUpdates,
+      ...mergedToolValidation,
+      actionResults: allActionResults,
+      usedSkills: allUsedSkills,
+      selectedSkill: null,
+      selectedSkillInput: null,
+      batchSkills: null, // Clear batch
+      ...(anySuccess ? {} : { currentStage: 'agentic_action_failed' }),
+    };
+  }
+
+  // =========================================================================
+  // SINGLE SKILL MODE (original behavior)
+  // =========================================================================
+  logger.info('Action: Executing skill', {
+    skill: state.selectedSkill,
+    iteration: state.currentIteration,
+  });
+
+  const { actionResult, stateUpdates, toolValidation } = await executeSingleSkill(
+    state.selectedSkill, state, deps, skillDeps, config
+  );
+
+  return {
+    ...stateUpdates,
+    ...toolValidation,
+    actionResults: [actionResult],
+    usedSkills: [state.selectedSkill],
+    selectedSkill: null,
+    selectedSkillInput: null,
+    ...(actionResult.success ? {} : { currentStage: 'agentic_action_failed' }),
+  };
 }
 
 /**
@@ -335,7 +428,7 @@ async function terminateNode(
     // =========================================================================
     // A6 VALIDATION LOOP: Recursive validation to catch response gaps
     // =========================================================================
-    const MAX_VALIDATION_ITERATIONS = 2;
+    const MAX_VALIDATION_ITERATIONS = 1; // Reduced from 2 — single pass is sufficient
     let validatedAnswer = response.userQueryAnswer;
     let validationIterationCount = 0;
 
@@ -349,8 +442,24 @@ async function terminateNode(
     const SKIP_VALIDATION_INTENTS = ['BLOG_CREATION', 'PROGRESS_UPDATE', 'SKILL_FILE_GENERATION'];
     const shouldValidate = !SKIP_VALIDATION_INTENTS.includes(queryIntent as string);
 
-    // Only run validation if we have an answer, workflows, and a validatable intent
-    if (shouldValidate && validatedAnswer && userWorkflows.length > 0) {
+    // Skip validation for well-structured responses (>2000 chars with sections)
+    const isWellStructured = validatedAnswer &&
+      validatedAnswer.length > 2000 &&
+      (validatedAnswer.includes('##') || validatedAnswer.includes('- '));
+
+    // Skip validation for follow-up queries (conversation context already established)
+    const isFollowUp = state.conversationMemory && state.conversationMemory.memories.length > 0;
+
+    if (isWellStructured || isFollowUp) {
+      logger.info('A6: Skipping validation (well-structured or follow-up)', {
+        isWellStructured,
+        isFollowUp,
+        answerLength: validatedAnswer?.length || 0,
+      });
+    }
+
+    // Only run validation if we have an answer, workflows, validatable intent, and not skipped
+    if (shouldValidate && !isWellStructured && !isFollowUp && validatedAnswer && userWorkflows.length > 0) {
       const validatorDeps: ValidatorGraphDeps = {
         logger,
         llmProvider: responseLLMProvider,
@@ -377,6 +486,18 @@ async function terminateNode(
           // No gaps found - validation passed
           if (gaps.length === 0) {
             logger.info('A6: Validation passed - no gaps found', {
+              iterations: validationIterationCount,
+            });
+            break;
+          }
+
+          // Skip regeneration if all gaps are low severity — not worth the LLM call
+          const allLowSeverity = gaps.every(g =>
+            g.severity === 'low' || g.severity === 'info' || g.severity === 'minor'
+          );
+          if (allLowSeverity) {
+            logger.info('A6: All gaps are low severity, skipping regeneration', {
+              gapCount: gaps.length,
               iterations: validationIterationCount,
             });
             break;
@@ -429,11 +550,35 @@ async function terminateNode(
       });
     }
 
-    // Update response with validated answer
+    // Update response with validated answer and timing diagnostics
     const validatedResponse = {
       ...response,
       userQueryAnswer: cleanedAnswer,
     };
+
+    // Attach timing diagnostics to agentDiagnostics
+    if (validatedResponse.agentDiagnostics) {
+      validatedResponse.agentDiagnostics.timings = state.phaseTiming || [];
+    } else {
+      validatedResponse.agentDiagnostics = {
+        agentsScheduled: [],
+        agentsRan: (state.usedSkills || []) as unknown as import('../types.js').AgentId[],
+        agentsSkipped: [],
+        sourceBreakdown: {},
+        usedHeuristicFallback: false,
+        timings: state.phaseTiming || [],
+      };
+    }
+
+    // Log timing summary
+    if (state.phaseTiming && state.phaseTiming.length > 0) {
+      logger.info('=== PERFORMANCE TIMING SUMMARY ===');
+      for (const t of state.phaseTiming) {
+        logger.info(`  ${t.phase}${t.skill ? ` (${t.skill})` : ''}: ${t.durationMs}ms`);
+      }
+      const totalMs = state.phaseTiming.reduce((sum, t) => sum + t.durationMs, 0);
+      logger.info(`  TOTAL (sum of phases): ${totalMs}ms`);
+    }
 
     return {
       finalResult: validatedResponse,
@@ -2174,12 +2319,33 @@ export function createAgenticLoopGraph(deps: AgenticLoopDeps) {
     };
   };
 
+  // Wrap node functions with timing instrumentation
+  const withTiming = (
+    phase: string,
+    nodeFn: (state: AgenticState) => Promise<Partial<AgenticState>>
+  ) => {
+    return async (state: AgenticState): Promise<Partial<AgenticState>> => {
+      const startMs = Date.now();
+      const update = await nodeFn(state);
+      const durationMs = Date.now() - startMs;
+      const skillName = phase === 'act' ? (state.selectedSkill || undefined) : undefined;
+      const timingEntry = { phase, skill: skillName, durationMs };
+
+      logger.info(`[TIMING] ${phase}${skillName ? ` (${skillName})` : ''}: ${durationMs}ms`);
+
+      return {
+        ...update,
+        phaseTiming: [timingEntry],
+      };
+    };
+  };
+
   const graph = new StateGraph(AgenticStateAnnotation)
-    // Add nodes (wrapped to persist progress to DB)
-    .addNode('guardrail', withProgressWrite((state) => guardrailNode(state, { logger, llmProvider: deps.llmProvider })))
-    .addNode('reason', withProgressWrite((state) => reasoningNode(state, { logger, llmProvider: deps.llmProvider })))
-    .addNode('act', withProgressWrite((state) => actionNode(state, deps)))
-    .addNode('terminate', withProgressWrite((state) => terminateNode(state, deps)))
+    // Add nodes (wrapped with timing + progress persistence)
+    .addNode('guardrail', withProgressWrite(withTiming('guardrail', (state) => guardrailNode(state, { logger, llmProvider: deps.llmProvider }))))
+    .addNode('reason', withProgressWrite(withTiming('reason', (state) => reasoningNode(state, { logger, llmProvider: deps.llmProvider }))))
+    .addNode('act', withProgressWrite(withTiming('act', (state) => actionNode(state, deps))))
+    .addNode('terminate', withProgressWrite(withTiming('terminate', (state) => terminateNode(state, deps))))
 
     // Add edges
     .addEdge('__start__', 'guardrail')

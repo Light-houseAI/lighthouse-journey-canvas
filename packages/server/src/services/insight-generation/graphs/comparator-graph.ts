@@ -181,7 +181,7 @@ async function alignWorkflows(
   // Limit to top 2 user workflows and top 3 peer workflows = max 6 comparisons
   const MAX_USER_WORKFLOWS = 2;
   const MAX_PEER_WORKFLOWS = 3;
-  const MAX_ALIGNMENT_TIME_MS = 30000; // 30 second timeout (reduced from 45s)
+  const MAX_ALIGNMENT_TIME_MS = 45000; // 45 second timeout (increased from 30s to reduce timeouts)
 
   // EARLY EXIT: If user workflows have too few steps, skip comparison
   const userWorkflowsWithSteps = state.userEvidence.workflows.filter(w => w.steps.length >= 2);
@@ -247,23 +247,38 @@ async function alignWorkflows(
     return bestMatch;
   });
 
-  // Apply timeout to entire parallel alignment process
-  const timeoutPromise = new Promise<null[]>((resolve) => {
+  // Apply timeout to alignment process, but collect partial results on timeout
+  let timedOut = false;
+  const timeoutPromise = new Promise<'timeout'>((resolve) => {
     setTimeout(() => {
-      logger.warn('A3: Alignment timeout reached');
-      resolve([]);
+      timedOut = true;
+      logger.warn('A3: Alignment timeout reached, collecting partial results');
+      resolve('timeout');
     }, MAX_ALIGNMENT_TIME_MS);
   });
 
+  // Use allSettled so individual failures don't block others
+  const settledPromise = Promise.allSettled(alignmentPromises).then(settled =>
+    settled
+      .filter((r): r is PromiseFulfilledResult<WorkflowAlignment | null> => r.status === 'fulfilled')
+      .map(r => r.value)
+  );
+
   const results = await Promise.race([
-    Promise.all(alignmentPromises),
-    timeoutPromise,
+    settledPromise,
+    timeoutPromise.then(() => {
+      // On timeout, return whatever has settled so far
+      // The promises that haven't settled will be abandoned
+      return [] as (WorkflowAlignment | null)[];
+    }),
   ]);
 
   // Collect successful alignments with score > 0.5
-  for (const bestMatch of results) {
-    if (bestMatch && bestMatch.alignmentScore > 0.5) {
-      alignments.push(bestMatch);
+  if (Array.isArray(results)) {
+    for (const bestMatch of results) {
+      if (bestMatch && bestMatch.alignmentScore > 0.5) {
+        alignments.push(bestMatch);
+      }
     }
   }
 
@@ -1246,7 +1261,8 @@ List 3-5 key benefits as strings:
 - Sub-actions should be specific enough that a user knows exactly what to do`,
           },
         ],
-        transformationSchema
+        transformationSchema,
+        { maxTokens: 12000 } // Increased to prevent truncation of complex transformation output
       ),
       LLM_TIMEOUT_MS,
       'A3 transformation generation timed out'

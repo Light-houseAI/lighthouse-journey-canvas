@@ -388,6 +388,9 @@ export async function reasoningNode(
     timestamp: new Date().toISOString(),
   };
 
+  // Extract batch skills from skillInput if present (set by rule-based reasoning)
+  const batchSkills = (result.skillInput as Record<string, unknown>)?._batchSkills as SkillId[] | undefined;
+
   return {
     reasoningSteps: [reasoningStep],
     selectedSkill: result.skillToInvoke as SkillId || null,
@@ -401,6 +404,8 @@ export async function reasoningNode(
         ? `agentic_executing:${result.skillToInvoke}`
         : 'agentic_reasoning_complete',
     progress: Math.min(10 + state.currentIteration * 8, 90),
+    // Propagate batch skills to state for parallel execution in actionNode
+    ...(batchSkills && batchSkills.length > 1 ? { batchSkills } : {}),
   };
 }
 
@@ -550,6 +555,27 @@ function ruleBasedReasoning(
       shouldTerminate: true,
       terminationReason: 'Sufficient data gathered for comprehensive response',
     };
+  }
+
+  // =========================================================================
+  // PARALLEL BATCH MODE: After A1 completes, run remaining skills in parallel
+  // =========================================================================
+  const a1Complete = usedSkillsSet.has('retrieve_user_workflows') && state.userEvidence;
+  if (a1Complete) {
+    // Collect all remaining unused and available skills
+    const remainingSkills = recommendedSkills.filter(
+      (skillId: SkillId) => !usedSkillsSet.has(skillId) && availableSkillIds.includes(skillId)
+    );
+
+    if (remainingSkills.length > 1) {
+      // Batch mode — execute all remaining skills in parallel
+      return {
+        thought: `A1 complete. Running ${remainingSkills.length} remaining skills in parallel: ${remainingSkills.join(', ')}`,
+        shouldTerminate: false,
+        skillToInvoke: remainingSkills[0], // Primary skill (for LangGraph routing)
+        skillInput: { query: state.query, _batchSkills: remainingSkills },
+      };
+    }
   }
 
   // If we have basic analysis but haven't run feature discovery yet, run it
