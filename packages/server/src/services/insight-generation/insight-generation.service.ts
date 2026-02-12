@@ -65,8 +65,6 @@ export interface InsightGenerationServiceDeps {
   graphService?: import('./agentic-loop/agentic-loop.js').AgenticLoopDeps['graphService'];
   /** Enable cross-session context stitching in retrieval (default: true) */
   enableContextStitching?: boolean;
-  /** Context stitching persistence service for saving results to graph */
-  contextStitchingPersistenceService?: any; // Type will be ContextStitchingPersistenceService
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 }
 
@@ -130,7 +128,6 @@ export class InsightGenerationService {
   private readonly noiseFilterService?: NoiseFilterService;
   private readonly graphService?: InsightGenerationServiceDeps['graphService'];
   private readonly enableContextStitching: boolean;
-  private readonly contextStitchingPersistenceService?: any; // Type will be ContextStitchingPersistenceService
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 
   // In-memory listeners for real-time progress streaming (not persisted)
@@ -160,7 +157,6 @@ export class InsightGenerationService {
     this.noiseFilterService = deps.noiseFilterService;
     this.graphService = deps.graphService;
     this.enableContextStitching = deps.enableContextStitching ?? true; // Enable by default
-    this.contextStitchingPersistenceService = deps.contextStitchingPersistenceService;
 
     // Debug logging for trace service injection
     this.logger.info('InsightGenerationService initialized', {
@@ -424,7 +420,6 @@ export class InsightGenerationService {
           modelConfig: options?.modelConfig,
           agenticConfig: agenticOptions?.agenticConfig,
           enableContextStitching: this.enableContextStitching,
-          contextStitchingPersistenceService: this.contextStitchingPersistenceService,
           // Write progress to DB so frontend polling can read it
           onProgressUpdate: async (progress: number, stage: string) => {
             let readableStage: string;
@@ -483,7 +478,6 @@ export class InsightGenerationService {
           perplexityApiKey: this.perplexityApiKey,
           modelConfig: options?.modelConfig,
           personaService: this.personaService,
-          contextStitchingPersistenceService: this.contextStitchingPersistenceService,
           // Company docs retrieved via nlqService.searchCompanyDocuments()
         });
 
@@ -864,7 +858,6 @@ export class InsightGenerationService {
           modelConfig: options?.modelConfig,
           agenticConfig: agenticOptions?.agenticConfig,
           enableContextStitching: this.enableContextStitching,
-          contextStitchingPersistenceService: this.contextStitchingPersistenceService,
         };
 
         const agenticGraph = createAgenticLoopGraph(agenticDeps);
@@ -897,7 +890,6 @@ export class InsightGenerationService {
         perplexityApiKey: this.perplexityApiKey,
         modelConfig: options?.modelConfig,
         personaService: this.personaService,
-        contextStitchingPersistenceService: this.contextStitchingPersistenceService,
         // Company docs retrieved via nlqService.searchCompanyDocuments()
       });
 

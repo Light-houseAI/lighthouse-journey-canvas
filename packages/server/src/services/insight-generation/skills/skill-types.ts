@@ -52,8 +52,6 @@ export interface SkillDependencies {
   modelConfig?: Partial<InsightModelConfiguration>;
   /** Enable cross-session context stitching in retrieval */
   enableContextStitching?: boolean;
-  /** Context stitching persistence service for saving results to graph */
-  contextStitchingPersistenceService?: any; // Type will be ContextStitchingPersistenceService
 }
 
 // ============================================================================

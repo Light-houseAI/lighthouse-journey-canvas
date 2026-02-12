@@ -1,41 +1,66 @@
 {
   "testModules": [
     {
-      "moduleId": "/Users/mrunmayeerane/Desktop/Light-House/lighthouse-journey-canvas/packages/server/src/services/insight-generation/classifiers/query-classifier.test.ts",
+      "moduleId": "/Users/mrunmayeerane/Desktop/Light-House/lighthouse-journey-canvas/packages/server/src/services/insight-generation/graphs/__tests__/validator-json-parsing.test.ts",
       "tests": [
         {
-          "name": "should extract iOS/Apple keywords",
-          "fullName": "Query Classifier - Domain Keyword Extraction > extractDomainKeywords > should extract iOS/Apple keywords",
+          "name": "should extract JSON from markdown code block",
+          "fullName": "A6 Validator JSON Parsing > extractJsonFromText > should extract JSON from markdown code block",
           "state": "passed"
         },
         {
-          "name": "should extract build/automation keywords",
-          "fullName": "Query Classifier - Domain Keyword Extraction > extractDomainKeywords > should extract build/automation keywords",
+          "name": "should extract JSON from code block without language",
+          "fullName": "A6 Validator JSON Parsing > extractJsonFromText > should extract JSON from code block without language",
           "state": "passed"
         },
         {
-          "name": "should extract chat keywords",
-          "fullName": "Query Classifier - Domain Keyword Extraction > extractDomainKeywords > should extract chat keywords",
+          "name": "should extract JSON object directly",
+          "fullName": "A6 Validator JSON Parsing > extractJsonFromText > should extract JSON object directly",
           "state": "passed"
         },
         {
-          "name": "should NOT extract iOS keywords from chat app query",
-          "fullName": "Query Classifier - Domain Keyword Extraction > extractDomainKeywords > should NOT extract iOS keywords from chat app query",
+          "name": "should return raw text if no JSON found",
+          "fullName": "A6 Validator JSON Parsing > extractJsonFromText > should return raw text if no JSON found",
           "state": "passed"
         },
         {
-          "name": "should enable strictDomainMatching when domain keywords detected",
-          "fullName": "Query Classifier - Domain Keyword Extraction > classifyQuery with domain keywords > should enable strictDomainMatching when domain keywords detected",
+          "name": "should remove trailing commas",
+          "fullName": "A6 Validator JSON Parsing > repairJson > should remove trailing commas",
           "state": "passed"
         },
         {
-          "name": "should NOT enable strictDomainMatching for generic queries",
-          "fullName": "Query Classifier - Domain Keyword Extraction > classifyQuery with domain keywords > should NOT enable strictDomainMatching for generic queries",
+          "name": "should close unclosed arrays",
+          "fullName": "A6 Validator JSON Parsing > repairJson > should close unclosed arrays",
           "state": "passed"
         },
         {
-          "name": "should extract correct domain keywords for Apple build query",
-          "fullName": "Query Classifier - Domain Keyword Extraction > classifyQuery with domain keywords > should extract correct domain keywords for Apple build query",
+          "name": "should close unclosed braces at end",
+          "fullName": "A6 Validator JSON Parsing > repairJson > should close unclosed braces at end",
+          "state": "passed"
+        },
+        {
+          "name": "should extract gaps using regex pattern",
+          "fullName": "A6 Validator JSON Parsing > extractGapsFromMalformedJson > should extract gaps using regex pattern",
+          "state": "passed"
+        },
+        {
+          "name": "should extract multiple gaps",
+          "fullName": "A6 Validator JSON Parsing > extractGapsFromMalformedJson > should extract multiple gaps",
+          "state": "passed"
+        },
+        {
+          "name": "should fallback to keyword detection when regex fails",
+          "fullName": "A6 Validator JSON Parsing > extractGapsFromMalformedJson > should fallback to keyword detection when regex fails",
+          "state": "passed"
+        },
+        {
+          "name": "should detect all gap types by keyword",
+          "fullName": "A6 Validator JSON Parsing > extractGapsFromMalformedJson > should detect all gap types by keyword",
+          "state": "passed"
+        },
+        {
+          "name": "should return empty array when no gaps detected",
+          "fullName": "A6 Validator JSON Parsing > extractGapsFromMalformedJson > should return empty array when no gaps detected",
           "state": "passed"
         }
       ]

@@ -90,8 +90,6 @@ export interface OrchestratorGraphDeps {
   personaService?: PersonaService;
   /** Service to filter noise (Slack, communication) from evidence */
   noiseFilterService?: NoiseFilterService;
-  /** Context stitching persistence service for saving results to graph */
-  contextStitchingPersistenceService?: any; // Type will be ContextStitchingPersistenceService
   // Note: Company docs are now retrieved via nlqService.searchCompanyDocuments()
 }
 
@@ -118,10 +116,6 @@ async function executeRetrievalAgent(
   deps: OrchestratorGraphDeps
 ): Promise<Partial<InsightState>> {
   const { logger, nlqService, platformWorkflowRepository, sessionMappingRepository, embeddingService, llmProvider, modelConfig, personaService, noiseFilterService } = deps;
-
-  logger.info('🔍 executeRetrievalAgent received deps', {
-    hasContextStitchingPersistenceService: !!deps.contextStitchingPersistenceService,
-  });
 
   // Get agent-specific LLM provider (Gemini 2.5 Flash by default)
   let a1LLMProvider: LLMProvider;
@@ -182,7 +176,6 @@ async function executeRetrievalAgent(
     embeddingService,
     llmProvider: a1LLMProvider,
     noiseFilterService: effectiveNoiseFilter,
-    contextStitchingPersistenceService: deps.contextStitchingPersistenceService,
   };
 
   try {

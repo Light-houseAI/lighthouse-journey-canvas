@@ -39,10 +39,6 @@ export async function initializeArangoDBSchema(logger: Logger = defaultLogger): 
       'blocks',             // Level 2: Tool-level execution units
       'steps',              // Level 3: Fine-grained UI actions
       'tools',              // Tool nodes for generalization
-      // Context Stitching collections (Tier 1, 2, 3)
-      'workstreams',        // Tier 1: Outcome-based workstream groupings
-      'tool_mastery',       // Tier 2: Tool usage pattern groups
-      'process_patterns',   // Tier 3: Repetitive cross-tool workflow sequences
     ];
 
     for (const collectionName of vertexCollections) {
@@ -73,11 +69,6 @@ export async function initializeArangoDBSchema(logger: Logger = defaultLogger): 
       'BLOCK_RELATES_CONCEPT',    // blocks -> concepts
       'PATTERN_OCCURS_IN_SESSION', // workflow_patterns -> sessions
       'STEP_EVIDENCED_BY',        // steps -> external screenshot ref
-      // Context Stitching edge collections
-      'SESSION_IN_WORKSTREAM',    // sessions -> workstreams (Tier 1)
-      'USES_TOOL_IN_WORKSTREAM',  // workstreams -> tools
-      'PATTERN_OBSERVED',         // tool_mastery -> sessions (Tier 2)
-      'PATTERN_INSTANCE',         // process_patterns -> sessions (Tier 3)
     ];
 
     for (const edgeName of edgeCollections) {
@@ -165,27 +156,6 @@ export async function initializeArangoDBSchema(logger: Logger = defaultLogger): 
         {
           collection: 'PATTERN_OCCURS_IN_SESSION',
           from: ['workflow_patterns'],
-          to: ['sessions'],
-        },
-        // Context Stitching edges
-        {
-          collection: 'SESSION_IN_WORKSTREAM',
-          from: ['sessions'],
-          to: ['workstreams'],
-        },
-        {
-          collection: 'USES_TOOL_IN_WORKSTREAM',
-          from: ['workstreams'],
-          to: ['tools'],
-        },
-        {
-          collection: 'PATTERN_OBSERVED',
-          from: ['tool_mastery'],
-          to: ['sessions'],
-        },
-        {
-          collection: 'PATTERN_INSTANCE',
-          from: ['process_patterns'],
           to: ['sessions'],
         },
       ]);
@@ -284,10 +254,11 @@ async function createIndexes(db: Database, logger: Logger = defaultLogger): Prom
       name: 'idx_entities_name_type',
     });
 
-    // Full-text index on entity names (using inverted index for modern ArangoDB)
+    // Full-text index on entity names
     await db.collection('entities').ensureIndex({
-      type: 'inverted',
+      type: 'fulltext',
       fields: ['name'],
+      minLength: 2,
       name: 'idx_entities_fulltext',
     });
 
@@ -417,56 +388,6 @@ async function createIndexes(db: Database, logger: Logger = defaultLogger): Prom
       name: 'idx_next_block_probability',
     });
 
-    // ========================================================================
-    // Context Stitching Indexes (Tier 1, 2, 3)
-    // ========================================================================
-
-    // Workstream indexes (Tier 1)
-    await db.collection('workstreams').ensureIndex({
-      type: 'persistent',
-      fields: ['user_id', 'confidence'],
-      name: 'idx_workstreams_user_confidence',
-    });
-
-    await db.collection('workstreams').ensureIndex({
-      type: 'persistent',
-      fields: ['first_activity', 'last_activity'],
-      name: 'idx_workstreams_temporal',
-    });
-
-    // Tool mastery indexes (Tier 2)
-    await db.collection('tool_mastery').ensureIndex({
-      type: 'persistent',
-      fields: ['user_id', 'tool_name'],
-      unique: true,
-      name: 'idx_tool_mastery_user_tool',
-    });
-
-    await db.collection('tool_mastery').ensureIndex({
-      type: 'persistent',
-      fields: ['total_time_seconds'],
-      name: 'idx_tool_mastery_time',
-    });
-
-    // Process pattern indexes (Tier 3)
-    await db.collection('process_patterns').ensureIndex({
-      type: 'persistent',
-      fields: ['user_id', 'frequency'],
-      name: 'idx_process_patterns_user_frequency',
-    });
-
-    await db.collection('process_patterns').ensureIndex({
-      type: 'persistent',
-      fields: ['pattern_name'],
-      name: 'idx_process_patterns_name',
-    });
-
-    await db.collection('process_patterns').ensureIndex({
-      type: 'persistent',
-      fields: ['automation_potential'],
-      name: 'idx_process_patterns_automation',
-    });
-
     logger.info('Successfully created all ArangoDB indexes');
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -523,14 +444,6 @@ export async function dropWorkflowAnalysisSchema(logger: Logger = defaultLogger)
       'BLOCK_RELATES_CONCEPT',
       'PATTERN_OCCURS_IN_SESSION',
       'STEP_EVIDENCED_BY',
-      // Context Stitching collections
-      'workstreams',
-      'tool_mastery',
-      'process_patterns',
-      'SESSION_IN_WORKSTREAM',
-      'USES_TOOL_IN_WORKSTREAM',
-      'PATTERN_OBSERVED',
-      'PATTERN_INSTANCE',
     ];
 
     for (const collectionName of allCollections) {
