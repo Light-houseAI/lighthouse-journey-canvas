@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 import BlogPage from "../pages/blog";
-import LandingPage from "../pages/landing";
 import SignIn from "../pages/signin";
 import SignUp from "../pages/signup";
 import { KramaLandingPage } from "./krama-landing";
@@ -37,26 +36,9 @@ export function UnauthenticatedApp() {
     }
   }, []);
 
-  // Determine if we should use the Krama landing page (krama-ai.com)
-  // For now, we'll check the hostname or allow both landing pages to coexist
-  const isKramaDomain = window.location.hostname.includes('krama-ai.com') || 
-                        window.location.hostname === 'localhost'; // Use Krama for local dev too
-
-  // Show Krama landing page for krama-ai.com domain
-  if (currentView === 'landing' && isKramaDomain) {
-    return <KramaLandingPage />;
-  }
-
-  // Show original landing page for light-houseai.com domain
+  // Show Krama landing page for all domains
   if (currentView === 'landing') {
-    return (
-      <LandingPage
-        onGetStarted={() => setCurrentView('signup')}
-        onSignIn={() => setCurrentView('signin')}
-        onSignUp={() => setCurrentView('signup')}
-        onBlog={() => setCurrentView('blog')}
-      />
-    );
+    return <KramaLandingPage />;
   }
 
   // Show blog page
