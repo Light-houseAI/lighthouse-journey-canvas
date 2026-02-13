@@ -377,6 +377,77 @@ export const screenshotDescriptionsSchema = z.record(
 export type ScreenshotDescriptions = z.infer<typeof screenshotDescriptionsSchema>;
 
 // ============================================================================
+// GAP ANALYSIS SCHEMA
+// ============================================================================
+
+const timeAllocationCategorySchema = z.object({
+  minutes: z.number(),
+  percentage: z.number(),
+  description: z.string(),
+});
+
+export const gapAnalysisSchema = z.object({
+  sessionStructure: z.object({
+    totalScreenshots: z.number(),
+    sessionDurationMinutes: z.number(),
+    captureIntervalSeconds: z.number(),
+    applicationsUsed: z.array(z.string()),
+    sessionType: z.string(),
+  }),
+  timelineReconstruction: z.array(z.object({
+    timeStart: z.string(),
+    timeEnd: z.string(),
+    app: z.string(),
+    durationSeconds: z.number(),
+    activity: z.string(),
+  })),
+  goalIdentification: z.object({
+    primaryGoal: z.string(),
+    secondaryGoals: z.array(z.string()),
+    expectedDeliverable: z.string(),
+  }),
+  sourceMaterialAudit: z.object({
+    materialsConsulted: z.array(z.string()),
+    toolsAvailableButUnused: z.array(z.string()),
+    missedContext: z.array(z.string()),
+  }),
+  outputAssessment: z.object({
+    actualOutput: z.string(),
+    completenessScore: z.number(),
+    qualityNotes: z.string(),
+  }),
+  timeAllocation: z.object({
+    usefulWork: timeAllocationCategorySchema,
+    wastedEffort: timeAllocationCategorySchema,
+    contextSwitching: timeAllocationCategorySchema,
+    navigationOverhead: timeAllocationCategorySchema,
+    idleTransition: timeAllocationCategorySchema,
+  }),
+  stepByStepRecommendations: z.array(z.object({
+    stepNumber: z.number(),
+    timeRange: z.string(),
+    app: z.string(),
+    assessment: z.enum(['good', 'warning', 'bad']),
+    whatHappened: z.string(),
+    whatShouldHaveDone: z.string(),
+    timeSavedSeconds: z.number(),
+    recommendation: z.string(),
+  })),
+  significantImprovements: z.array(z.object({
+    title: z.string(),
+    description: z.string(),
+    impactLevel: z.enum(['HIGH', 'MEDIUM', 'LOW']),
+    estimatedTimeSavingsMinutes: z.number(),
+    implementationDifficulty: z.enum(['EASY', 'MODERATE', 'HARD']),
+    implementationSteps: z.array(z.string()),
+  })),
+  overallEfficiencyScore: z.number(),
+  summaryOfGaps: z.string(),
+}).nullable().optional();
+
+export type GapAnalysis = z.infer<typeof gapAnalysisSchema>;
+
+// ============================================================================
 // PUSH SESSION API SCHEMAS
 // ============================================================================
 
@@ -416,6 +487,9 @@ export const pushSessionRequestSchema = z.object({
   // Optional: Screenshot-level descriptions for granular insight generation
   // Contains detailed descriptions of what happened in each meaningful screenshot
   screenshotDescriptions: screenshotDescriptionsSchema,
+
+  // Optional: Deep gap & improvement analysis from Gemini Vision
+  gapAnalysis: gapAnalysisSchema,
 });
 
 export type PushSessionRequest = z.infer<typeof pushSessionRequestSchema>;

@@ -497,6 +497,9 @@ export const sessionMappings = pgTable('session_mappings', {
 
   // Embedding for similarity search when matching future sessions
   summaryEmbedding: vector('summary_embedding', { dimensions: 1536 }),
+  highLevelSummaryEmbedding: vector('high_level_summary_embedding', { dimensions: 1536 }),
+  screenshotDescriptionsEmbedding: vector('screenshot_descriptions_embedding', { dimensions: 1536 }),
+  gapAnalysisEmbedding: vector('gap_analysis_embedding', { dimensions: 1536 }),
 
   // High-level summary for display (from desktop app's generated summary)
   highLevelSummary: text('high_level_summary'),
@@ -518,6 +521,11 @@ export const sessionMappings = pgTable('session_mappings', {
   // Keyed by timestamp, contains description, app, and category
   // Used for granular insight generation with fine-grained activity context
   screenshotDescriptions: jsonb('screenshot_descriptions'),
+
+  // Deep gap & improvement analysis from Gemini Vision
+  // Contains timeline reconstruction, time allocation, step-by-step recommendations,
+  // and significant improvement opportunities identified for the session
+  gapAnalysis: jsonb('gap_analysis'),
 
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()

@@ -335,6 +335,178 @@ export class SessionService {
         }
       }
 
+      // Generate embeddings for additional fields (high_level_summary, screenshot_descriptions, gap_analysis)
+      const MAX_CHUNK_CHARS = 30000; // ~7500 tokens — safe limit for text-embedding-3-small
+      const TIME_WINDOW_MS = 10 * 60 * 1000; // 10-minute windows for screenshot grouping
+
+      /** Split text at sentence boundaries if it exceeds max chunk size */
+      function splitAtSentenceBoundaries(text: string): string[] {
+        if (text.length <= MAX_CHUNK_CHARS) return [text];
+        const sentences = text.split('. ');
+        const chunks: string[] = [];
+        let current = '';
+        for (const sentence of sentences) {
+          if (current.length + sentence.length + 2 > MAX_CHUNK_CHARS && current) {
+            chunks.push(current);
+            current = sentence;
+          } else {
+            current = current ? `${current}. ${sentence}` : sentence;
+          }
+        }
+        if (current) chunks.push(current);
+        return chunks;
+      }
+
+      /** Length-weighted average of embeddings — denser chunks contribute more */
+      function weightedAverageEmbeddings(embeddings: number[][], weights: number[]): number[] {
+        const dim = embeddings[0].length;
+        const totalWeight = weights.reduce((a, b) => a + b, 0);
+        const avg = new Array(dim).fill(0);
+        for (let j = 0; j < embeddings.length; j++) {
+          const w = weights[j] / totalWeight;
+          for (let i = 0; i < dim; i++) avg[i] += embeddings[j][i] * w;
+        }
+        return avg;
+      }
+
+      // Build semantic chunks for each field
+      const allChunks: { field: string; text: string }[] = [];
+
+      // 1. high_level_summary → single chunk (short text)
+      const hlSummary = sessionData.summary?.highLevelSummary;
+      if (hlSummary) {
+        allChunks.push({ field: 'highLevelSummary', text: hlSummary });
+      }
+
+      // 2. screenshot_descriptions → chunk by 10-minute time windows
+      if (sessionData.screenshotDescriptions) {
+        const entries = Object.entries(sessionData.screenshotDescriptions)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([ts, desc]: [string, any]) => {
+            const app = desc.app ? ` [${desc.app}]` : '';
+            return { timestamp: Number(ts), text: `${ts}${app} ${desc.description || desc}` };
+          });
+
+        if (entries.length > 0) {
+          let currentWindow: string[] = [];
+          let currentWindowEnd = entries[0].timestamp + TIME_WINDOW_MS;
+
+          for (const entry of entries) {
+            if (entry.timestamp > currentWindowEnd && currentWindow.length > 0) {
+              const windowText = currentWindow.join('. ');
+              splitAtSentenceBoundaries(windowText).forEach(chunk =>
+                allChunks.push({ field: 'screenshotDescriptions', text: chunk })
+              );
+              currentWindow = [];
+              currentWindowEnd = entry.timestamp + TIME_WINDOW_MS;
+            }
+            currentWindow.push(entry.text);
+          }
+          if (currentWindow.length > 0) {
+            const windowText = currentWindow.join('. ');
+            splitAtSentenceBoundaries(windowText).forEach(chunk =>
+              allChunks.push({ field: 'screenshotDescriptions', text: chunk })
+            );
+          }
+        }
+      }
+
+      // 3. gap_analysis → chunk by semantic section
+      if (sessionData.gapAnalysis) {
+        const ga = sessionData.gapAnalysis as any;
+
+        // Chunk A: Summary + Goals + Output (what happened)
+        const chunkA: string[] = [];
+        if (ga.summaryOfGaps) chunkA.push(ga.summaryOfGaps);
+        if (ga.goalIdentification?.primaryGoal) chunkA.push(`Primary goal: ${ga.goalIdentification.primaryGoal}`);
+        if (ga.goalIdentification?.secondaryGoals?.length) chunkA.push(`Secondary goals: ${ga.goalIdentification.secondaryGoals.join(', ')}`);
+        if (ga.goalIdentification?.expectedDeliverable) chunkA.push(`Expected deliverable: ${ga.goalIdentification.expectedDeliverable}`);
+        if (ga.outputAssessment?.actualOutput) chunkA.push(`Output: ${ga.outputAssessment.actualOutput}`);
+        if (ga.outputAssessment?.qualityNotes) chunkA.push(ga.outputAssessment.qualityNotes);
+        if (chunkA.length) {
+          splitAtSentenceBoundaries(chunkA.join('. ')).forEach(t =>
+            allChunks.push({ field: 'gapAnalysis', text: t })
+          );
+        }
+
+        // Chunk B: Time allocation (where time went)
+        const chunkB: string[] = [];
+        for (const key of ['usefulWork', 'wastedEffort', 'contextSwitching', 'navigationOverhead', 'idleTransition']) {
+          if (ga.timeAllocation?.[key]?.description) chunkB.push(ga.timeAllocation[key].description);
+        }
+        if (chunkB.length) {
+          splitAtSentenceBoundaries(chunkB.join('. ')).forEach(t =>
+            allChunks.push({ field: 'gapAnalysis', text: t })
+          );
+        }
+
+        // Chunk C: Step-by-step recommendations
+        const chunkC: string[] = [];
+        for (const step of ga.stepByStepRecommendations || []) {
+          if (step.whatHappened) chunkC.push(step.whatHappened);
+          if (step.whatShouldHaveDone) chunkC.push(step.whatShouldHaveDone);
+          if (step.recommendation) chunkC.push(step.recommendation);
+        }
+        if (chunkC.length) {
+          splitAtSentenceBoundaries(chunkC.join('. ')).forEach(t =>
+            allChunks.push({ field: 'gapAnalysis', text: t })
+          );
+        }
+
+        // Chunk D: Significant improvements with implementation steps
+        const chunkD: string[] = [];
+        for (const imp of ga.significantImprovements || []) {
+          if (imp.title) chunkD.push(imp.title);
+          if (imp.description) chunkD.push(imp.description);
+          if (imp.implementationSteps?.length) chunkD.push(`Steps: ${imp.implementationSteps.join('. ')}`);
+        }
+        if (chunkD.length) {
+          splitAtSentenceBoundaries(chunkD.join('. ')).forEach(t =>
+            allChunks.push({ field: 'gapAnalysis', text: t })
+          );
+        }
+      }
+
+      // Single batch API call, then length-weighted average per field
+      let highLevelSummaryEmbedding: number[] = [];
+      let screenshotDescriptionsEmbedding: number[] = [];
+      let gapAnalysisEmbedding: number[] = [];
+
+      if (allChunks.length > 0) {
+        try {
+          const texts = allChunks.map(c => c.text);
+          const batchEmbeddings = await this.embeddingService.generateEmbeddings(texts);
+
+          // Group embeddings by field, then length-weighted average
+          const fieldGroups: Record<string, { embeddings: number[][]; weights: number[] }> = {};
+          allChunks.forEach((chunk, idx) => {
+            if (!fieldGroups[chunk.field]) fieldGroups[chunk.field] = { embeddings: [], weights: [] };
+            fieldGroups[chunk.field].embeddings.push(Array.from(batchEmbeddings[idx]));
+            fieldGroups[chunk.field].weights.push(chunk.text.length);
+          });
+
+          for (const [field, group] of Object.entries(fieldGroups)) {
+            const final = group.embeddings.length === 1
+              ? group.embeddings[0]
+              : weightedAverageEmbeddings(group.embeddings, group.weights);
+
+            if (field === 'highLevelSummary') highLevelSummaryEmbedding = final;
+            else if (field === 'screenshotDescriptions') screenshotDescriptionsEmbedding = final;
+            else if (field === 'gapAnalysis') gapAnalysisEmbedding = final;
+          }
+
+          this.logger.info('Generated additional embeddings', {
+            sessionId: sessionData.sessionId,
+            chunksProcessed: allChunks.length,
+            fields: Object.keys(fieldGroups),
+          });
+        } catch (error) {
+          this.logger.warn('Failed to generate additional embeddings, continuing without them', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
       // Extract session title from summary
       // V2: workflows[0].classification.level_1_intent
       // V1: chapters[0].title
@@ -424,6 +596,9 @@ export class SessionService {
         endedAt: new Date(sessionData.endTime),
         durationSeconds,
         summaryEmbedding: embedding,
+        highLevelSummaryEmbedding: highLevelSummaryEmbedding.length > 0 ? highLevelSummaryEmbedding : undefined,
+        screenshotDescriptionsEmbedding: screenshotDescriptionsEmbedding.length > 0 ? screenshotDescriptionsEmbedding : undefined,
+        gapAnalysisEmbedding: gapAnalysisEmbedding.length > 0 ? gapAnalysisEmbedding : undefined,
         highLevelSummary: highLevelSummary || undefined,
         generatedTitle,
         userNotes: sessionData.userNotes || null,
@@ -431,6 +606,8 @@ export class SessionService {
         summary: summaryToStore,
         // Store screenshot-level descriptions for granular insight generation
         screenshotDescriptions: sessionData.screenshotDescriptions || null,
+        // Store deep gap & improvement analysis
+        gapAnalysis: sessionData.gapAnalysis || null,
       });
 
       this.logger.info('Session push complete', {

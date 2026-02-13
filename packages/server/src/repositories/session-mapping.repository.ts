@@ -35,6 +35,9 @@ export interface CreateSessionMappingData {
   endedAt?: Date;
   durationSeconds?: number;
   summaryEmbedding?: number[];
+  highLevelSummaryEmbedding?: number[];
+  screenshotDescriptionsEmbedding?: number[];
+  gapAnalysisEmbedding?: number[];
   highLevelSummary?: string;
   generatedTitle?: string | null;
   userNotes?: string | null;
@@ -42,6 +45,8 @@ export interface CreateSessionMappingData {
   summary?: Record<string, unknown>;
   /** Screenshot-level descriptions from Gemini Vision for granular insight generation */
   screenshotDescriptions?: Record<string, unknown> | null;
+  /** Deep gap & improvement analysis (timeline reconstruction, time allocation, step-by-step recommendations) */
+  gapAnalysis?: Record<string, unknown> | null;
 }
 
 export interface UpdateSessionMappingData {
@@ -123,10 +128,15 @@ export class SessionMappingRepository {
           endedAt: data.endedAt,
           durationSeconds: data.durationSeconds,
           summaryEmbedding: data.summaryEmbedding,
+          highLevelSummaryEmbedding: data.highLevelSummaryEmbedding,
+          screenshotDescriptionsEmbedding: data.screenshotDescriptionsEmbedding,
+          gapAnalysisEmbedding: data.gapAnalysisEmbedding,
           highLevelSummary: data.highLevelSummary,
           generatedTitle: data.generatedTitle,
           userNotes: data.userNotes,
           summary: data.summary,
+          screenshotDescriptions: data.screenshotDescriptions,
+          gapAnalysis: data.gapAnalysis,
         })
         .returning();
 
