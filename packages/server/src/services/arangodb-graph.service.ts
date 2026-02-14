@@ -1394,6 +1394,7 @@ export class ArangoDBGraphService {
       minSharedEntities?: number;
       limit?: number;
       lookbackDays?: number;
+      sharingUserIds?: number[];
     } = {}
   ): Promise<Array<{
     sessionId: string;
@@ -1404,7 +1405,10 @@ export class ArangoDBGraphService {
   }>> {
     const db = await this.ensureInitialized();
     const excludeUserKey = `user_${excludeUserId}`;
-    const { minSharedEntities = 2, limit = 10, lookbackDays = 60 } = options;
+    const { minSharedEntities = 2, limit = 10, lookbackDays = 60, sharingUserIds } = options;
+    const sharingUserKeys = sharingUserIds
+      ? sharingUserIds.map(id => `user_${id}`)
+      : null;
 
     if (entityNames.length === 0) {
       return [];
@@ -1440,6 +1444,7 @@ export class ArangoDBGraphService {
                 FOR session IN sessions
                   FILTER session._key == activity.session_key
                   FILTER session.user_key != ${excludeUserKey}
+                  FILTER !${sharingUserKeys} || session.user_key IN ${sharingUserKeys || []}
                   FILTER session.start_time >= lookback_date
 
                   COLLECT session_id = session._key INTO shared_entities = entity_key

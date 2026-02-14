@@ -47,6 +47,8 @@ export const REPOSITORY_TOKENS = {
   COMPANY_DOCUMENT_REPOSITORY: 'companyDocumentRepository',
   // Insight Generation Job Repository (persistent job storage)
   INSIGHT_GENERATION_JOB_REPOSITORY: 'insightGenerationJobRepository',
+  // User Preferences Repository (peer insights opt-in)
+  USER_PREFERENCES_REPOSITORY: 'userPreferencesRepository',
 } as const;
 
 /**
@@ -132,6 +134,9 @@ export const SERVICE_TOKENS = {
   PERSONA_SUGGESTION_SERVICE: 'personaSuggestionService',
   // Conversation Memory Service (Mem0 integration for follow-up questions)
   MEMORY_SERVICE: 'memoryService',
+  // Peer Insights Services
+  PEER_PREFERENCES_SERVICE: 'peerPreferencesService',
+  PEER_INSIGHTS_SERVICE: 'peerInsightsService',
 } as const;
 
 /**

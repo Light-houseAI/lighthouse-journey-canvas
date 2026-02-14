@@ -30,3 +30,4 @@ export * from './ai-usage.schemas';
 export * from './feedback.schemas';
 export * from './progress-snapshot.schemas';
 export * from './insight-assistant.schemas';
+export * from './peer-preferences.schemas';

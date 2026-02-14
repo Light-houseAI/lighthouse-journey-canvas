@@ -4,13 +4,14 @@
  * (LIG-247: Desktop Session to Work Track Mapping)
  */
 
-import { Badge, Skeleton, VStack, Button } from '@journey/components';
+import { Badge, Skeleton, Switch, VStack, Button } from '@journey/components';
 import type { SessionMappingItem } from '@journey/schema';
 import { WORK_TRACK_CATEGORY_LABELS } from '@journey/schema';
-import { Clock, Calendar, FileText, Activity, Sparkles, TrendingUp } from 'lucide-react';
+import { Clock, Calendar, FileText, Activity, Share2, Sparkles, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 
 import { useNodeSessions } from '../../hooks/useNodeSessions';
+import { usePeerPreferences, useToggleSessionSharing } from '../../hooks/usePeerPreferences';
 import {
   formatSessionDuration,
   formatSessionDate,
@@ -53,9 +54,29 @@ function getCategoryColor(category: string): string {
 /**
  * Single session item display
  */
-function SessionItem({ session }: { session: SessionMappingItem }) {
+function SessionItem({
+  session,
+  showShareToggle = false,
+  shareScope = 'all',
+}: {
+  session: SessionMappingItem;
+  showShareToggle?: boolean;
+  shareScope?: 'all' | 'per_session';
+}) {
   const categoryLabel = WORK_TRACK_CATEGORY_LABELS[session.category] || session.category;
   const categoryColor = getCategoryColor(session.category);
+  const toggleMutation = useToggleSessionSharing();
+  // Default: ON when scope is "all", use DB value when "per_session"
+  const defaultShared = shareScope === 'all' ? true : (session.peerSharingEnabled ?? false);
+  const [isShared, setIsShared] = useState(defaultShared);
+
+  const handleShareToggle = (checked: boolean) => {
+    setIsShared(checked);
+    toggleMutation.mutate(
+      { sessionId: session.desktopSessionId, enabled: checked },
+      { onError: () => setIsShared(!checked) }
+    );
+  };
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 transition-shadow hover:shadow-sm">
@@ -99,10 +120,25 @@ function SessionItem({ session }: { session: SessionMappingItem }) {
           </div>
         </div>
 
-        {/* Category badge */}
-        <Badge variant="secondary" className={`flex-shrink-0 text-xs ${categoryColor}`}>
-          {categoryLabel}
-        </Badge>
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          {/* Category badge */}
+          <Badge variant="secondary" className={`text-xs ${categoryColor}`}>
+            {categoryLabel}
+          </Badge>
+
+          {/* Per-session share toggle */}
+          {showShareToggle && (
+            <div className="flex items-center gap-1.5">
+              <Share2 size={12} className="text-gray-400" />
+              <span className="text-xs text-gray-500">Share</span>
+              <Switch
+                checked={isShared}
+                onCheckedChange={handleShareToggle}
+                className="scale-75"
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -153,6 +189,8 @@ export function NodeSessions({ nodeId, enabled = true }: NodeSessionsProps) {
   const { data, isLoading, error } = useNodeSessions(nodeId, { limit: 5 }, enabled);
   const [showWorkflowAnalysis, setShowWorkflowAnalysis] = useState(false);
   const [showTopWorkflows, setShowTopWorkflows] = useState(false);
+  const { data: peerPrefs } = usePeerPreferences();
+  const showPerSessionToggle = peerPrefs?.sharePeerInsights === true;
 
   if (!enabled) {
     return null;
@@ -253,7 +291,7 @@ export function NodeSessions({ nodeId, enabled = true }: NodeSessionsProps) {
       {sessions.length > 0 ? (
         <VStack spacing={3} className="flex flex-col">
           {sessions.map((session) => (
-            <SessionItem key={session.id} session={session} />
+            <SessionItem key={session.id} session={session} showShareToggle={showPerSessionToggle} shareScope={peerPrefs?.shareScopeDefault ?? 'all'} />
           ))}
 
           {/* "Show more" indicator if there are more sessions */}

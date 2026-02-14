@@ -19,7 +19,9 @@ import {
 } from '@journey/components'; // was: form
 import { Input } from '@journey/components'; // was: input
 import { Label } from '@journey/components'; // was: label
+import { RadioGroup, RadioGroupItem } from '@journey/components';
 import { Separator } from '@journey/components'; // was: separator
+import { Switch } from '@journey/components';
 import { type ProfileUpdate, profileUpdateSchema } from '@journey/schema';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, Copy, Link, Mail, User } from 'lucide-react';
@@ -33,6 +35,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
 import { useToast } from '../hooks/use-toast';
 import { useCurrentUser, useUpdateProfile } from '../hooks/useAuth';
+import { usePeerPreferences, useUpdatePeerPreferences } from '../hooks/usePeerPreferences';
 
 export default function Settings() {
   const [, setLocation] = useLocation();
@@ -43,6 +46,8 @@ export default function Settings() {
   const { toast } = useToast();
   const [copiedLink, setCopiedLink] = useState(false);
   const queryClient = useQueryClient();
+  const { data: peerPrefs } = usePeerPreferences();
+  const updatePeerPrefs = useUpdatePeerPreferences();
 
   const form = useForm<ProfileUpdate>({
     resolver: zodResolver(profileUpdateSchema),
@@ -423,6 +428,108 @@ export default function Settings() {
                       You need to set a username before you can share your
                       profile with others.
                     </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </BlurFade>
+
+          {/* Peer Insights Section */}
+          <BlurFade delay={0.4}>
+            <Card
+              className={`${theme.cardBackground} ${theme.cardShadow} rounded-[8px] border-0`}
+            >
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`rounded-lg p-2 ${theme.primaryBorder} border`}
+                  >
+                    <User className={`h-5 w-5 ${theme.secondaryText}`} />
+                  </div>
+                  <div>
+                    <CardTitle className={theme.primaryText}>
+                      Peer Insights
+                    </CardTitle>
+                    <CardDescription className={theme.secondaryText}>
+                      Learn from anonymized peer work sessions
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label className={theme.primaryText}>
+                      Receive peer insights
+                    </Label>
+                    <p className={`text-sm ${theme.mutedText}`}>
+                      See anonymized insights from peers with similar work
+                      sessions
+                    </p>
+                  </div>
+                  <Switch
+                    checked={peerPrefs?.receivePeerInsights ?? false}
+                    onCheckedChange={(checked) =>
+                      updatePeerPrefs.mutate({ receivePeerInsights: checked })
+                    }
+                  />
+                </div>
+
+                <Separator className={theme.primaryBorder} />
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label className={theme.primaryText}>
+                      Share with peers
+                    </Label>
+                    <p className={`text-sm ${theme.mutedText}`}>
+                      Your anonymized session data helps other users learn
+                    </p>
+                  </div>
+                  <Switch
+                    checked={peerPrefs?.sharePeerInsights ?? false}
+                    onCheckedChange={(checked) =>
+                      updatePeerPrefs.mutate({ sharePeerInsights: checked })
+                    }
+                  />
+                </div>
+
+                {peerPrefs?.sharePeerInsights && (
+                  <div className="ml-4 space-y-3">
+                    <Label className={`text-sm ${theme.secondaryText}`}>
+                      Sharing scope
+                    </Label>
+                    <RadioGroup
+                      value={peerPrefs.shareScopeDefault ?? 'all'}
+                      onValueChange={(value) =>
+                        updatePeerPrefs.mutate({
+                          shareScopeDefault: value as 'all' | 'per_session',
+                        })
+                      }
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="all" id="scope-all" />
+                        <Label
+                          htmlFor="scope-all"
+                          className={`cursor-pointer ${theme.primaryText}`}
+                        >
+                          Share all sessions
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem
+                          value="per_session"
+                          id="scope-per-session"
+                        />
+                        <Label
+                          htmlFor="scope-per-session"
+                          className={`cursor-pointer ${theme.primaryText}`}
+                        >
+                          Choose per session
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
                 )}
               </CardContent>

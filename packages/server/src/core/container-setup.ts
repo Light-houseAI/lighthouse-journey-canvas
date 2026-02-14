@@ -108,6 +108,9 @@ import { DocumentParserService } from '../services/document-parser.service';
 import { DocumentChunkerService } from '../services/document-chunker.service';
 import { CompanyDocumentProcessingService } from '../services/company-document-processing.service';
 import { CompanyDocumentSearchService } from '../services/company-document-search.service';
+import { UserPreferencesRepository } from '../repositories/user-preferences.repository';
+import { PeerPreferencesService } from '../services/peer-preferences.service';
+import { PeerInsightsService } from '../services/peer-insights.service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -261,6 +264,10 @@ export class Container {
         // Insight Generation Job Repository (persistent job storage)
         [CONTAINER_TOKENS.INSIGHT_GENERATION_JOB_REPOSITORY]: asClass(
           InsightGenerationJobRepository
+        ).singleton(),
+        // User Preferences Repository (peer insights opt-in)
+        [CONTAINER_TOKENS.USER_PREFERENCES_REPOSITORY]: asClass(
+          UserPreferencesRepository
         ).singleton(),
       });
 
@@ -558,6 +565,13 @@ export class Container {
             },
           });
         }).singleton(),
+        // Peer Insights Services
+        [CONTAINER_TOKENS.PEER_PREFERENCES_SERVICE]: asClass(
+          PeerPreferencesService
+        ).singleton(),
+        [CONTAINER_TOKENS.PEER_INSIGHTS_SERVICE]: asClass(
+          PeerInsightsService
+        ).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
