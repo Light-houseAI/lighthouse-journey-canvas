@@ -1055,7 +1055,7 @@ export default function InsightAssistant() {
   // Handle close
   const handleClose = () => {
     track(AnalyticsEvents.BUTTON_CLICKED, { button_name: 'close_insight_assistant' });
-    setLocation('/');
+    setLocation('/home');
   };
 
   return (

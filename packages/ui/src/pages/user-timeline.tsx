@@ -19,7 +19,7 @@ export function UserTimelinePage() {
   // Redirect to main timeline if no username provided
   useEffect(() => {
     if (!username) {
-      setLocation('/');
+      setLocation('/home');
     }
   }, [username, setLocation]);
 

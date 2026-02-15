@@ -14,6 +14,7 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { CheckCircle } from 'lucide-react';
+import { useLocation } from 'wouter';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
@@ -24,7 +25,6 @@ import { getErrorMessage } from '../utils/error-toast';
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 interface SignUpProps {
-  onSwitchToSignIn: () => void;
   /** Optional invite code for waitlist users */
   inviteCode?: string;
   /** Optional pre-filled email from invite code validation */
@@ -44,7 +44,8 @@ interface ValidateInviteResponse {
   };
 }
 
-export default function SignUp({ onSwitchToSignIn, inviteCode: initialInviteCode, inviteEmail: initialInviteEmail }: SignUpProps) {
+export default function SignUp({ inviteCode: initialInviteCode, inviteEmail: initialInviteEmail }: SignUpProps) {
+  const [, setLocation] = useLocation();
   const { track } = useAnalytics();
   const { toast } = useToast();
   const registerMutation = useRegister();
@@ -150,7 +151,7 @@ export default function SignUp({ onSwitchToSignIn, inviteCode: initialInviteCode
         description: "Welcome! Let's get you set up.",
       });
       // Redirect to home page after successful registration
-      window.location.href = '/';
+      window.location.href = '/app/home';
     } catch (error) {
       console.error('❌ [SIGNUP] Registration failed:', error);
       toast({
@@ -394,7 +395,7 @@ export default function SignUp({ onSwitchToSignIn, inviteCode: initialInviteCode
                       button_name: 'switch_to_signin',
                       button_location: 'signup_page',
                     });
-                    onSwitchToSignIn();
+                    setLocation('/sign-in');
                   }}
                   variant="ghost"
                   className="cursor-pointer rounded border-none bg-transparent px-2 py-1 font-bold text-[#10B981] decoration-2 underline-offset-4 transition-colors duration-200 hover:text-[#059669] hover:underline"

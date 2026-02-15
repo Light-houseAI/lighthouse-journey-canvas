@@ -1,20 +1,17 @@
 import { Button } from '@journey/components';
 import { ArrowLeft } from 'lucide-react';
 import React from 'react';
+import { useLocation } from 'wouter';
 
-interface BlogPageProps {
-  onBack: () => void;
-  onSignIn: () => void;
-  onSignUp: () => void;
-}
+export default function BlogPage() {
+  const [, setLocation] = useLocation();
 
-export default function BlogPage({ onBack, onSignIn, onSignUp }: BlogPageProps) {
   return (
     <div className="flex min-h-screen w-full flex-col bg-white">
       {/* Header */}
       <header className="flex items-center justify-between border-b border-gray-200 px-8 py-4">
         <button
-          onClick={onBack}
+          onClick={() => setLocation('/')}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -22,13 +19,13 @@ export default function BlogPage({ onBack, onSignIn, onSignUp }: BlogPageProps) 
         </button>
         <div className="flex items-center gap-4">
           <Button
-            onClick={onSignIn}
+            onClick={() => setLocation('/sign-in')}
             className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-900 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
           >
             Sign in
           </Button>
           <Button
-            onClick={onSignUp}
+            onClick={() => setLocation('/sign-up')}
             className="rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-900"
           >
             Sign up

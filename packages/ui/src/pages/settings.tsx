@@ -122,7 +122,7 @@ export default function Settings() {
       return;
     }
 
-    const shareUrl = `${window.location.origin}/profile/${user.userName}`;
+    const shareUrl = `${window.location.origin}/app/profile/${user.userName}`;
 
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -147,7 +147,7 @@ export default function Settings() {
       button_name: 'back_to_timeline',
       button_location: 'settings_page',
     });
-    setLocation('/');
+    setLocation('/home');
   };
 
   if (!user) {
@@ -389,7 +389,7 @@ export default function Settings() {
                       </Label>
                       <div className="flex gap-2">
                         <Input
-                          value={`${window.location.origin}/profile/${user.userName}`}
+                          value={`${window.location.origin}/app/profile/${user.userName}`}
                           readOnly
                           className={`${theme.inputBackground} ${theme.primaryBorder} border ${theme.mutedText} cursor-default`}
                         />

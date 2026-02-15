@@ -85,7 +85,7 @@ export function SectionErrorFallback({
   const userMessage = getUserFriendlyMessage(error);
 
   const handleGoHome = () => {
-    window.location.href = '/';
+    window.location.href = '/app/home';
   };
 
   return (

@@ -13,6 +13,7 @@ import { type SignIn, signInSchema } from '@journey/schema';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useLocation } from 'wouter';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { useAnalytics, AnalyticsEvents } from '../hooks/useAnalytics';
@@ -20,11 +21,8 @@ import { useToast } from '../hooks/use-toast';
 import { useLogin } from '../hooks/useAuth';
 import { getErrorMessage } from '../utils/error-toast';
 
-interface SignInProps {
-  onSwitchToSignUp: () => void;
-}
-
-export default function SignIn({ onSwitchToSignUp }: SignInProps) {
+export default function SignIn() {
+  const [, setLocation] = useLocation();
   const { track } = useAnalytics();
   const { toast } = useToast();
   const loginMutation = useLogin();
@@ -53,7 +51,7 @@ export default function SignIn({ onSwitchToSignUp }: SignInProps) {
         description: "You've signed in successfully.",
       });
       // Redirect to home page after successful login
-      window.location.href = '/';
+      window.location.href = '/app/home';
     } catch (error) {
       toast({
         title: 'Sign in failed',
@@ -187,7 +185,7 @@ export default function SignIn({ onSwitchToSignUp }: SignInProps) {
                       button_name: 'switch_to_signup',
                       button_location: 'signin_page',
                     });
-                    onSwitchToSignUp();
+                    setLocation('/sign-up');
                   }}
                   variant="ghost"
                   className="cursor-pointer rounded border-none bg-transparent px-2 py-1 font-bold text-[#10B981] decoration-2 underline-offset-4 transition-colors duration-200 hover:text-[#059669] hover:underline"

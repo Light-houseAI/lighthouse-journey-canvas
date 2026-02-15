@@ -7,12 +7,11 @@ import { ProfileListViewContainer } from "../components/timeline/ProfileListView
 
 export default function ProfessionalJourney() {
   // Extract username from URL path
+  // Inside nested router, /home is the current user's profile
+  // /profile/:username is for viewing another user's profile
   const [location] = useLocation();
-  const pathSegments = location.split('/').filter(Boolean);
-
-  // If path is just "/" then it's the current user's profile
-  // If path is "/username" then it's viewing another user's profile
-  const username = pathSegments.length > 0 ? pathSegments[0] : undefined;
+  const profileMatch = location.match(/^\/profile\/(.+)/);
+  const username = profileMatch ? profileMatch[1] : undefined;
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-gray-50">

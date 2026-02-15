@@ -32,7 +32,7 @@ export const HeaderSearchInput: React.FC<HeaderSearchInputProps> = ({
 
       
       // Force page refresh for proper search results loading
-      const searchUrl = `/search?q=${encodedQuery}`;
+      const searchUrl = `/app/search?q=${encodedQuery}`;
       window.location.href = searchUrl;
     }
   };

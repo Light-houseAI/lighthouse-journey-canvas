@@ -118,8 +118,8 @@ export function useAnalytics() {
     ) => {
       trackEvent(eventName, {
         ...properties,
-        // Add common properties
-        page_path: location,
+        // Add common properties — use full browser path (not Wouter-scoped path)
+        page_path: window.location.pathname,
         timestamp: new Date().toISOString(),
       });
     },
@@ -133,7 +133,7 @@ export function useAnalytics() {
     (pageName?: string, properties?: Record<string, any>) => {
       trackPageView(window.location.href, {
         page_name: pageName,
-        page_path: location,
+        page_path: window.location.pathname,
         ...properties,
       });
     },
@@ -211,7 +211,7 @@ export function usePageTracking() {
   useEffect(() => {
     // Track page view on location change
     trackPageView(window.location.href, {
-      page_path: location,
+      page_path: window.location.pathname,
       is_authenticated: isAuthenticated,
     });
   }, [location, isAuthenticated]);

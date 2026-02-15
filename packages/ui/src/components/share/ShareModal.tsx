@@ -45,7 +45,7 @@ export const ShareModal: React.FC = () => {
   const handleCopyShareLink = () => {
     track(AnalyticsEvents.BUTTON_CLICKED, { button_name: 'copy_share_link', button_location: 'share_modal' });
     // Copy share link to clipboard
-    const shareLink = `${window.location.origin}/profile/${user?.userName}`;
+    const shareLink = `${window.location.origin}/app/profile/${user?.userName}`;
     navigator.clipboard.writeText(shareLink);
 
     toast({

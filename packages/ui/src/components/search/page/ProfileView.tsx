@@ -65,7 +65,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
               <Button
                 onClick={() => {
                   if (profile.username) {
-                    window.location.href = `/profile/${profile.username}`;
+                    window.location.href = `/app/profile/${profile.username}`;
                   }
                 }}
                 disabled={!profile.username}

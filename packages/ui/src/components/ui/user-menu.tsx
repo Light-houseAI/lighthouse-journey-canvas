@@ -62,7 +62,7 @@ export function UserMenu({ className }: UserMenuProps) {
       return;
     }
 
-    const shareUrl = `${window.location.origin}/profile/${user.userName}`;
+    const shareUrl = `${window.location.origin}/app/profile/${user.userName}`;
 
     try {
       await navigator.clipboard.writeText(shareUrl);

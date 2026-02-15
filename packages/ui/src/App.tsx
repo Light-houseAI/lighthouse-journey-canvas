@@ -1,22 +1,75 @@
 import { LoadingScreen, TooltipProvider } from '@journey/components';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { Route, Switch } from 'wouter';
+import { Redirect, Route, Switch } from 'wouter';
 
 import { AnalyticsProvider } from './components/AnalyticsProvider';
 import { AuthenticatedApp } from './components/AuthenticatedApp';
 import { GlobalErrorBoundary } from './components/errors/GlobalErrorBoundary';
+import { KramaLandingPage } from './components/krama-landing';
 import { Toaster } from './components/ui/toaster';
-import { UnauthenticatedApp } from './components/UnauthenticatedApp';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useDesktopSessionSync } from './hooks/useAuth';
 import { queryClient } from './lib/queryClient';
+import BlogPage from './pages/blog';
 import PrivacyPolicy from './pages/privacy-policy';
+import SignIn from './pages/signin';
+import SignUp from './pages/signup';
 import { refreshTokenIfNeeded } from './services/auth-api';
 import { tokenManager } from './services/token-manager';
 import { useAuthStore } from './stores/auth-store';
 
-function Router() {
+/**
+ * RequireAuth - Redirects to /sign-in if not authenticated
+ */
+function RequireAuth({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuthStore();
+
+  if (!isAuthenticated) {
+    return <Redirect to="/sign-in" />;
+  }
+
+  return <>{children}</>;
+}
+
+/**
+ * RedirectIfAuthenticated - Redirects to /app/home if already logged in
+ */
+function RedirectIfAuthenticated({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuthStore();
+
+  if (isAuthenticated) {
+    return <Redirect to="/app/home" />;
+  }
+
+  return <>{children}</>;
+}
+
+/**
+ * RootRedirect - Shows landing page or redirects based on auth state
+ */
+function RootRedirect() {
+  const { isAuthenticated } = useAuthStore();
+
+  if (isAuthenticated) {
+    return <Redirect to="/app/home" />;
+  }
+
+  return <KramaLandingPage />;
+}
+
+/**
+ * JoinPage - Extracts invite code from URL and renders SignUp
+ */
+function JoinPage() {
+  const code = new URLSearchParams(window.location.search).get('code') || '';
+  return <SignUp inviteCode={code} />;
+}
+
+/**
+ * AppRoutes - Main routing component with auth logic
+ */
+function AppRoutes() {
   const { isAuthenticated } = useAuthStore();
   const { setUser } = useAuthStore();
   const { syncDesktopSession } = useDesktopSessionSync();
@@ -47,27 +100,23 @@ function Router() {
     let refreshTimer: NodeJS.Timeout | null = null;
 
     const scheduleTokenRefresh = async () => {
-      // Clear any existing timer
       if (refreshTimer) {
         clearTimeout(refreshTimer);
         refreshTimer = null;
       }
 
-      // Check tokens exist
       if (!tokenManager.isAuthenticated()) {
         console.warn('Tokens missing from storage, logging out');
         setUser(null);
         return;
       }
 
-      // Check refresh token hasn't expired
       if (tokenManager.isRefreshTokenExpired()) {
         console.warn('Refresh token expired, logging out');
         setUser(null);
         return;
       }
 
-      // Get access token expiry
       const exp = tokenManager.getAccessTokenExpiry();
       if (!exp) {
         console.warn('Cannot decode token expiry, logging out');
@@ -76,10 +125,9 @@ function Router() {
       }
 
       const now = Math.floor(Date.now() / 1000);
-      const bufferSeconds = 30; // Refresh 30 seconds before expiry
+      const bufferSeconds = 30;
       const secondsUntilRefresh = exp - now - bufferSeconds;
 
-      // If token already expired or expiring soon, refresh immediately
       if (secondsUntilRefresh <= 0) {
         const refreshed = await refreshTokenIfNeeded();
         if (!refreshed) {
@@ -87,17 +135,15 @@ function Router() {
           setUser(null);
           return;
         }
-        // Schedule next refresh after successful refresh
         scheduleTokenRefresh();
         return;
       }
 
-      // Schedule refresh before expiry
       const msUntilRefresh = secondsUntilRefresh * 1000;
       refreshTimer = setTimeout(async () => {
         const refreshed = await refreshTokenIfNeeded();
         if (refreshed) {
-          scheduleTokenRefresh(); // Reschedule based on new token
+          scheduleTokenRefresh();
         } else {
           console.error('Scheduled token refresh failed, logging out');
           setUser(null);
@@ -105,7 +151,6 @@ function Router() {
       }, msUntilRefresh);
     };
 
-    // Handle tab visibility changes (wake from sleep)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isAuthenticated) {
         refreshTokenIfNeeded().then((refreshed) => {
@@ -118,10 +163,7 @@ function Router() {
       }
     };
 
-    // Initial check and schedule
     scheduleTokenRefresh();
-
-    // Listen for tab becoming visible
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
@@ -135,22 +177,51 @@ function Router() {
     return <LoadingScreen />;
   }
 
-  // Simple conditional render based on persisted auth state
-  return isAuthenticated ? <AuthenticatedApp /> : <UnauthenticatedApp />;
-}
-
-/**
- * PublicRoutes - Routes accessible without authentication
- * These are rendered before auth check to ensure they work for everyone
- */
-function PublicRoutes({ children }: { children: React.ReactNode }) {
   return (
     <Switch>
-      {/* Public privacy policy page */}
+      {/* Fully public routes */}
       <Route path="/privacy-policy" component={PrivacyPolicy} />
 
-      {/* All other routes go through normal auth flow */}
-      <Route>{children}</Route>
+      {/* Public auth routes — redirect to /app/home if already authenticated */}
+      <Route path="/sign-in">
+        <RedirectIfAuthenticated>
+          <SignIn />
+        </RedirectIfAuthenticated>
+      </Route>
+      <Route path="/signin">
+        <Redirect to="/sign-in" />
+      </Route>
+
+      <Route path="/sign-up">
+        <RedirectIfAuthenticated>
+          <SignUp />
+        </RedirectIfAuthenticated>
+      </Route>
+      <Route path="/signup">
+        <Redirect to="/sign-up" />
+      </Route>
+
+      <Route path="/join">
+        <RedirectIfAuthenticated>
+          <JoinPage />
+        </RedirectIfAuthenticated>
+      </Route>
+
+      <Route path="/blog">
+        <BlogPage />
+      </Route>
+
+      {/* Authenticated routes under /app */}
+      <Route path="/app" nest>
+        <RequireAuth>
+          <AuthenticatedApp />
+        </RequireAuth>
+      </Route>
+
+      {/* Catch-all: landing page or redirect to /app/home */}
+      <Route>
+        <RootRedirect />
+      </Route>
     </Switch>
   );
 }
@@ -163,9 +234,7 @@ function App() {
           <AnalyticsProvider>
             <TooltipProvider>
               <Toaster />
-              <PublicRoutes>
-                <Router />
-              </PublicRoutes>
+              <AppRoutes />
             </TooltipProvider>
           </AnalyticsProvider>
         </ThemeProvider>

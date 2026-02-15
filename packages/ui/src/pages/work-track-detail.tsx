@@ -372,7 +372,7 @@ export default function WorkTrackDetail() {
       <div className="flex flex-col items-center justify-center min-h-screen p-8">
         <h1 className="text-2xl font-bold text-gray-900">Work Track Not Found</h1>
         <p className="mt-2 text-gray-600">The work track you're looking for doesn't exist.</p>
-        <Button onClick={() => setLocation('/')} className="mt-4">
+        <Button onClick={() => setLocation('/home')} className="mt-4">
           Go Back
         </Button>
       </div>
@@ -403,7 +403,7 @@ export default function WorkTrackDetail() {
             <div className="flex flex-col gap-2">
               {/* Back navigation */}
               <button
-                onClick={() => setLocation('/')}
+                onClick={() => setLocation('/home')}
                 className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />

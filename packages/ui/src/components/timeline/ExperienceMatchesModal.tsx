@@ -105,7 +105,7 @@ export function ExperienceMatchesModal({
                   showViewProfile={true}
                   onViewProfile={() => {
                     if (selectedProfile.username) {
-                      window.location.href = `/profile/${selectedProfile.username}`;
+                      window.location.href = `/app/profile/${selectedProfile.username}`;
                     }
                   }}
                 />

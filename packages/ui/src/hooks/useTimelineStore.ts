@@ -56,7 +56,7 @@ export const useTimelineStore = () => {
 
   // Determine if viewing another user's timeline
   const isViewingOtherUser =
-    location !== '/' && location !== '/timeline' && !location.startsWith('/?');
+    location !== '/home' && location !== '/timeline' && !location.startsWith('/home?');
 
   // Extract username from location if viewing other user
   const viewingUsername = isViewingOtherUser

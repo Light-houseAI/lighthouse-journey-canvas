@@ -33,11 +33,12 @@ import { useProfileViewStore } from '../../stores/profile-view-store';
 import { NodeIcon } from '../icons/NodeIcons';
 import { MultiStepAddNodeModal } from '../modals/MultiStepAddNodeModal';
 import { CareerUpdateWizard } from '../nodes/career-transition/wizard/CareerUpdateWizard';
-import { BrowseWorkOutputsModal } from '../modals/BrowseWorkOutputsModal';
+
 import { NodeSessions } from './NodeSessions';
 import { useNodeSessions } from '../../hooks/useNodeSessions';
 import { NaturalLanguageQueryDialog } from '../workflow/NaturalLanguageQueryDialog';
 import { ProgressSnapshotPanel } from './ProgressSnapshotPanel';
+import { BrowseWorkOutputsModal } from '../modals/BrowseWorkOutputsModal';
 import { TrackAnalysisChatModal } from '../modals/TrackAnalysisChatModal';
 
 // Simple types for props
@@ -423,7 +424,7 @@ const HierarchicalNode = ({
                         className="text-xs font-normal"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setLocation(`/work-track/${node.id}?template=workflow-analysis`);
+                          setLocation(`/work-track/${node.id}/browse-outputs/workflow-analysis`);
                         }}
                       >
                         Workflow analysis
@@ -434,7 +435,7 @@ const HierarchicalNode = ({
                         className="text-xs font-normal"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setLocation(`/work-track/${node.id}?template=progress-update`);
+                          setLocation(`/work-track/${node.id}/browse-outputs/weekly-progress`);
                         }}
                       >
                         Progress update
@@ -445,7 +446,7 @@ const HierarchicalNode = ({
                         className="text-xs font-normal"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setLocation(`/work-track/${node.id}?template=story-summary`);
+                          setLocation(`/work-track/${node.id}/browse-outputs`);
                         }}
                       >
                         Story summary
@@ -725,7 +726,7 @@ const JourneyCard = ({
       setShowProgressSnapshot(true);
       return;
     }
-    setLocation(`/work-track/${node.id}?template=${templateKey}`);
+    setLocation(`/work-track/${node.id}/browse-outputs/${templateKey}`);
   };
 
   return (
@@ -958,9 +959,6 @@ const JourneyCard = ({
         isOpen={showBrowseOutputsModal}
         onClose={() => setShowBrowseOutputsModal(false)}
         nodeId={node.id}
-        onSelectTemplate={(templateKey) => {
-          setLocation(`/work-track/${node.id}?template=${templateKey}`);
-        }}
       />
 
       {/* Progress Snapshot Modal */}
@@ -1176,7 +1174,7 @@ export function ProfileListViewContainer({
                     if (isAuthError) {
                       // Clear auth state and redirect to sign in
                       localStorage.removeItem('auth-store');
-                      window.location.href = '/';
+                      window.location.href = '/app/home';
                     } else {
                       refetch();
                     }
@@ -1207,17 +1205,6 @@ export function ProfileListViewContainer({
               onAddExperience={() => setIsProfileAddModalOpen(true)}
             />
 
-            {/* Empty state */}
-            {nodes.length === 0 && (
-              <div className="rounded-lg bg-white p-8 text-center shadow">
-                <p className="text-gray-500">No timeline data found</p>
-                {!username && (
-                  <p className="mt-2 text-sm text-gray-400">
-                    Start building your professional journey timeline
-                  </p>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Spacer to ensure last item can scroll to bottom - responsive */}

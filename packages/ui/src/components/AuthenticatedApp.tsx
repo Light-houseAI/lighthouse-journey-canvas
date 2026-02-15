@@ -1,6 +1,6 @@
 import { LoadingScreen } from '@journey/components';
 import { useEffect, useState } from 'react';
-import { Route, Switch } from 'wouter';
+import { Redirect, Route, Switch } from 'wouter';
 
 import { useCurrentUser } from '../hooks/useAuth';
 import ApplicationMaterialsDetail from '../pages/application-materials-detail';
@@ -18,6 +18,8 @@ import Settings from '../pages/settings';
 import { UserTimelinePage } from '../pages/user-timeline';
 import WorkTrackDetail from '../pages/work-track-detail';
 import WorkflowCanvasPage from '../pages/workflow-canvas';
+import BrowseOutputTemplate from '../pages/browse-output-template';
+import BrowseWorkOutputsPage from '../pages/browse-work-outputs';
 import InsightAssistant from '../pages/insight-assistant';
 import { hierarchyApi } from '../services/hierarchy-api';
 import { completeOnboarding } from '../services/onboarding-api';
@@ -60,6 +62,18 @@ function TimelineRouter() {
         component={CareerTransitionDetail}
       />
 
+      {/* Browse work outputs — template detail (must come before parent routes) */}
+      <Route
+        path="/work-track/:nodeId/browse-outputs/:templateKey"
+        component={BrowseOutputTemplate}
+      />
+
+      {/* Browse work outputs — catalog page */}
+      <Route
+        path="/work-track/:nodeId/browse-outputs"
+        component={BrowseWorkOutputsPage}
+      />
+
       {/* Work track detail view */}
       <Route
         path="/work-track/:nodeId"
@@ -99,11 +113,16 @@ function TimelineRouter() {
       {/* Insight Assistant */}
       <Route path="/insight-assistant" component={InsightAssistant} />
 
-      {/* Main timeline route - user's own timeline */}
-      <Route path="/" component={ProfessionalJourney} />
-
       {/* Profile-based timeline route - viewing another user's timeline */}
       <Route path="/profile/:username" component={UserTimelinePage} />
+
+      {/* Main home route */}
+      <Route path="/home" component={ProfessionalJourney} />
+
+      {/* Redirect root to /home */}
+      <Route path="/">
+        <Redirect to="/home" />
+      </Route>
     </Switch>
   );
 }

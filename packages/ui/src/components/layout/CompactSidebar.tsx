@@ -19,7 +19,7 @@ export function CompactSidebar() {
 
   const handleLogoClick = () => {
     track(AnalyticsEvents.BUTTON_CLICKED, { button_name: 'logo', button_location: 'sidebar' });
-    setLocation('/');
+    setLocation('/home');
   };
 
   const handleNavClick = (item: NavItem) => {
@@ -31,8 +31,8 @@ export function CompactSidebar() {
     {
       icon: <Home className="h-5 w-5" />,
       label: 'Home',
-      path: '/',
-      isActive: location === '/',
+      path: '/home',
+      isActive: location === '/home',
     },
     {
       icon: <Search className="h-5 w-5" />,

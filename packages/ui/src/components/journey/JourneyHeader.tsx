@@ -23,7 +23,7 @@ export const JourneyHeader: React.FC<{ viewingUsername?: string }> = ({
 
   const handleLogoClick = () => {
     track(AnalyticsEvents.BUTTON_CLICKED, { button_name: 'logo', button_location: 'header' });
-    setLocation('/');
+    setLocation('/home');
   };
 
   return (
