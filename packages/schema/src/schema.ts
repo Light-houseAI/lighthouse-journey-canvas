@@ -558,6 +558,11 @@ export const sessionMappings = pgTable('session_mappings', {
   // Peer sharing opt-in (used when user's shareScopeDefault = 'per_session')
   peerSharingEnabled: boolean('peer_sharing_enabled').default(false),
 
+  // Pre-computed context stitching (3-tier cumulative analysis)
+  // Contains workstream assignment, tool mastery groups, repetitive patterns,
+  // and cumulative context from previous sessions. Chain-based O(1) per session.
+  stitchedContext: jsonb('stitched_context'),
+
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -635,6 +640,53 @@ export const groupItems = pgTable(
     ),
   ]
 );
+
+// ============================================================================
+// WORKSTREAMS (Context Stitching)
+// ============================================================================
+
+/**
+ * User Workstreams Table
+ * Tracks outcome-based workstreams for Tier 1 context stitching.
+ * A workstream groups sessions that contribute to a shared deliverable/goal.
+ * Maintained incrementally — updated each time a session is stitched.
+ */
+export const userWorkstreams = pgTable('user_workstreams', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+
+  // Workstream identity
+  workstreamId: varchar('workstream_id', { length: 100 }).notNull(),
+  name: text('name').notNull(),
+  outcomeDescription: text('outcome_description'),
+
+  // Membership
+  sessionIds: text('session_ids').array().default([]),
+
+  // Aggregated metadata
+  topics: text('topics').array().default([]),
+  toolsUsed: text('tools_used').array().default([]),
+  confidence: doublePrecision('confidence').default(0),
+
+  // Temporal bounds
+  firstActivity: timestamp('first_activity', { withTimezone: true }),
+  lastActivity: timestamp('last_activity', { withTimezone: true }),
+  totalDurationSeconds: integer('total_duration_seconds').default(0),
+
+  // Status
+  isActive: boolean('is_active').default(true),
+  mergedIntoId: uuid('merged_into_id'),
+
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 /**
  * Session Classification Feedback Table

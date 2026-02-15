@@ -49,15 +49,15 @@ SECTION 1: FACT DISAMBIGUATION - KEY DEFINITIONS
 
 **SUFFICIENT DATA** means:
 - For EXPLORATION queries: User workflow evidence exists (even partial)
-- For DIAGNOSTIC/OPTIMIZATION queries: User evidence + diagnostics/analysis
+- For DIAGNOSTIC/OPTIMIZATION queries: User evidence (enriched with gap analysis, insights from session_mappings)
 - For TOOL_INTEGRATION queries: Web search results about the tool
-- For COMPARISON queries: User evidence + peer comparison data
-- For BLOG_CREATION/PROGRESS_UPDATE/SKILL_FILE_GENERATION queries: User workflow evidence ONLY (retrieval-only — specialized prompt handles generation, do NOT run analysis/comparison/feature discovery)
+- For COMPARISON queries: User evidence (enriched with peer insights from session_mappings)
+- For BLOG_CREATION/PROGRESS_UPDATE/SKILL_FILE_GENERATION queries: User workflow evidence ONLY (retrieval-only — specialized prompt handles generation)
 
 **SKILL PREREQUISITES**: Some skills require outputs from other skills:
-- analyze_workflow_efficiency: REQUIRES retrieve_user_workflows first
-- compare_with_peers: REQUIRES retrieve_user_workflows first
-- discover_underused_features: REQUIRES retrieve_user_workflows first
+- search_web_best_practices: No prerequisites (can run first for TOOL_INTEGRATION)
+- search_company_docs: No prerequisites
+- search_conversation_memory: No prerequisites
 
 ================================================================================
 SECTION 2: AVAILABLE SKILLS
@@ -82,18 +82,17 @@ SECTION 4: TERMINATION DECISION MATRIX
 | Intent                | Terminate When                                                |
 |-----------------------|---------------------------------------------------------------|
 | EXPLORATION           | Have userEvidence (any workflow data)                         |
-| DIAGNOSTIC            | Have userEvidence + diagnostics + feature tips (A5)           |
-| OPTIMIZATION          | Have userEvidence + diagnostics + optimization + feature tips |
-| COMPARISON            | Have userEvidence + peer comparison data                      |
+| DIAGNOSTIC            | Have userEvidence (enriched with gap analysis + insights)     |
+| OPTIMIZATION          | Have userEvidence + web/company optimization plan             |
+| COMPARISON            | Have userEvidence (enriched with peer insights)               |
 | TOOL_INTEGRATION      | Have web search results                                       |
-| FEATURE_DISCOVERY     | Have userEvidence + feature tips                              |
+| FEATURE_DISCOVERY     | Have userEvidence (enriched with insights)                    |
 | BLOG_CREATION         | Have userEvidence (retrieval only — prompt does heavy lifting)|
 | PROGRESS_UPDATE       | Have userEvidence (retrieval only — prompt does heavy lifting)|
 | SKILL_FILE_GENERATION | Have userEvidence (retrieval only — prompt does heavy lifting)|
-| GENERAL               | Have userEvidence + optimization plan + feature tips          |
+| GENERAL               | Have userEvidence + web/company optimization plan             |
 
-**IMPORTANT**: For DIAGNOSTIC/OPTIMIZATION/GENERAL, you MUST invoke discover_underused_features
-before terminating, even if you have diagnostics and optimizations.
+Note: A1 retrieval now returns enriched session data (gap analysis, insights, peer insights) from session_mappings JSONB. No separate analysis or comparison skills needed.
 
 ================================================================================
 SECTION 5: FEW-SHOT EXAMPLES
@@ -106,7 +105,7 @@ Input State:
 - Iteration: 0
 - Used skills: []
 - Has user evidence: false
-- Recommended: [retrieve_user_workflows, analyze_workflow_efficiency, ...]
+- Recommended: [retrieve_user_workflows, search_web_best_practices, ...]
 
 Correct Output:
 {
@@ -116,21 +115,19 @@ Correct Output:
   "skillInput": { "query": "deployment" }
 }
 
-### EXAMPLE 2: After retrieval, need analysis
+### EXAMPLE 2: After retrieval, ready to respond (enriched data from session_mappings)
 Input State:
 - Query: "Why am I so slow at deploying?"
 - Intent: DIAGNOSTIC
 - Iteration: 1
 - Used skills: [retrieve_user_workflows]
-- Has user evidence: true
-- Has diagnostics: false
+- Has user evidence: true (enriched with gap analysis, insights)
 
 Correct Output:
 {
-  "thought": "Have user evidence. DIAGNOSTIC requires diagnostics per matrix. RULE 1: skip retrieve_user_workflows (used). Next: analyze_workflow_efficiency.",
-  "shouldTerminate": false,
-  "skillToInvoke": "analyze_workflow_efficiency",
-  "skillInput": { "query": "deployment inefficiencies" }
+  "thought": "Have enriched user evidence with gap analysis and insights. DIAGNOSTIC satisfied per termination matrix. Terminating.",
+  "shouldTerminate": true,
+  "terminationReason": "Sufficient enriched data for diagnostic response"
 }
 
 ### EXAMPLE 3: Tool integration query
@@ -163,60 +160,51 @@ Correct Output:
   "terminationReason": "EXPLORATION satisfied per termination matrix"
 }
 
-### EXAMPLE 5: Must invoke A5 before terminating OPTIMIZATION query
+### EXAMPLE 5: OPTIMIZATION query with web search
 Input State:
 - Query: "How can I optimize my coding workflow?"
 - Intent: OPTIMIZATION
-- Iteration: 3
-- Used skills: [retrieve_user_workflows, analyze_workflow_efficiency, compare_with_peers]
-- Has user evidence: true
-- Has diagnostics: true
-- Has optimization plan: true
-- Has feature tips: false
+- Iteration: 1
+- Used skills: [retrieve_user_workflows]
+- Has user evidence: true (enriched with gap analysis, insights)
+- Has web optimization plan: false
 
 Correct Output:
 {
-  "thought": "OPTIMIZATION query. Matrix says: need userEvidence + diagnostics + optimization + feature tips. I have all EXCEPT feature tips. MUST invoke discover_underused_features before terminating.",
+  "thought": "OPTIMIZATION query. Have enriched user evidence. Could benefit from web best practices. Invoking search_web_best_practices.",
   "shouldTerminate": false,
-  "skillToInvoke": "discover_underused_features",
-  "skillInput": { "query": "coding workflow feature tips" }
+  "skillToInvoke": "search_web_best_practices",
+  "skillInput": { "query": "coding workflow optimization best practices" }
 }
 
-### EXAMPLE 6: Skill prerequisites not met
+### EXAMPLE 6: COMPARISON query — enriched data sufficient
 Input State:
 - Query: "How do I compare to others?"
 - Intent: COMPARISON
-- Iteration: 0
-- Used skills: []
-- Has user evidence: false
-- Available skills: [retrieve_user_workflows, search_web_best_practices]
+- Iteration: 1
+- Used skills: [retrieve_user_workflows]
+- Has user evidence: true (enriched with peer insights from session_mappings)
 
 Correct Output:
 {
-  "thought": "COMPARISON query needs compare_with_peers, but it's NOT in availableSkills (prerequisite: userEvidence). RULE 2: cannot invoke. Must retrieve_user_workflows first.",
-  "shouldTerminate": false,
-  "skillToInvoke": "retrieve_user_workflows",
-  "skillInput": { "query": "my workflows" }
+  "thought": "COMPARISON query. Have enriched user evidence with peer insights. Terminating per matrix.",
+  "shouldTerminate": true,
+  "terminationReason": "Enriched peer insights data sufficient for comparison"
 }
 
 ================================================================================
 SECTION 6: NEGATIVE EXAMPLES (common mistakes to avoid)
 ================================================================================
 
-### WRONG: Terminating too early (missing diagnostics)
-Input: Intent=DIAGNOSTIC, hasUserEvidence=true, hasDiagnostics=false
-WRONG Output: { "shouldTerminate": true, "terminationReason": "Have user data" }
-WHY WRONG: DIAGNOSTIC requires diagnostics per matrix. hasUserEvidence alone is insufficient.
-
-### WRONG: Terminating OPTIMIZATION without feature tips
-Input: Intent=OPTIMIZATION, hasUserEvidence=true, hasDiagnostics=true, hasOptimization=true, hasFeatureTips=false
-WRONG Output: { "shouldTerminate": true, "terminationReason": "Have diagnostics and optimization" }
-WHY WRONG: OPTIMIZATION requires feature tips per matrix. Must invoke discover_underused_features first.
+### WRONG: Terminating without enriched evidence
+Input: Intent=DIAGNOSTIC, hasUserEvidence=false
+WRONG Output: { "shouldTerminate": true, "terminationReason": "Ready to respond" }
+WHY WRONG: DIAGNOSTIC requires enriched user evidence (with gap analysis and insights).
 
 ### WRONG: Invoking unavailable skill
 Input: availableSkills=[retrieve_user_workflows, search_web_best_practices]
-WRONG Output: { "skillToInvoke": "compare_with_peers" }
-WHY WRONG: compare_with_peers is NOT in availableSkills. Violates RULE 2.
+WRONG Output: { "skillToInvoke": "search_company_docs" }
+WHY WRONG: search_company_docs is NOT in availableSkills. Violates RULE 2.
 
 ### WRONG: Re-invoking used skill
 Input: usedSkills=[retrieve_user_workflows]
@@ -486,18 +474,16 @@ function ruleBasedReasoning(
   }
 
   // Check if we should terminate
-  // Condition 1: Have final result components
-  const hasBasicAnalysis = state.userEvidence && state.userDiagnostics;
+  // A1 now provides enriched data (gap analysis, insights, peerInsights) from session_mappings
+  const hasEnrichedEvidence = !!state.userEvidence;
   const hasOptimizations =
-    state.peerOptimizationPlan ||
     state.webOptimizationPlan ||
-    state.companyOptimizationPlan ||
-    (state.featureAdoptionTips && state.featureAdoptionTips.length > 0);
+    state.companyOptimizationPlan;
 
   // For exploration queries, just user evidence is enough
-  if (state.queryClassification?.intent === 'EXPLORATION' && state.userEvidence) {
+  if (state.queryClassification?.intent === 'EXPLORATION' && hasEnrichedEvidence) {
     return {
-      thought: 'Have user evidence for exploration query. Ready to respond.',
+      thought: 'Have enriched user evidence for exploration query. Ready to respond.',
       shouldTerminate: true,
       terminationReason: 'Sufficient data for exploration query',
     };
@@ -506,7 +492,7 @@ function ruleBasedReasoning(
   // For template-based generation (blog, progress update, skill file),
   // only retrieval is needed — the specialized system prompt does the heavy lifting
   const templateIntents = ['BLOG_CREATION', 'PROGRESS_UPDATE', 'SKILL_FILE_GENERATION'];
-  if (templateIntents.includes(state.queryClassification?.intent || '') && state.userEvidence) {
+  if (templateIntents.includes(state.queryClassification?.intent || '') && hasEnrichedEvidence) {
     return {
       thought: `Have user evidence for ${state.queryClassification?.intent} query. Retrieval only — specialized prompt handles generation.`,
       shouldTerminate: true,
@@ -515,7 +501,6 @@ function ruleBasedReasoning(
   }
 
   // For TOOL_INTEGRATION queries, web search is the PRIMARY source
-  // Terminate when we have web search results (user context is optional bonus)
   if (state.queryClassification?.intent === 'TOOL_INTEGRATION') {
     if (state.webOptimizationPlan) {
       return {
@@ -524,7 +509,6 @@ function ruleBasedReasoning(
         terminationReason: 'Web search provided integration guidance',
       };
     }
-    // For tool integration, prioritize web search skill
     if (!usedSkillsSet.has('search_web_best_practices') && availableSkillIds.includes('search_web_best_practices')) {
       return {
         thought: 'Tool integration query - need to search web for tool information and integration guidance.',
@@ -535,31 +519,43 @@ function ruleBasedReasoning(
     }
   }
 
-  // For optimization/diagnostic queries, need analysis, optimizations, AND feature tips
-  // FIX: Previously terminated too early before A5 (discover_underused_features) could run
-  const hasFeatureTips = state.featureAdoptionTips && state.featureAdoptionTips.length > 0;
-  const featureSkillUsed = usedSkillsSet.has('discover_underused_features');
-  const featureSkillAvailable = availableSkillIds.includes('discover_underused_features');
-
-  // Only terminate if we have feature tips OR the feature skill has been used/is unavailable
-  const featureAnalysisComplete = hasFeatureTips || featureSkillUsed || !featureSkillAvailable;
-
-  if (hasBasicAnalysis && hasOptimizations && featureAnalysisComplete) {
+  // For COMPARISON queries, enriched evidence (with peerInsights) is sufficient
+  if (state.queryClassification?.intent === 'COMPARISON' && hasEnrichedEvidence) {
     return {
-      thought: 'Have diagnostics, optimization recommendations, and feature tips. Ready to generate response.',
+      thought: 'Have enriched user evidence with peer insights for comparison query. Ready to respond.',
+      shouldTerminate: true,
+      terminationReason: 'Enriched evidence sufficient for comparison',
+    };
+  }
+
+  // For DIAGNOSTIC/OPTIMIZATION/GENERAL, enriched evidence is the base requirement
+  // Web/company optimization plans are bonus if available
+  if (hasEnrichedEvidence && hasOptimizations) {
+    return {
+      thought: 'Have enriched evidence and optimization recommendations. Ready to generate response.',
       shouldTerminate: true,
       terminationReason: 'Sufficient data gathered for comprehensive response',
     };
   }
 
-  // If we have basic analysis but haven't run feature discovery yet, run it
-  if (hasBasicAnalysis && hasOptimizations && !featureSkillUsed && featureSkillAvailable) {
-    return {
-      thought: 'Have diagnostics and optimizations. Still need to check for underused features before terminating.',
-      shouldTerminate: false,
-      skillToInvoke: 'discover_underused_features',
-      skillInput: { query: state.query },
-    };
+  // If we have enriched evidence but no optimizations, check if any optimization skills remain
+  if (hasEnrichedEvidence) {
+    const hasWebSearchAvailable = !usedSkillsSet.has('search_web_best_practices') && availableSkillIds.includes('search_web_best_practices');
+    const hasCompanyDocsAvailable = !usedSkillsSet.has('search_company_docs') && availableSkillIds.includes('search_company_docs');
+
+    // For intents that benefit from web/company search, try those first
+    const benefitsFromSearch = ['DIAGNOSTIC', 'OPTIMIZATION', 'GENERAL', 'LEARNING', 'TOOL_MASTERY'].includes(
+      state.queryClassification?.intent || ''
+    );
+
+    if (!benefitsFromSearch || (!hasWebSearchAvailable && !hasCompanyDocsAvailable)) {
+      // No search skills needed or available — terminate with enriched evidence alone
+      return {
+        thought: 'Have enriched user evidence. No additional search skills needed. Ready to respond.',
+        shouldTerminate: true,
+        terminationReason: 'Enriched evidence sufficient',
+      };
+    }
   }
 
   // Find next skill to use

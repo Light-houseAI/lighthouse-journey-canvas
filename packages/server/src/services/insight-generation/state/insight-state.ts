@@ -1,8 +1,11 @@
 /**
  * LangGraph State Definition for Insight Generation
  *
- * Defines the state schema that flows through the multi-agent pipeline:
- * - A1 (Retrieval) → A2 (Judge) → Orchestrator → A3/A4
+ * Defines the state schema that flows through the agentic loop:
+ * INIT → GUARDRAIL → [ REASON → ACT → OBSERVE ] → TERMINATE
+ *
+ * Active skills: A1 (enriched retrieval), A4-Web, A4-Company, Memory
+ * Deprecated agents: A2 (Judge), A3 (Comparator), A5 (Feature Adoption), A6 (Validator)
  *
  * Uses LangGraph's Annotation system for type-safe state management.
  */
@@ -31,13 +34,11 @@ import type { QueryClassification } from '../classifiers/query-classifier.js';
 /**
  * Main state annotation for the insight generation graph.
  *
- * State flows through agents:
+ * State flows through agentic loop:
  * 1. Input: query, userId, options
- * 2. A1 adds: userEvidence, peerEvidence, a1CritiqueResult
- * 3. A2 adds: userDiagnostics, peerDiagnostics, a2CritiqueResult
- * 4. Orchestrator adds: routingDecision
- * 5. A3/A4 add: optimization plans
- * 6. Merge node adds: mergedPlan, finalResult
+ * 2. A1 adds: userEvidence (enriched with gapAnalysis, insights, peerInsights from session_mappings)
+ * 3. Skills (A4-Web, A4-Company, Memory) add: optimization plans, docs, memory
+ * 4. Terminate: answerGen + fact-check validator
  */
 export const InsightStateAnnotation = Annotation.Root({
   // -------------------------------------------------------------------------
@@ -210,10 +211,10 @@ export const InsightStateAnnotation = Annotation.Root({
   }),
 
   // -------------------------------------------------------------------------
-  // A3 WORKFLOW ALIGNMENTS (for multi-workflow comparison)
+  // @deprecated A3 WORKFLOW ALIGNMENTS — replaced by peerInsights in session_mappings
   // -------------------------------------------------------------------------
 
-  /** Aligned workflow pairs from A3 alignment phase */
+  /** @deprecated A3 removed — peer data now in session_mappings peerInsights JSONB */
   workflowAlignments: Annotation<Array<{
     userWorkflowId: string;
     peerWorkflowId: string;
@@ -224,28 +225,28 @@ export const InsightStateAnnotation = Annotation.Root({
   }),
 
   // -------------------------------------------------------------------------
-  // A2 JUDGE OUTPUT
+  // @deprecated A2 JUDGE OUTPUT — replaced by gapAnalysis/insights in session_mappings
   // -------------------------------------------------------------------------
 
-  /** Diagnostics for user's workflows */
+  /** @deprecated A2 removed — gap analysis now in session_mappings gapAnalysis JSONB */
   userDiagnostics: Annotation<Diagnostics | null>({
     reducer: (_, b) => b,
     default: () => null,
   }),
 
-  /** Diagnostics for peer workflows */
+  /** @deprecated A2 removed — peer diagnostics replaced by peerInsights JSONB */
   peerDiagnostics: Annotation<Diagnostics | null>({
     reducer: (_, b) => b,
     default: () => null,
   }),
 
-  /** Critique result for A2 judgment */
+  /** @deprecated A2 removed */
   a2CritiqueResult: Annotation<CritiqueResult | null>({
     reducer: (_, b) => b,
     default: () => null,
   }),
 
-  /** Number of A2 retries */
+  /** @deprecated A2 removed */
   a2RetryCount: Annotation<number>({
     reducer: (a, b) => Math.max(a, b),
     default: () => 0,
@@ -265,7 +266,7 @@ export const InsightStateAnnotation = Annotation.Root({
   // DOWNSTREAM AGENT OUTPUTS
   // -------------------------------------------------------------------------
 
-  /** Optimization plan from A3 (peer comparison) */
+  /** @deprecated A3 removed — peer data now in session_mappings peerInsights JSONB */
   peerOptimizationPlan: Annotation<StepOptimizationPlan | null>({
     reducer: (_, b) => b,
     default: () => null,
@@ -283,7 +284,7 @@ export const InsightStateAnnotation = Annotation.Root({
     default: () => null,
   }),
 
-  /** Feature adoption tips from A5 (separate from optimization blocks) */
+  /** @deprecated A5 removed — feature insights now in session_mappings insights JSONB */
   featureAdoptionTips: Annotation<FeatureAdoptionTip[] | null>({
     reducer: (_, b) => b,
     default: () => null,
@@ -321,16 +322,16 @@ export const InsightStateAnnotation = Annotation.Root({
   }),
 
   // -------------------------------------------------------------------------
-  // A6 VALIDATOR OUTPUT (Recursive Validation Loop)
+  // @deprecated A6 VALIDATOR OUTPUT — replaced by fact-check validator in terminateNode
   // -------------------------------------------------------------------------
 
-  /** Generated answer that will be validated (alias for userQueryAnswer in validation context) */
+  /** @deprecated A6 removed — replaced by fact-check validator */
   generatedAnswer: Annotation<string | null>({
     reducer: (_, b) => b,
     default: () => null,
   }),
 
-  /** Gaps identified in the generated response */
+  /** @deprecated A6 removed — replaced by fact-check validator */
   identifiedGaps: Annotation<Array<{
     id: string;
     type: string;
@@ -343,19 +344,19 @@ export const InsightStateAnnotation = Annotation.Root({
     default: () => null,
   }),
 
-  /** Whether the response passed validation (no gaps remaining) */
+  /** @deprecated A6 removed — replaced by fact-check validator */
   validationPassed: Annotation<boolean>({
     reducer: (_, b) => b,
     default: () => false,
   }),
 
-  /** Number of validation loop iterations */
+  /** @deprecated A6 removed — replaced by fact-check validator */
   validationIterationCount: Annotation<number>({
     reducer: (_, b) => b,
     default: () => 0,
   }),
 
-  /** Final validation result */
+  /** @deprecated A6 removed — replaced by fact-check validator */
   validationResult: Annotation<{
     gaps: Array<{ id: string; type: string; location: string; description: string; severity: string; evidence: string }>;
     passed: boolean;
@@ -365,7 +366,7 @@ export const InsightStateAnnotation = Annotation.Root({
     default: () => null,
   }),
 
-  /** User workflows being analyzed (for validation context) */
+  /** @deprecated A6 removed — replaced by fact-check validator */
   userWorkflows: Annotation<unknown[] | null>({
     reducer: (_, b) => b,
     default: () => null,
@@ -506,10 +507,10 @@ export function createInitialState(params: {
     // User toolbox (historical tools)
     userToolbox: null,
 
-    // A3 workflow alignments
+    // @deprecated A3 — peer data now in session_mappings peerInsights
     workflowAlignments: null,
 
-    // A2 output
+    // @deprecated A2 — gap analysis now in session_mappings gapAnalysis/insights
     userDiagnostics: null,
     peerDiagnostics: null,
     a2CritiqueResult: null,
@@ -519,10 +520,10 @@ export function createInitialState(params: {
     routingDecision: null,
 
     // Downstream outputs
-    peerOptimizationPlan: null,
+    peerOptimizationPlan: null, // @deprecated A3
     webOptimizationPlan: null,
     companyOptimizationPlan: null,
-    featureAdoptionTips: null,
+    featureAdoptionTips: null, // @deprecated A5
     cachedWebSearchResult: null,
 
     // Final output
@@ -530,7 +531,7 @@ export function createInitialState(params: {
     userQueryAnswer: null,
     finalResult: null,
 
-    // A6 Validator output
+    // @deprecated A6 — replaced by fact-check validator
     generatedAnswer: null,
     identifiedGaps: null,
     validationPassed: false,
@@ -556,21 +557,21 @@ export function createInitialState(params: {
 }
 
 /**
- * Check if state has sufficient data for A2
+ * Check if state has sufficient data from A1 retrieval
  */
 export function hasA1Output(state: InsightState): boolean {
   return state.userEvidence !== null && state.a1CritiqueResult?.passed === true;
 }
 
 /**
- * Check if state has sufficient data for orchestrator
+ * @deprecated A2 removed — gapAnalysis now in session_mappings JSONB
  */
 export function hasA2Output(state: InsightState): boolean {
   return state.userDiagnostics !== null && state.a2CritiqueResult?.passed === true;
 }
 
 /**
- * Check if peer comparison is viable
+ * @deprecated A3 removed — peer data now in session_mappings peerInsights JSONB
  */
 export function canRunPeerComparison(state: InsightState): boolean {
   return (

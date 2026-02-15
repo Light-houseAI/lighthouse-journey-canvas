@@ -607,6 +607,9 @@ export function InteractiveMessage({
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
+              p: ({ children }) => (
+                <div className="mb-2 text-gray-700">{children}</div>
+              ),
               code: ({ inline, className, children, ...props }: {
                 inline?: boolean;
                 className?: string;

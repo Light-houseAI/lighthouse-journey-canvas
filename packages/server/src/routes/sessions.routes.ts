@@ -10,6 +10,7 @@
  * - POST /api/v2/sessions/:id/reclassify - Reclassify session
  * - POST /api/v2/sessions/:id/remap   - Remap session to different node
  * - POST /api/v2/sessions/feedback    - Submit RLHF feedback
+ * - POST /api/v2/sessions/stitch-context - Pre-compute cumulative context stitching
  */
 
 import { Router } from 'express';
@@ -131,6 +132,43 @@ router.post('/feedback', containerMiddleware, async (req: any, res: any, next: a
   try {
     const controller = req.scope.resolve(CONTAINER_TOKENS.SESSION_CONTROLLER);
     await controller.submitFeedback(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @route POST /api/v2/sessions/stitch-context
+ * @summary Pre-compute cumulative context stitching for a session
+ * @description Called by the desktop app during the "analyzing" phase. Runs 3-tier
+ *              context stitching (workstreams, tool mastery, pattern detection) using
+ *              a chain-based O(1) approach that builds on the previous session's context.
+ * @body {StitchContextRequest} Session data including summary, screenshots, gap analysis
+ * @response {200} {PerSessionStitchedContext} Stitched context result
+ * @response {400} {ApiErrorResponse} Validation error
+ * @response {401} {ApiErrorResponse} Authentication required
+ * @security BearerAuth
+ */
+router.post('/stitch-context', containerMiddleware, async (req: any, res: any, next: any) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { sessionId, workflowName, summary, screenshotDescriptions, gapAnalysis, appsUsed, startTime, endTime } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'sessionId is required' });
+    }
+
+    const service = req.scope.resolve(CONTAINER_TOKENS.CONTEXT_STITCHING_ENDPOINT_SERVICE);
+    const stitchedContext = await service.stitchForNewSession(
+      { sessionId, workflowName, summary, screenshotDescriptions, gapAnalysis, appsUsed: appsUsed || [], startTime, endTime },
+      userId
+    );
+
+    return res.json({ stitchedContext });
   } catch (error) {
     next(error);
   }

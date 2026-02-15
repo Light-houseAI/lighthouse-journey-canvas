@@ -51,7 +51,7 @@ This skill requires company docs to be enabled and indexed for the user's organi
 
   produces: ['companyOptimizationPlan'],
 
-  requires: ['userDiagnostics'], // Needs diagnostics for context
+  requires: ['userEvidence'], // Needs user evidence for context
 
   // =========================================================================
   // EXECUTION (callable function)
@@ -66,7 +66,7 @@ This skill requires company docs to be enabled and indexed for the user's organi
     const startTime = Date.now();
 
     logger.info('Company Docs Skill: Starting execution', {
-      hasUserDiagnostics: !!state.userDiagnostics,
+      hasUserEvidence: !!state.userEvidence,
       companyDocsEnabled,
       userId: state.userId,
     });
@@ -82,12 +82,12 @@ This skill requires company docs to be enabled and indexed for the user's organi
       };
     }
 
-    if (!state.userDiagnostics) {
+    if (!state.userEvidence) {
       return {
         success: false,
-        observation: 'Cannot search company docs: No diagnostics available. Run analyze_workflow_efficiency first.',
+        observation: 'Cannot search company docs: No user evidence available. Run retrieve_user_workflows first.',
         stateUpdates: {},
-        error: 'Missing prerequisite: userDiagnostics',
+        error: 'Missing prerequisite: userEvidence',
         executionTimeMs: Date.now() - startTime,
       };
     }

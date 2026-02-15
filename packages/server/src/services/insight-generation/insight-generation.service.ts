@@ -63,8 +63,6 @@ export interface InsightGenerationServiceDeps {
   noiseFilterService?: NoiseFilterService;
   /** Graph service for cross-session pattern detection */
   graphService?: import('./agentic-loop/agentic-loop.js').AgenticLoopDeps['graphService'];
-  /** Enable cross-session context stitching in retrieval (default: true) */
-  enableContextStitching?: boolean;
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 }
 
@@ -127,7 +125,6 @@ export class InsightGenerationService {
   private readonly traceService?: TraceService | null;
   private readonly noiseFilterService?: NoiseFilterService;
   private readonly graphService?: InsightGenerationServiceDeps['graphService'];
-  private readonly enableContextStitching: boolean;
   // Note: Company docs are now retrieved via NLQ service's searchCompanyDocuments()
 
   // In-memory listeners for real-time progress streaming (not persisted)
@@ -156,7 +153,6 @@ export class InsightGenerationService {
     this.traceService = deps.traceService;
     this.noiseFilterService = deps.noiseFilterService;
     this.graphService = deps.graphService;
-    this.enableContextStitching = deps.enableContextStitching ?? true; // Enable by default
 
     // Debug logging for trace service injection
     this.logger.info('InsightGenerationService initialized', {
@@ -311,6 +307,16 @@ export class InsightGenerationService {
   private async processJob(jobId: string): Promise<void> {
     const jobStartTime = Date.now();
 
+    // Increase max listeners to prevent false-positive warning during agentic loop.
+    // The multi-skill pipeline legitimately attaches 11+ abort listeners across
+    // sequential LLM calls (retrieval → web search → company docs → final response).
+    try {
+      const { setMaxListeners } = await import('events');
+      setMaxListeners(20);
+    } catch {
+      // Ignore if events module is unavailable
+    }
+
     const record = await this.jobRepository.findById(jobId);
     if (!record) {
       this.logger.error(`Job not found for processing: ${jobId}`);
@@ -389,6 +395,7 @@ export class InsightGenerationService {
           'agentic_action_failed': 'Retrying skill...',
           'agentic_action_skipped': 'Skipping, continuing...',
           'agentic_terminating': 'Generating final response...',
+          'agentic_fact_check_retry': 'Re-checking answer quality...',
           'agentic_complete': 'Finalizing results...',
           'agentic_failed': 'Processing failed',
         };
@@ -396,11 +403,8 @@ export class InsightGenerationService {
         // Skill-specific descriptions for agentic_executing:<skillId> stages
         const skillStageDescriptions: Record<string, string> = {
           'retrieve_user_workflows': 'Retrieving your workflow history...',
-          'analyze_workflow_efficiency': 'Analyzing workflow efficiency...',
-          'compare_with_peers': 'Comparing with peer patterns...',
           'search_web_best_practices': 'Searching web best practices...',
           'search_company_docs': 'Searching company documentation...',
-          'discover_underused_features': 'Discovering underused features...',
           'search_conversation_memory': 'Searching conversation history...',
         };
 
@@ -419,7 +423,6 @@ export class InsightGenerationService {
           perplexityApiKey: this.perplexityApiKey,
           modelConfig: options?.modelConfig,
           agenticConfig: agenticOptions?.agenticConfig,
-          enableContextStitching: this.enableContextStitching,
           // Write progress to DB so frontend polling can read it
           onProgressUpdate: async (progress: number, stage: string) => {
             let readableStage: string;
@@ -857,7 +860,6 @@ export class InsightGenerationService {
           perplexityApiKey: this.perplexityApiKey,
           modelConfig: options?.modelConfig,
           agenticConfig: agenticOptions?.agenticConfig,
-          enableContextStitching: this.enableContextStitching,
         };
 
         const agenticGraph = createAgenticLoopGraph(agenticDeps);

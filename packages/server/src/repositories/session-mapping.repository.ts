@@ -51,6 +51,8 @@ export interface CreateSessionMappingData {
   insights?: Record<string, unknown> | null;
   /** Peer insights fetched from backend API for this session's journey node */
   peerInsights?: Record<string, unknown>[] | null;
+  /** Pre-computed context stitching (3-tier cumulative analysis) */
+  stitchedContext?: Record<string, unknown> | null;
 }
 
 export interface UpdateSessionMappingData {
@@ -143,6 +145,7 @@ export class SessionMappingRepository {
           gapAnalysis: data.gapAnalysis,
           insights: data.insights,
           peerInsights: data.peerInsights,
+          stitchedContext: data.stitchedContext,
         })
         .returning();
 
@@ -206,6 +209,42 @@ export class SessionMappingRepository {
       this.logger.error('Failed to get session mapping by desktop session ID', {
         error: error instanceof Error ? error.message : String(error),
         desktopSessionId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get enriched session data by IDs (batch)
+   * Returns screenshotDescriptions, gapAnalysis, insights, and 4 embedding vectors
+   * Used by A1 to enrich evidence when sessions are @tagged or NLQ-retrieved
+   */
+  async getEnrichedByIds(
+    ids: string[]
+  ): Promise<Map<string, SessionMapping>> {
+    const resultMap = new Map<string, SessionMapping>();
+    if (ids.length === 0) return resultMap;
+
+    try {
+      const results = await this.database
+        .select()
+        .from(sessionMappings)
+        .where(inArray(sessionMappings.id, ids));
+
+      for (const row of results) {
+        resultMap.set(row.id, row);
+      }
+
+      this.logger.info('Fetched enriched session mappings by IDs', {
+        requestedCount: ids.length,
+        foundCount: resultMap.size,
+      });
+
+      return resultMap;
+    } catch (error) {
+      this.logger.error('Failed to fetch enriched session mappings by IDs', {
+        error: error instanceof Error ? error.message : String(error),
+        idCount: ids.length,
       });
       throw error;
     }
@@ -1351,6 +1390,101 @@ export class SessionMappingRepository {
         error: error instanceof Error ? error.message : String(error),
       });
       return [];
+    }
+  }
+
+  // ============================================================================
+  // CONTEXT STITCHING METHODS
+  // ============================================================================
+
+  /**
+   * Update the stitched_context JSONB for a session mapping.
+   */
+  async updateStitchedContext(
+    sessionMappingId: string,
+    stitchedContext: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      await this.database
+        .update(sessionMappings)
+        .set({ stitchedContext })
+        .where(eq(sessionMappings.id, sessionMappingId));
+    } catch (error) {
+      this.logger.error('Failed to update stitched context', {
+        sessionMappingId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get the most recent session's stitched_context for a user.
+   * Used for chain-based O(1) cumulative stitching.
+   */
+  async getLatestStitchedContext(
+    userId: number
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const results = await this.database
+        .select({
+          stitchedContext: sessionMappings.stitchedContext,
+        })
+        .from(sessionMappings)
+        .where(
+          and(
+            eq(sessionMappings.userId, userId),
+            sql`${sessionMappings.stitchedContext} IS NOT NULL`
+          )
+        )
+        .orderBy(desc(sessionMappings.endedAt))
+        .limit(1);
+
+      if (results.length === 0) return null;
+      return results[0].stitchedContext as Record<string, unknown> | null;
+    } catch (error) {
+      this.logger.error('Failed to get latest stitched context', {
+        userId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    }
+  }
+
+  /**
+   * Bulk-read stitched_context for multiple session IDs.
+   * Used by Insight Assistant to read pre-computed stitching.
+   */
+  async getPreComputedStitching(
+    sessionIds: string[]
+  ): Promise<Map<string, Record<string, unknown>>> {
+    try {
+      if (sessionIds.length === 0) return new Map();
+
+      const results = await this.database
+        .select({
+          desktopSessionId: sessionMappings.desktopSessionId,
+          stitchedContext: sessionMappings.stitchedContext,
+        })
+        .from(sessionMappings)
+        .where(inArray(sessionMappings.desktopSessionId, sessionIds));
+
+      const map = new Map<string, Record<string, unknown>>();
+      for (const row of results) {
+        if (row.stitchedContext) {
+          map.set(
+            row.desktopSessionId,
+            row.stitchedContext as Record<string, unknown>
+          );
+        }
+      }
+      return map;
+    } catch (error) {
+      this.logger.error('Failed to get pre-computed stitching', {
+        sessionIdCount: sessionIds.length,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return new Map();
     }
   }
 }

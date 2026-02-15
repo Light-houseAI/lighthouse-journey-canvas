@@ -13,11 +13,8 @@ import { withTimeout } from '../../../core/retry-utils.js';
 
 // Import all skills
 import { retrievalSkill } from './retrieval-skill.js';
-import { judgeSkill } from './judge-skill.js';
-import { comparatorSkill } from './comparator-skill.js';
 import { webSearchSkill } from './web-search-skill.js';
 import { companyDocsSkill } from './company-docs-skill.js';
-import { featureAdoptionSkill } from './feature-adoption-skill.js';
 import { memorySearchSkill } from './memory-search-skill.js';
 
 // ============================================================================
@@ -30,13 +27,10 @@ import { memorySearchSkill } from './memory-search-skill.js';
 export function createSkillRegistry(): SkillRegistry {
   const registry: SkillRegistry = new Map();
 
-  // Register all skills
+  // Register all skills (A2 Judge, A3 Comparator, A5 Feature Adoption removed — data now in session_mappings JSONB)
   registry.set('retrieve_user_workflows', retrievalSkill);
-  registry.set('analyze_workflow_efficiency', judgeSkill);
-  registry.set('compare_with_peers', comparatorSkill);
   registry.set('search_web_best_practices', webSearchSkill);
   registry.set('search_company_docs', companyDocsSkill);
-  registry.set('discover_underused_features', featureAdoptionSkill);
   registry.set('search_conversation_memory', memorySearchSkill);
 
   return registry;
@@ -74,84 +68,52 @@ export function getAllSkills(registry: SkillRegistry): Skill[] {
 export const INTENT_TO_SKILLS: Record<QueryIntent, SkillId[]> = {
   DIAGNOSTIC: [
     'retrieve_user_workflows',
-    'analyze_workflow_efficiency',
-    'compare_with_peers',
-    'discover_underused_features',
     'search_web_best_practices',
-    'search_company_docs', // Added: Internal docs may have relevant procedures
+    'search_company_docs',
   ],
   OPTIMIZATION: [
     'retrieve_user_workflows',
-    'analyze_workflow_efficiency',
-    'compare_with_peers',
-    'discover_underused_features',
     'search_web_best_practices',
-    'search_company_docs', // Added: Company-specific best practices
+    'search_company_docs',
   ],
   COMPARISON: [
     'retrieve_user_workflows',
-    'analyze_workflow_efficiency',
-    'compare_with_peers',
-    'discover_underused_features',
   ],
   EXPLORATION: [
     'retrieve_user_workflows',
-    'discover_underused_features',
   ],
   LEARNING: [
     'retrieve_user_workflows',
-    'compare_with_peers',
     'search_web_best_practices',
-    'search_company_docs', // Added: Internal training/onboarding docs
-    'discover_underused_features',
+    'search_company_docs',
   ],
   PATTERN: [
     'retrieve_user_workflows',
-    'analyze_workflow_efficiency',
-    'discover_underused_features',
   ],
   FEATURE_DISCOVERY: [
     'retrieve_user_workflows',
-    'analyze_workflow_efficiency',
-    'discover_underused_features',
-    'compare_with_peers',
   ],
   TOOL_MASTERY: [
     'retrieve_user_workflows',
-    'analyze_workflow_efficiency',
-    'discover_underused_features',
     'search_web_best_practices',
-    'search_company_docs', // Added: Internal tool guides
-    'compare_with_peers',
+    'search_company_docs',
   ],
   TOOL_INTEGRATION: [
-    // Web search FIRST - primary source for unknown tools and integration guidance
     'search_web_best_practices',
     'retrieve_user_workflows',
-    'discover_underused_features',
-    // Skip A2 Judge and A3 Comparator - not useful for tool integration queries
   ],
   GENERAL: [
     'retrieve_user_workflows',
-    'analyze_workflow_efficiency',
-    'compare_with_peers',
-    'discover_underused_features',
     'search_web_best_practices',
-    'search_company_docs', // Added: Fallback source
+    'search_company_docs',
   ],
   BLOG_CREATION: [
-    // Blog creation only needs retrieval - the blog prompt does the heavy lifting
-    // Uses BLOG_GENERATION_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
     'retrieve_user_workflows',
   ],
   PROGRESS_UPDATE: [
-    // Progress update only needs retrieval - the progress update prompt does the heavy lifting
-    // Uses PROGRESS_UPDATE_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
     'retrieve_user_workflows',
   ],
   SKILL_FILE_GENERATION: [
-    // Skill file generation only needs retrieval - the skill file prompt does the heavy lifting
-    // Uses SKILL_FILE_GENERATION_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
     'retrieve_user_workflows',
   ],
 };
@@ -246,9 +208,6 @@ export { formatSkillsForPrompt, getAvailableSkills } from './skill-types.js';
 
 // Export individual skills for direct use if needed
 export { retrievalSkill } from './retrieval-skill.js';
-export { judgeSkill } from './judge-skill.js';
-export { comparatorSkill } from './comparator-skill.js';
 export { webSearchSkill } from './web-search-skill.js';
 export { companyDocsSkill } from './company-docs-skill.js';
-export { featureAdoptionSkill } from './feature-adoption-skill.js';
 export { memorySearchSkill } from './memory-search-skill.js';

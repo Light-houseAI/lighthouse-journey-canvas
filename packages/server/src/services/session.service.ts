@@ -612,6 +612,8 @@ export class SessionService {
         insights: sessionData.insights || null,
         // Store peer insights fetched from backend API
         peerInsights: sessionData.peerInsights || null,
+        // Store pre-computed context stitching from desktop analyzing phase
+        stitchedContext: sessionData.stitchedContext || null,
       });
 
       this.logger.info('Session push complete', {

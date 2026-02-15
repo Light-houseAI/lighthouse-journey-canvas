@@ -50,8 +50,6 @@ export interface SkillDependencies {
   companyDocsEnabled: boolean;
   perplexityApiKey?: string;
   modelConfig?: Partial<InsightModelConfiguration>;
-  /** Enable cross-session context stitching in retrieval */
-  enableContextStitching?: boolean;
 }
 
 // ============================================================================

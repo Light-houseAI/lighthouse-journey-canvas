@@ -226,6 +226,12 @@ export interface SessionInfo {
     category: string;
     isMeaningful?: boolean;
   }>;
+  /** Deep gap & improvement analysis from Gemini Vision (pre-computed by Desktop companion) */
+  gapAnalysis?: Record<string, unknown>;
+  /** Session insights from Gemini (at-a-glance, impressive things, issues, improvements) */
+  insights?: Record<string, unknown>;
+  /** Peer insights fetched from backend API for this session's journey node (conditional on user prefs) */
+  peerInsights?: Record<string, unknown>[] | null;
 }
 
 /**
@@ -301,6 +307,13 @@ export interface EvidenceBundle {
   };
   /** Repetitive workflow patterns detected across user's sessions (optional) */
   repetitivePatterns?: RepetitiveWorkflowPattern[];
+  /** Pre-computed session embeddings for downstream agents (A3 peer comparison) */
+  sessionEmbeddings?: Map<string, {
+    summaryEmbedding?: number[] | null;
+    highLevelSummaryEmbedding?: number[] | null;
+    screenshotDescriptionsEmbedding?: number[] | null;
+    gapAnalysisEmbedding?: number[] | null;
+  }>;
 }
 
 // ============================================================================
@@ -618,13 +631,11 @@ export type OptimizationSource =
   | 'heuristic';
 
 // ============================================================================
-// FEATURE ADOPTION TYPES (A5 Output)
+// @deprecated FEATURE ADOPTION TYPES (A5 Output) — A5 removed, insights now in session_mappings
 // ============================================================================
 
 /**
- * Feature adoption tip from A5 Feature Adoption Agent
- * Suggests underused features within tools the user already has
- * Displayed as separate "Workflow Tips" section (not merged with optimization blocks)
+ * @deprecated A5 removed — feature insights now in session_mappings insights JSONB
  */
 export interface FeatureAdoptionTip {
   /** Unique identifier for the tip */
@@ -827,7 +838,7 @@ export interface InsightGenerationResult {
   /** LLM-generated follow-up questions based on the analysis context */
   suggestedFollowUps?: string[];
 
-  /** Feature adoption tips from A5 (displayed as separate "Workflow Tips" section) */
+  /** @deprecated A5 removed — feature insights now in session_mappings insights JSONB */
   featureAdoptionTips?: FeatureAdoptionTip[];
 
   /**
@@ -904,10 +915,11 @@ export interface CritiqueIssue {
  */
 export type AgentId =
   | 'A1_RETRIEVAL'
-  | 'A2_JUDGE'
-  | 'A3_COMPARATOR'
   | 'A4_WEB'
   | 'A4_COMPANY'
+  // Deprecated: kept for legacy orchestrator-graph.ts compatibility
+  | 'A2_JUDGE'
+  | 'A3_COMPARATOR'
   | 'A5_FEATURE_ADOPTION';
 
 /**
@@ -966,15 +978,15 @@ export interface AgentModelConfig {
 export interface InsightModelConfiguration {
   /** A1 Retrieval Agent - Gemini 2.5 Flash by default */
   a1Retrieval: AgentModelConfig;
-  /** A2 Judge Agent - Gemini 3 Flash Preview by default (LLM-as-judge) */
+  /** @deprecated A2 removed — gapAnalysis now in session_mappings JSONB */
   a2Judge: AgentModelConfig;
-  /** A3 Comparator Agent - Gemini 2.5 Flash by default */
+  /** @deprecated A3 removed — peer data now in session_mappings peerInsights JSONB */
   a3Comparator: AgentModelConfig;
   /** A4 Web Best Practices Agent - Gemini 2.5 Flash by default */
   a4Web: AgentModelConfig;
   /** A4 Company Docs Agent - Gemini 2.5 Flash by default */
   a4Company: AgentModelConfig;
-  /** A5 Feature Adoption Agent - Gemini 2.5 Flash by default */
+  /** @deprecated A5 removed — feature insights now in session_mappings insights JSONB */
   a5FeatureAdoption: AgentModelConfig;
 }
 
@@ -984,7 +996,7 @@ export interface InsightModelConfiguration {
 export const DEFAULT_MODEL_CONFIG: InsightModelConfiguration = {
   a1Retrieval: {
     provider: 'google',
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3-flash-preview',
     temperature: 0.3,
     maxTokens: 8000,
   },
@@ -1198,12 +1210,13 @@ export const AGENTIC_MAX_ITERATIONS = 10;
  */
 export type SkillId =
   | 'retrieve_user_workflows'
-  | 'analyze_workflow_efficiency'
-  | 'compare_with_peers'
   | 'search_web_best_practices'
   | 'search_company_docs'
-  | 'discover_underused_features'
-  | 'search_conversation_memory';
+  | 'search_conversation_memory'
+  // Deprecated: kept for file-level compatibility (files exist but not registered in skill-registry)
+  | 'analyze_workflow_efficiency'
+  | 'compare_with_peers'
+  | 'discover_underused_features';
 
 /**
  * Query type classification for guardrails
@@ -1327,6 +1340,8 @@ export interface AgenticLoopConfig {
   responseModel: AgentModelConfig;
   /** Whether to enable verbose logging */
   verbose: boolean;
+  /** Maximum number of fact-check retry regenerations (0 = no retries, default 2) */
+  maxFactCheckRetries: number;
 }
 
 /**
@@ -1354,6 +1369,7 @@ export const DEFAULT_AGENTIC_CONFIG: AgenticLoopConfig = {
     maxTokens: 4000,
   },
   verbose: false,
+  maxFactCheckRetries: 2,
 };
 
 /**

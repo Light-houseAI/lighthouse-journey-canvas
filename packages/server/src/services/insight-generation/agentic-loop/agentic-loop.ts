@@ -39,7 +39,8 @@ import { reasoningNode, routeAfterReasoning } from './reasoning.js';
 import { createSkillRegistry, getSkill, executeSkillWithTimeout } from '../skills/skill-registry.js';
 import { AGENTIC_MAX_ITERATIONS, DEFAULT_AGENTIC_CONFIG, type AgenticLoopConfig } from '../types.js';
 import { extractToolNames, validateToolInResults, generateUnknownToolResponse } from '../utils/tool-validator.js';
-import { identifyResponseGaps, regenerateWithGapFixes, type ValidatorGraphDeps } from '../graphs/validator-graph.js';
+// Old A6 validator removed — replaced by fact-check-validator.ts (dynamically imported in terminateNode)
+import type { FactCheckIssue } from '../validators/fact-check-validator.js';
 import { BLOG_GENERATION_SYSTEM_PROMPT } from '../prompts/blog-system-prompt.js';
 import { PROGRESS_UPDATE_SYSTEM_PROMPT } from '../prompts/progressupdate-system-prompt.js';
 import { SKILL_FILE_GENERATION_SYSTEM_PROMPT } from '../prompts/skillfile-system-prompt.js';
@@ -63,8 +64,6 @@ export interface AgenticLoopDeps {
   perplexityApiKey?: string;
   modelConfig?: Partial<InsightModelConfiguration>;
   agenticConfig?: Partial<AgenticLoopConfig>;
-  /** Enable cross-session context stitching in retrieval */
-  enableContextStitching?: boolean;
   /** Callback to persist progress updates to database for frontend polling */
   onProgressUpdate?: (progress: number, stage: string) => Promise<void>;
 }
@@ -130,7 +129,6 @@ async function actionNode(
     companyDocsEnabled: deps.companyDocsEnabled,
     perplexityApiKey: deps.perplexityApiKey,
     modelConfig: deps.modelConfig,
-    enableContextStitching: deps.enableContextStitching,
   };
 
   try {
@@ -325,116 +323,109 @@ async function terminateNode(
     };
   }
 
-  // Generate response from gathered data using the dedicated response model
+  // =========================================================================
+  // GENERATE + FACT-CHECK RETRY LOOP
+  // Attempt 1: generate with evidence boundary (no prior issues)
+  // Attempts 2..N: regenerate from scratch with prior fact-check issues injected
+  // =========================================================================
   try {
-    const response = await generateFinalResponse(state, responseLLMProvider, logger);
+    const config = { ...DEFAULT_AGENTIC_CONFIG, ...deps.agenticConfig };
+    const maxRetries = config.maxFactCheckRetries;
 
-    // =========================================================================
-    // A6 VALIDATION LOOP: Recursive validation to catch response gaps
-    // =========================================================================
-    const MAX_VALIDATION_ITERATIONS = 2;
-    let validatedAnswer = response.userQueryAnswer;
-    let validationIterationCount = 0;
-
-    // Prepare user workflows for validation context
-    const userWorkflows = state.userEvidence?.workflows || [];
-
-    // Skip validation for creative/summarization intents — their specialized
-    // system prompts (blog-system-prompt.ts, progressupdate-system-prompt.ts)
-    // already enforce quality. A6 gap types are designed for workflow analysis.
     const queryIntent = state.queryClassification?.intent;
     const SKIP_VALIDATION_INTENTS = ['BLOG_CREATION', 'PROGRESS_UPDATE', 'SKILL_FILE_GENERATION'];
     const shouldValidate = !SKIP_VALIDATION_INTENTS.includes(queryIntent as string);
+    const userWorkflows = state.userEvidence?.workflows || [];
+    const userSessions = state.userEvidence?.sessions || [];
+    const canValidate = shouldValidate && (userWorkflows.length > 0 || userSessions.length > 0);
 
-    // Only run validation if we have an answer, workflows, and a validatable intent
-    if (shouldValidate && validatedAnswer && userWorkflows.length > 0) {
-      const validatorDeps: ValidatorGraphDeps = {
+    let currentResponse: InsightGenerationResult | undefined;
+    let factCheckIssuesForRetry: FactCheckIssue[] | undefined;
+    let attemptNumber = 0;
+
+    while (attemptNumber <= maxRetries) {
+      attemptNumber++;
+
+      // Generate response (with fact-check issues on retries)
+      currentResponse = await generateFinalResponse(
+        state,
+        responseLLMProvider,
         logger,
-        llmProvider: responseLLMProvider,
-      };
+        factCheckIssuesForRetry
+      );
 
-      logger.info('A6: Starting response validation', {
-        answerLength: validatedAnswer.length,
-        workflowCount: userWorkflows.length,
-      });
+      const currentAnswer = currentResponse.userQueryAnswer;
 
-      // Recursive validation loop
-      while (validationIterationCount < MAX_VALIDATION_ITERATIONS) {
-        validationIterationCount++;
-
-        try {
-          // Phase 1: Identify gaps
-          const gaps = await identifyResponseGaps(validatedAnswer, userWorkflows, validatorDeps);
-
-          logger.info(`A6: Validation iteration ${validationIterationCount}`, {
-            gapsFound: gaps.length,
-            gapTypes: gaps.map(g => g.type),
-          });
-
-          // No gaps found - validation passed
-          if (gaps.length === 0) {
-            logger.info('A6: Validation passed - no gaps found', {
-              iterations: validationIterationCount,
-            });
-            break;
-          }
-
-          // Phase 2: Regenerate with gap fixes
-          logger.info('A6: Improving response to fix gaps', {
-            gapCount: gaps.length,
-            iteration: validationIterationCount,
-          });
-
-          validatedAnswer = await regenerateWithGapFixes(
-            validatedAnswer,
-            gaps,
-            userWorkflows,
-            validatorDeps
-          );
-
-          logger.info('A6: Response improved', {
-            newAnswerLength: validatedAnswer.length,
-            iteration: validationIterationCount,
-          });
-        } catch (validationError) {
-          logger.warn('A6: Validation iteration failed, continuing with current answer', {
-            error: validationError instanceof Error ? validationError.message : String(validationError),
-            iteration: validationIterationCount,
-          });
-          break;
-        }
+      // Skip fact-check for certain intents or when no evidence is available
+      if (!canValidate || !currentAnswer) {
+        logger.info('Fact-check: Skipping', {
+          reason: !shouldValidate ? `intent=${queryIntent}` : 'no answer or evidence',
+          attempt: attemptNumber,
+        });
+        break; // Use current answer as-is
       }
 
-      logger.info('A6: Validation loop complete', {
-        iterations: validationIterationCount,
-        originalLength: response.userQueryAnswer.length,
-        finalLength: validatedAnswer.length,
-      });
-    } else {
-      logger.info('A6: Skipping validation', {
-        reason: !shouldValidate ? `intent=${queryIntent}` : 'no answer or workflows',
-      });
+      // Run fact-check validation
+      try {
+        const { factCheckResponse: doFactCheck } = await import('../validators/fact-check-validator.js');
+
+        logger.info('Fact-check: Starting validation', {
+          attempt: attemptNumber,
+          maxAttempts: maxRetries + 1,
+          answerLength: currentAnswer.length,
+          workflowCount: userWorkflows.length,
+          sessionCount: userSessions.length,
+          isRetry: attemptNumber > 1,
+        });
+
+        const factCheckResult = await doFactCheck(
+          currentAnswer,
+          { sessions: userSessions, workflows: userWorkflows },
+          { logger, llmProvider: responseLLMProvider }
+        );
+
+        if (factCheckResult.passed || factCheckResult.issues.length === 0) {
+          logger.info('Fact-check: Passed', { attempt: attemptNumber });
+          break; // Answer is clean, use it
+        }
+
+        // Fact-check failed
+        const criticalCount = factCheckResult.issues.filter((i: FactCheckIssue) => i.severity === 'critical').length;
+        logger.info('Fact-check: Issues found', {
+          attempt: attemptNumber,
+          issueCount: factCheckResult.issues.length,
+          criticalCount,
+          willRetry: attemptNumber <= maxRetries,
+          issues: factCheckResult.issues.map((i: FactCheckIssue) => `${i.type}: "${i.claim}"`),
+        });
+
+        if (attemptNumber <= maxRetries) {
+          // Store issues for the next regeneration attempt
+          factCheckIssuesForRetry = factCheckResult.issues;
+
+          // Emit progress update to indicate re-generation
+          if (deps.onProgressUpdate) {
+            await deps.onProgressUpdate(95, 'agentic_fact_check_retry').catch(() => {});
+          }
+        }
+        // If attemptNumber > maxRetries, loop exits and we use the last answer
+      } catch (error) {
+        logger.warn('Fact-check: Validation failed, using current answer', {
+          error: error instanceof Error ? error.message : String(error),
+          attempt: attemptNumber,
+        });
+        break; // Fact-check itself failed, use current answer gracefully
+      }
     }
 
-    // Strip internal FIXED comments from the final answer (these are for debugging, not for users)
-    const cleanedAnswer = validatedAnswer.replace(/<!--\s*FIXED:.*?-->\s*/g, '');
-
-    if (cleanedAnswer.length !== validatedAnswer.length) {
-      logger.info('A6: Stripped FIXED comments from final answer', {
-        before: validatedAnswer.length,
-        after: cleanedAnswer.length,
-      });
-    }
-
-    // Update response with validated answer
-    const validatedResponse = {
-      ...response,
-      userQueryAnswer: cleanedAnswer,
-    };
+    logger.info('Fact-check: Finalized', {
+      totalAttempts: attemptNumber,
+      retriesUsed: attemptNumber - 1,
+    });
 
     return {
-      finalResult: validatedResponse,
-      userQueryAnswer: validatedResponse.userQueryAnswer,
+      finalResult: currentResponse!,
+      userQueryAnswer: currentResponse!.userQueryAnswer,
       status: 'completed',
       progress: 100,
       completedAt: new Date().toISOString(),
@@ -1178,19 +1169,71 @@ ${workflowDetails}`;
   }
 
   // =========================================================================
-  // SOURCE-LABELED CONTEXT SECTIONS
+  // SESSION ANALYSIS [Source: session_mappings] — enriched JSONB per session
+  // Replaces A2 (Judge), A3 (Comparator), A5 (Feature Adoption) sections
   // =========================================================================
 
-  // A2: Identified inefficiencies (PRIORITY)
-  if (state.userDiagnostics?.inefficiencies && state.userDiagnostics.inefficiencies.length > 0) {
-    const ineffSummary = state.userDiagnostics.inefficiencies
-      .slice(0, MAX_RECOMMENDATIONS)
-      .map(i => {
-        const wastedTime = i.estimatedWastedSeconds ? ` (~${Math.round(i.estimatedWastedSeconds / 60)}min wasted)` : '';
-        return `- **${formatInefficiencyType(i.type)}**: ${sanitizeDescriptionForUser(i.description)}${wastedTime}`;
-      })
-      .join('\n');
-    sections.push(`DETECTED INEFFICIENCIES [Source: Workflow Analysis]:\nThese patterns were identified in YOUR captured sessions:\n${ineffSummary}`);
+  if (state.userEvidence?.sessions && state.userEvidence.sessions.length > 0) {
+    const sessionsWithEnrichedData = state.userEvidence.sessions.filter(
+      s => s.gapAnalysis || s.insights || s.peerInsights
+    );
+
+    if (sessionsWithEnrichedData.length > 0) {
+      const enrichedParts: string[] = [];
+
+      for (const session of sessionsWithEnrichedData) {
+        const sessionParts: string[] = [];
+        const duration = session.durationSeconds
+          ? `${Math.round(session.durationSeconds / 60)}m`
+          : 'unknown';
+        const apps = session.appsUsed?.join(', ') || 'unknown';
+
+        sessionParts.push(`--- Session: "${session.highLevelSummary || session.startActivity || session.sessionId}" (${duration}, ${apps}) ---`);
+
+        if (session.gapAnalysis) {
+          const ga = session.gapAnalysis as Record<string, unknown>;
+          const score = ga.overallEfficiencyScore != null ? `Efficiency Score: ${ga.overallEfficiencyScore}/100` : '';
+          if (score) sessionParts.push(`  ${score}`);
+          if (Array.isArray(ga.stepByStepRecommendations)) {
+            const recs = ga.stepByStepRecommendations.slice(0, 3).map((r: any) =>
+              `    - ${typeof r === 'string' ? r : r?.recommendation || JSON.stringify(r)}`
+            ).join('\n');
+            if (recs) sessionParts.push(`  Recommendations:\n${recs}`);
+          }
+          if (Array.isArray(ga.significantImprovements)) {
+            const improv = ga.significantImprovements.slice(0, 2).map((i: any) =>
+              `    - ${typeof i === 'string' ? i : JSON.stringify(i)}`
+            ).join('\n');
+            if (improv) sessionParts.push(`  Key Improvements:\n${improv}`);
+          }
+        }
+
+        if (session.insights) {
+          const ins = session.insights as Record<string, unknown>;
+          if (ins.at_a_glance) {
+            const glance = String(ins.at_a_glance);
+            sessionParts.push(`  At a Glance: ${glance.length > 200 ? glance.slice(0, 200) + '...' : glance}`);
+          }
+          if (Array.isArray(ins.issues) && ins.issues.length > 0) {
+            sessionParts.push(`  Issues: ${ins.issues.slice(0, 3).map((i: any) => typeof i === 'string' ? i : JSON.stringify(i)).join('; ')}`);
+          }
+          if (Array.isArray(ins.improvements) && ins.improvements.length > 0) {
+            sessionParts.push(`  Improvements: ${ins.improvements.slice(0, 3).map((i: any) => typeof i === 'string' ? i : JSON.stringify(i)).join('; ')}`);
+          }
+        }
+
+        if (session.peerInsights && Array.isArray(session.peerInsights) && session.peerInsights.length > 0) {
+          const peerSummary = session.peerInsights.slice(0, 2).map((p: any) =>
+            typeof p === 'string' ? p : (p?.summary || p?.learningPoint || JSON.stringify(p))
+          ).join('; ');
+          sessionParts.push(`  Peer Insights: ${peerSummary.length > 200 ? peerSummary.slice(0, 200) + '...' : peerSummary}`);
+        }
+
+        enrichedParts.push(sessionParts.join('\n'));
+      }
+
+      sections.push(`SESSION ANALYSIS [Source: session_mappings]:\nPre-computed analysis for ${sessionsWithEnrichedData.length} session(s):\n\n${enrichedParts.join('\n\n')}`);
+    }
   }
 
   // Repetitive patterns
@@ -1205,83 +1248,6 @@ ${workflowDetails}`;
       })
       .join('\n');
     sections.push(`REPETITIVE PATTERNS [Source: Session Analysis]:\nThese recurring patterns represent automation opportunities:\n${patternSummary}`);
-  }
-
-  // A2: Opportunities
-  if (state.userDiagnostics?.opportunities && state.userDiagnostics.opportunities.length > 0) {
-    const oppSummary = state.userDiagnostics.opportunities
-      .slice(0, MAX_RECOMMENDATIONS)
-      .map(o => {
-        const tool = o.suggestedTool ? ` → Use ${o.suggestedTool}` : '';
-        const shortcut = o.shortcutCommand ? ` (${o.shortcutCommand})` : '';
-        const feature = o.featureSuggestion ? ` - ${o.featureSuggestion}` : '';
-        return `- **${o.type}**: ${o.description}${tool}${shortcut}${feature}`;
-      })
-      .join('\n');
-    sections.push(`IMPROVEMENT OPPORTUNITIES [Source: Workflow Analysis]:\n${oppSummary}`);
-  }
-
-  // A2: EFFECTIVENESS ANALYSIS (Step-by-step quality critique)
-  if (state.userDiagnostics?.effectivenessAnalysis) {
-    const eff = state.userDiagnostics.effectivenessAnalysis;
-    const effectivenessParts: string[] = [];
-
-    // Overall summary
-    effectivenessParts.push(`**Overall Effectiveness Score**: ${eff.overallEffectivenessScore}/100`);
-    effectivenessParts.push(`**Summary**: ${eff.effectivenessSummary}`);
-
-    // Top priorities
-    if (eff.topPriorities && eff.topPriorities.length > 0) {
-      effectivenessParts.push(`\n**Top Priorities for Improvement**:\n${eff.topPriorities.map((p, i) => `${i + 1}. ${p}`).join('\n')}`);
-    }
-
-    // Step-by-step quality analysis
-    if (eff.stepAnalysis && eff.stepAnalysis.length > 0) {
-      const stepDetails = eff.stepAnalysis.slice(0, 5).map(s => {
-        const rating = s.qualityRating.toUpperCase();
-        return `- **${s.whatUserDid}**\n    Quality: ${rating}\n    Could improve: ${s.couldHaveDoneDifferently}\n    Why better: ${s.whyBetter}`;
-      }).join('\n');
-      effectivenessParts.push(`\n**Step-by-Step Quality Analysis**:\n${stepDetails}`);
-    }
-
-    // Missed activities
-    if (eff.missedActivities && eff.missedActivities.length > 0) {
-      const missedDetails = eff.missedActivities.map(m => {
-        const impact = m.impactLevel.toUpperCase();
-        return `- **${m.activity}** (Impact: ${impact})\n    When: After ${m.shouldOccurAfter}\n    Why important: ${m.whyImportant}\n    Recommendation: ${m.recommendation}`;
-      }).join('\n');
-      effectivenessParts.push(`\n**Activities You Missed**:\n${missedDetails}`);
-    }
-
-    // Content quality critiques
-    if (eff.contentCritiques && eff.contentCritiques.length > 0) {
-      const critiqueDetails = eff.contentCritiques.map(c => {
-        const rating = c.rating.toUpperCase();
-        return `- **${c.aspect}** (${rating}): ${c.observation}\n    Suggestion: ${c.improvementSuggestion}`;
-      }).join('\n');
-      effectivenessParts.push(`\n**Content Quality Observations**:\n${critiqueDetails}`);
-    }
-
-    sections.push(`EFFECTIVENESS ANALYSIS [Source: Quality Assessment]:\nThis evaluates the QUALITY and OUTCOMES of your work, not just efficiency:\n\n${effectivenessParts.join('\n')}`);
-  }
-
-  // A5: Feature Adoption Tips
-  if (state.featureAdoptionTips && state.featureAdoptionTips.length > 0) {
-    const tipsSummary = state.featureAdoptionTips
-      .map(t => `- **${t.toolName} - ${t.featureName}** (${t.triggerOrShortcut}): ${t.message}`)
-      .join('\n');
-    sections.push(`TOOL FEATURE RECOMMENDATIONS [Source: Feature Adoption]:\nFeatures in tools you already use:\n${tipsSummary}`);
-  }
-
-  // A3: Peer comparison insights
-  if (state.peerOptimizationPlan?.blocks && state.peerOptimizationPlan.blocks.length > 0) {
-    const peerInsights = state.peerOptimizationPlan.blocks
-      .map(b => {
-        const savedTime = b.timeSaved ? ` (saves ~${Math.round(b.timeSaved / 60)}min)` : '';
-        return `- ${b.whyThisMatters}${savedTime} (${Math.round(b.relativeImprovement)}% improvement)`;
-      })
-      .join('\n');
-    sections.push(`PEER WORKFLOW INSIGHTS [Source: Similar Users]:\nHow others with similar workflows optimized:\n${peerInsights}`);
   }
 
   // A4-Company: Internal documentation
@@ -1314,10 +1280,83 @@ ${workflowDetails}`;
   return sections.join('\n\n');
 }
 
+/**
+ * Build an explicit evidence boundary listing the ONLY facts the LLM may reference.
+ * This prevents hallucination by giving the model a concrete allowlist.
+ */
+function buildEvidenceBoundary(state: AgenticState): string {
+  const sessions = state.userEvidence?.sessions || [];
+  const workflows = state.userEvidence?.workflows || [];
+
+  // Collect all unique tools/apps from sessions and workflows
+  const toolSet = new Set<string>();
+  for (const s of sessions) {
+    if (s.appsUsed) s.appsUsed.forEach(app => toolSet.add(app));
+  }
+  for (const w of workflows) {
+    if (w.tools) w.tools.forEach(tool => toolSet.add(tool));
+  }
+  const toolsList = toolSet.size > 0
+    ? Array.from(toolSet).join(', ')
+    : 'No tool data available — do NOT mention any specific tools';
+
+  // List sessions with exact names and durations
+  const sessionsList = sessions.length > 0
+    ? sessions.slice(0, 10).map(s => {
+        const name = s.highLevelSummary || s.startActivity || s.sessionId;
+        const duration = s.durationSeconds ? `${Math.round(s.durationSeconds / 60)}min` : 'unknown duration';
+        const date = s.startTime ? new Date(s.startTime).toLocaleDateString() : '';
+        return `- "${name}" (${duration}${date ? `, ${date}` : ''})`;
+      }).join('\n')
+    : 'No session data available — do NOT reference any sessions';
+
+  // List workflows with exact names, step counts, and durations
+  const workflowsList = workflows.length > 0
+    ? workflows.slice(0, 10).map(w => {
+        const duration = `${Math.round(w.totalDurationSeconds / 60)}min`;
+        return `- "${w.title}" (${w.steps.length} steps, ${duration}, tools: ${w.tools?.join(', ') || 'unknown'})`;
+      }).join('\n')
+    : 'No workflow data available — do NOT reference any workflows';
+
+  // Extract only metrics that actually exist in the data
+  const metricParts: string[] = [];
+  for (const s of sessions) {
+    if (s.gapAnalysis) {
+      const ga = s.gapAnalysis as Record<string, unknown>;
+      if (ga.overallEfficiencyScore != null) {
+        const name = s.highLevelSummary || s.startActivity || s.sessionId;
+        metricParts.push(`- "${name}": Efficiency Score = ${ga.overallEfficiencyScore}/100`);
+      }
+    }
+  }
+  const metricsList = metricParts.length > 0
+    ? metricParts.join('\n')
+    : 'No pre-computed metrics available — do NOT invent percentages or scores';
+
+  return `## EVIDENCE BOUNDARY — MANDATORY CONSTRAINTS
+
+You may ONLY reference the following verified facts. Any claim not traceable to this list is HALLUCINATION.
+
+### Verified Tools/Apps (ONLY these):
+${toolsList}
+
+### Verified Sessions (ONLY these — use exact names and durations):
+${sessionsList}
+
+### Verified Workflows (ONLY these — use exact names and step counts):
+${workflowsList}
+
+### Verified Metrics (ONLY these):
+${metricsList}
+
+RULE: If a tool, session, workflow, duration, or metric is NOT in the lists above, you MUST NOT mention it. When evidence is limited, say less rather than fabricate.`;
+}
+
 async function generateFinalResponse(
   state: AgenticState,
   llmProvider: LLMProvider,
-  logger: Logger
+  logger: Logger,
+  previousFactCheckIssues?: FactCheckIssue[]
 ): Promise<InsightGenerationResult> {
   const intent = state.queryClassification?.intent || 'GENERAL';
 
@@ -1345,6 +1384,18 @@ async function generateFinalResponse(
 
   // Build rich, source-attributed context using the ported function
   const aggregatedContext = buildStructuredContext(state);
+
+  // =========================================================================
+  // EVIDENCE BOUNDARY: Explicit allowlist to prevent hallucination
+  // =========================================================================
+  const evidenceBoundary = buildEvidenceBoundary(state);
+
+  // Build fact-check retry context (only on regeneration retries)
+  const factCheckRetryInstructions = previousFactCheckIssues && previousFactCheckIssues.length > 0
+    ? `\n---\n\n## CRITICAL: PREVIOUS FACT-CHECK FAILURES\n\nA previous version of this response was fact-checked and the following claims were found to be HALLUCINATED. You MUST NOT repeat these errors:\n\n${previousFactCheckIssues.map((issue, i) =>
+        `${i + 1}. [${issue.severity.toUpperCase()}] **${issue.type}**: "${issue.claim}"\n   Evidence says: ${issue.evidence}\n   Action: Do NOT make this claim. Use only what the evidence supports.`
+      ).join('\n\n')}\n\n**INSTRUCTIONS FOR THIS RETRY**:\n- Do NOT repeat any of the above claims, even in softened form\n- If a claim has no evidence, OMIT it entirely rather than guessing\n- Double-check every time duration, tool name, workflow name, and metric against the EVIDENCE BOUNDARY\n- It is better to say less than to hallucinate\n`
+    : '';
 
   // Build session references for citations
   const sessionReferences = state.userEvidence?.sessions?.slice(0, 5).map((s, i) => {
@@ -1510,6 +1561,10 @@ ${RESPONSE_AGENT_VALIDATION_CHECKLIST}
 
 ---
 
+${evidenceBoundary}
+${factCheckRetryInstructions}
+---
+
 ## FINAL INSTRUCTION
 
 Generate your response now. Remember:
@@ -1517,6 +1572,7 @@ Generate your response now. Remember:
 - Use the response structure template provided
 - Apply the validation checklist before finalizing
 - If data is limited, acknowledge this honestly rather than fabricating
+- NEVER reference tools, sessions, workflows, or metrics not listed in the EVIDENCE BOUNDARY section
 `;
 
   // Select appropriate system prompt based on intent
@@ -1543,7 +1599,10 @@ Generate your response now. Remember:
     hasPeerInsights: (state.peerOptimizationPlan?.blocks?.length || 0) > 0,
     hasFeatureTips: (state.featureAdoptionTips?.length || 0) > 0,
     hasUrlContent,
-    promptFramework: 'fact-disambiguation-v1',
+    hasEvidenceBoundary: evidenceBoundary.length > 0,
+    isFactCheckRetry: !!previousFactCheckIssues && previousFactCheckIssues.length > 0,
+    previousIssueCount: previousFactCheckIssues?.length || 0,
+    promptFramework: 'fact-disambiguation-v2',
     usingBlogPrompt: intent === 'BLOG_CREATION',
     usingProgressUpdatePrompt: intent === 'PROGRESS_UPDATE',
     usingSkillFilePrompt: intent === 'SKILL_FILE_GENERATION',

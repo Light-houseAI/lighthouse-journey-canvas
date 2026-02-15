@@ -226,10 +226,10 @@ export function createInitialAgenticState(params: {
     // User toolbox
     userToolbox: null,
 
-    // A3 workflow alignments
+    // @deprecated A3 — peer data now in session_mappings peerInsights
     workflowAlignments: null,
 
-    // A2 output
+    // @deprecated A2 — gap analysis now in session_mappings gapAnalysis/insights
     userDiagnostics: null,
     peerDiagnostics: null,
     a2CritiqueResult: null,
@@ -239,10 +239,10 @@ export function createInitialAgenticState(params: {
     routingDecision: null,
 
     // Downstream outputs
-    peerOptimizationPlan: null,
+    peerOptimizationPlan: null, // @deprecated A3
     webOptimizationPlan: null,
     companyOptimizationPlan: null,
-    featureAdoptionTips: null,
+    featureAdoptionTips: null, // @deprecated A5
     cachedWebSearchResult: null,
 
     // Final output
@@ -250,7 +250,7 @@ export function createInitialAgenticState(params: {
     userQueryAnswer: null,
     finalResult: null,
 
-    // A6 Validator output
+    // @deprecated A6 — replaced by fact-check validator
     generatedAnswer: null,
     identifiedGaps: null,
     validationPassed: false,

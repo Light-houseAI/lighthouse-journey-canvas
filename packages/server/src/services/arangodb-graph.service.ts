@@ -1297,13 +1297,13 @@ export class ArangoDBGraphService {
         LET workflow_patterns = (
           FOR session IN peer_sessions
             COLLECT wf_type = session.workflow_classification.primary
-            AGGREGATE
-              occurrence_count = COUNT(1),
-              avg_duration = AVG(session.duration_seconds || 0),
-              unique_users = COLLECT_SET(session.user_key)
+            INTO sessions_group
+            LET occurrence_count = LENGTH(sessions_group)
+            LET avg_duration = AVG(sessions_group[*].session.duration_seconds)
+            LET unique_users = LENGTH(UNIQUE(sessions_group[*].session.user_key))
 
             // Only include patterns seen by multiple users (privacy)
-            FILTER LENGTH(unique_users) >= 2
+            FILTER unique_users >= 2
             FILTER occurrence_count >= ${minOccurrences}
 
             SORT occurrence_count DESC
@@ -1313,7 +1313,7 @@ export class ArangoDBGraphService {
               workflowType: wf_type,
               avgDurationSeconds: ROUND(avg_duration),
               occurrenceCount: occurrence_count,
-              uniqueUserCount: LENGTH(unique_users)
+              uniqueUserCount: unique_users
             }
         )
 
@@ -1565,13 +1565,13 @@ export class ArangoDBGraphService {
           FOR i IN 0..(LENGTH(user_sessions) - ${minSequenceLength})
             FOR seq_len IN ${minSequenceLength}..${maxSequenceLength}
               FILTER i + seq_len <= LENGTH(user_sessions)
-              LET window = SLICE(user_sessions, i, seq_len)
-              LET seq_types = (FOR s IN window RETURN s.type)
+              LET win_slice = SLICE(user_sessions, i, seq_len)
+              LET seq_types = (FOR s IN win_slice RETURN s.type)
               LET seq_key = CONCAT_SEPARATOR(" → ", seq_types)
-              LET total_duration = SUM(FOR s IN window RETURN s.duration)
-              LET session_ids = (FOR s IN window RETURN s.id)
-              LET first_time = FIRST(window).start_time
-              LET last_time = LAST(window).start_time
+              LET total_duration = SUM(FOR s IN win_slice RETURN s.duration)
+              LET session_ids = (FOR s IN win_slice RETURN s.id)
+              LET first_time = FIRST(win_slice).start_time
+              LET last_time = LAST(win_slice).start_time
               RETURN {
                 sequence_key: seq_key,
                 sequence: seq_types,

@@ -76,7 +76,8 @@ export interface QueryClassification {
     agentsToRun: AgentId[];  // Which agents to invoke
     includePeerComparison: boolean;
     includeWebSearch: boolean;
-    includeFeatureAdoption: boolean;  // Run A5 Feature Adoption agent
+    /** @deprecated A5 removed — feature data now in session_mappings insights JSONB */
+    includeFeatureAdoption: boolean;
     useSemanticSearch: boolean;  // vs pure filtering
     strictDomainMatching: boolean;  // Require domain keyword match for workflows
   };
@@ -710,95 +711,52 @@ function determineRouting(
 
   switch (intent) {
     case 'DIAGNOSTIC':
-      // Finding problems → A1→A2→A3 (peer comparison)→A5 (features)→A4 (web)
-      agentsToRun = ['A1_RETRIEVAL', 'A2_JUDGE', 'A3_COMPARATOR', 'A5_FEATURE_ADOPTION', 'A4_WEB'];
-      includePeerComparison = true;
+      agentsToRun = ['A1_RETRIEVAL', 'A4_WEB'];
       includeWebSearch = true;
-      includeFeatureAdoption = true;
       break;
     case 'OPTIMIZATION':
-      // How to improve → A1→A2→A3 (peer comparison)→A5 (features)→A4 (web)
-      agentsToRun = ['A1_RETRIEVAL', 'A2_JUDGE', 'A3_COMPARATOR', 'A5_FEATURE_ADOPTION', 'A4_WEB'];
-      includePeerComparison = true;
+      agentsToRun = ['A1_RETRIEVAL', 'A4_WEB'];
       includeWebSearch = true;
-      includeFeatureAdoption = true;
       break;
     case 'COMPARISON':
-      // Compare with peers → A1→A2→A3 (peer)→A5 (features)→A4 (web)
-      agentsToRun = ['A1_RETRIEVAL', 'A2_JUDGE', 'A3_COMPARATOR', 'A5_FEATURE_ADOPTION', 'A4_WEB'];
-      includePeerComparison = true;
-      includeWebSearch = true;
-      includeFeatureAdoption = true;
+      // peerInsights data now comes from enriched A1 (session_mappings JSONB)
+      agentsToRun = ['A1_RETRIEVAL'];
       break;
     case 'EXPLORATION':
-      // Show me what I did → A1→A5 (suggest features based on what user did)
-      agentsToRun = ['A1_RETRIEVAL', 'A5_FEATURE_ADOPTION'];
-      includeFeatureAdoption = true;
+      agentsToRun = ['A1_RETRIEVAL'];
       break;
     case 'LEARNING':
-      // Best practices → A1→A3 (peer patterns)→A5 (features)→A4 (web)
-      agentsToRun = ['A1_RETRIEVAL', 'A3_COMPARATOR', 'A5_FEATURE_ADOPTION', 'A4_WEB'];
-      includePeerComparison = true;
+      agentsToRun = ['A1_RETRIEVAL', 'A4_WEB'];
       includeWebSearch = true;
-      includeFeatureAdoption = true;
       break;
     case 'PATTERN':
-      // Find patterns → A1→A2→A5 (feature patterns)
-      agentsToRun = ['A1_RETRIEVAL', 'A2_JUDGE', 'A5_FEATURE_ADOPTION'];
-      includeFeatureAdoption = true;
+      agentsToRun = ['A1_RETRIEVAL'];
       break;
     case 'FEATURE_DISCOVERY':
-      // Discover underused features → A1→A2→A3 (peer comparison)→A5 (features)
-      agentsToRun = ['A1_RETRIEVAL', 'A2_JUDGE', 'A3_COMPARATOR', 'A5_FEATURE_ADOPTION'];
-      includePeerComparison = true;
-      includeFeatureAdoption = true;
+      // Feature data now comes from enriched A1 (session_mappings insights JSONB)
+      agentsToRun = ['A1_RETRIEVAL'];
       break;
     case 'TOOL_MASTERY':
-      // Master specific tool → A1→A2→A3 (peer patterns)→A5 (features)→A4 (web tips)
-      agentsToRun = ['A1_RETRIEVAL', 'A2_JUDGE', 'A3_COMPARATOR', 'A5_FEATURE_ADOPTION', 'A4_WEB'];
-      includePeerComparison = true;
+      agentsToRun = ['A1_RETRIEVAL', 'A4_WEB'];
       includeWebSearch = true;
-      includeFeatureAdoption = true;
       break;
     case 'TOOL_INTEGRATION':
-      // Integrate/use/add a tool → A4 (web search FIRST for tool info), then A1 for context
-      // Web search is the PRIMARY source for unknown tools and integration guidance
-      agentsToRun = ['A4_WEB', 'A1_RETRIEVAL', 'A5_FEATURE_ADOPTION'];
-      includePeerComparison = false;  // Peers unlikely to help with new tool integration
-      includeWebSearch = true;        // PRIMARY source
-      includeFeatureAdoption = true;  // May have relevant feature tips
+      agentsToRun = ['A4_WEB', 'A1_RETRIEVAL'];
+      includeWebSearch = true;
       break;
     case 'BLOG_CREATION':
-      // Blog creation only needs retrieval - the blog prompt does the heavy lifting
-      // Uses BLOG_GENERATION_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
       agentsToRun = ['A1_RETRIEVAL'];
-      includePeerComparison = false;  // No peer comparison for blog
-      includeWebSearch = false;       // No web search for blog
-      includeFeatureAdoption = false; // No feature tips for blog
       break;
     case 'PROGRESS_UPDATE':
-      // Progress update only needs retrieval - the progress update prompt does the heavy lifting
-      // Uses PROGRESS_UPDATE_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
       agentsToRun = ['A1_RETRIEVAL'];
-      includePeerComparison = false;  // No peer comparison for progress report
-      includeWebSearch = false;       // No web search for progress report
-      includeFeatureAdoption = false; // No feature tips for progress report
       break;
     case 'SKILL_FILE_GENERATION':
-      // Skill file generation only needs retrieval - the skill file prompt does the heavy lifting
-      // Uses SKILL_FILE_GENERATION_SYSTEM_PROMPT instead of ANSWER_GENERATION_SYSTEM_PROMPT
       agentsToRun = ['A1_RETRIEVAL'];
-      includePeerComparison = false;  // No peer comparison for skill file
-      includeWebSearch = false;       // No web search for skill file
-      includeFeatureAdoption = false; // No feature tips for skill file
       break;
     case 'GENERAL':
     default:
-      // Default: Full pipeline for comprehensive analysis
-      agentsToRun = ['A1_RETRIEVAL', 'A2_JUDGE', 'A3_COMPARATOR', 'A5_FEATURE_ADOPTION', 'A4_WEB'];
-      includePeerComparison = true;
+      agentsToRun = ['A1_RETRIEVAL', 'A4_WEB'];
       includeWebSearch = true;
-      includeFeatureAdoption = true;
       break;
   }
 
@@ -813,9 +771,9 @@ function determineRouting(
   return {
     maxResults,
     agentsToRun,
-    includePeerComparison,
+    includePeerComparison: false, // A3 removed — peerInsights now in session_mappings JSONB
     includeWebSearch,
-    includeFeatureAdoption,
+    includeFeatureAdoption: false, // A5 removed — feature data now in session_mappings insights JSONB
     useSemanticSearch,
     strictDomainMatching,
   };

@@ -112,8 +112,10 @@ import { UserPreferencesRepository } from '../repositories/user-preferences.repo
 import { PeerPreferencesService } from '../services/peer-preferences.service';
 import { PeerInsightsService } from '../services/peer-insights.service';
 import { GroupRepository } from '../repositories/group.repository';
+import { UserWorkstreamRepository } from '../repositories/user-workstream.repository';
 import { GroupService } from '../services/group.service';
 import { GroupController } from '../controllers/group.controller';
+import { ContextStitchingEndpointService } from '../services/context-stitching-endpoint.service';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -275,6 +277,10 @@ export class Container {
         // Group Repository
         [CONTAINER_TOKENS.GROUP_REPOSITORY]: asClass(
           GroupRepository
+        ).singleton(),
+        // User Workstream Repository (context stitching)
+        [CONTAINER_TOKENS.USER_WORKSTREAM_REPOSITORY]: asClass(
+          UserWorkstreamRepository
         ).singleton(),
       });
 
@@ -489,7 +495,6 @@ export class Container {
             personaService,
             memoryService,
             graphService,
-            enableContextStitching: process.env.ENABLE_CONTEXT_STITCHING !== 'false', // Default to true
           });
         }).singleton(),
         // Company Documents Services (RAG document processing)
@@ -581,6 +586,10 @@ export class Container {
         ).singleton(),
         // Group Service
         [CONTAINER_TOKENS.GROUP_SERVICE]: asClass(GroupService).singleton(),
+        // Context Stitching Endpoint Service (pre-computed stitching)
+        [CONTAINER_TOKENS.CONTEXT_STITCHING_ENDPOINT_SERVICE]: asClass(
+          ContextStitchingEndpointService
+        ).singleton(),
       });
 
       // Register controllers as transient (new instance per request)

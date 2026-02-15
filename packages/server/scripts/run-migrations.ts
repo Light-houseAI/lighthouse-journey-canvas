@@ -123,6 +123,27 @@ async function runMigrations() {
     );
     await runSqlMigration(pool, hnswMigrationPath, 'upgrade_vector_indexes_to_hnsw');
 
+    // insights + peer_insights columns on session_mappings
+    const insightsMigrationPath = path.join(
+      __dirname,
+      '../../schema/migrations/20260214000001_add_insights_to_session_mappings.sql'
+    );
+    await runSqlMigration(pool, insightsMigrationPath, 'add_insights_to_session_mappings');
+
+    // groups tables
+    const groupsMigrationPath = path.join(
+      __dirname,
+      '../../schema/migrations/20260214100001_add_groups_tables.sql'
+    );
+    await runSqlMigration(pool, groupsMigrationPath, 'add_groups_tables');
+
+    // stitched_context column + user_workstreams table (pre-computed context stitching)
+    const contextStitchingMigrationPath = path.join(
+      __dirname,
+      '../../schema/migrations/20260215000001_add_context_stitching.sql'
+    );
+    await runSqlMigration(pool, contextStitchingMigrationPath, 'add_context_stitching');
+
     // Verify workflow_screenshots table
     const result = await pool.query(`
       SELECT table_name

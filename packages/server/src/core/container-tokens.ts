@@ -51,6 +51,8 @@ export const REPOSITORY_TOKENS = {
   USER_PREFERENCES_REPOSITORY: 'userPreferencesRepository',
   // Group Repository
   GROUP_REPOSITORY: 'groupRepository',
+  // User Workstream Repository (context stitching)
+  USER_WORKSTREAM_REPOSITORY: 'userWorkstreamRepository',
 } as const;
 
 /**
@@ -141,6 +143,8 @@ export const SERVICE_TOKENS = {
   PEER_INSIGHTS_SERVICE: 'peerInsightsService',
   // Group Service
   GROUP_SERVICE: 'groupService',
+  // Context Stitching Endpoint Service (pre-computed stitching)
+  CONTEXT_STITCHING_ENDPOINT_SERVICE: 'contextStitchingEndpointService',
 } as const;
 
 /**

@@ -496,6 +496,10 @@ export const pushSessionRequestSchema = z.object({
 
   // Optional: Peer insights fetched from backend API
   peerInsights: z.array(z.record(z.any())).nullable().optional(),
+
+  // Optional: Pre-computed context stitching (3-tier cumulative analysis)
+  // Generated during desktop analyzing phase via POST /api/v2/sessions/stitch-context
+  stitchedContext: z.record(z.any()).nullable().optional(),
 });
 
 export type PushSessionRequest = z.infer<typeof pushSessionRequestSchema>;

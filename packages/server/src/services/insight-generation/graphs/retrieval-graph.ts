@@ -36,12 +36,8 @@ import type {
   CritiqueResult,
   CritiqueIssue,
   AttachedSessionContext,
-  SessionForStitching,
+  RepetitiveWorkflowPattern,
 } from '../types.js';
-import {
-  ContextStitchingService,
-  createContextStitchingService,
-} from '../context-stitching.service.js';
 import { z } from 'zod';
 import { NoiseFilterService } from '../filters/noise-filter.service.js';
 import { A1_RETRIEVAL_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
@@ -275,8 +271,6 @@ export interface RetrievalGraphDeps {
   embeddingService: EmbeddingService;
   llmProvider: LLMProvider;
   noiseFilterService?: NoiseFilterService;
-  /** Whether to enable context stitching (default: false for backward compatibility) */
-  enableContextStitching?: boolean;
 }
 
 // ============================================================================
@@ -300,11 +294,20 @@ async function retrieveUserEvidence(
       sessionIds: state.attachedSessionContext.map(s => s.sessionId),
     });
 
-    // Transform attached sessions to EvidenceBundle format
-    const userEvidence = transformAttachedSessionsToEvidence(
+    // Transform attached sessions to EvidenceBundle format (with enriched JSONB data)
+    const userEvidence = await transformAttachedSessionsToEvidence(
       state.attachedSessionContext,
-      logger
+      logger,
+      sessionMappingRepository
     );
+
+    // Conditionally strip peerInsights if peer comparison is disabled
+    if (!state.includePeerComparison) {
+      for (const session of userEvidence.sessions) {
+        session.peerInsights = undefined;
+      }
+      logger.info('A1: peerInsights stripped (includePeerComparison=false)');
+    }
 
     logger.info('A1: Attached sessions transformed to evidence', {
       workflowCount: userEvidence.workflows.length,
@@ -520,6 +523,14 @@ async function retrieveUserEvidence(
         retrievalMetadata: userEvidence.retrievalMetadata,
       }));
       logger.debug('=== END A1 USER EVIDENCE OUTPUT ===');
+    }
+
+    // Conditionally strip peerInsights if peer comparison is disabled
+    if (!state.includePeerComparison) {
+      for (const session of userEvidence.sessions) {
+        session.peerInsights = undefined;
+      }
+      logger.info('A1: peerInsights stripped (includePeerComparison=false)');
     }
 
     return {
@@ -1016,253 +1027,165 @@ function routeAfterCritique(state: InsightState): string {
  * Node: Detect repetitive workflow patterns across user's sessions
  * Uses ArangoDB graph to find recurring sequences like "research → summarize → email"
  */
+/**
+ * Node: Load pre-computed repetitive patterns from stitched_context.
+ * Patterns are pre-computed during the desktop app's "analyzing" phase
+ * and stored in session_mappings.stitched_context JSONB.
+ * No on-the-fly Helix/ArangoDB calls needed.
+ */
 async function detectRepetitivePatterns(
   state: InsightState,
   deps: RetrievalGraphDeps
 ): Promise<Partial<InsightState>> {
-  const { logger, graphService } = deps;
+  const { logger, sessionMappingRepository } = deps;
 
-  // Skip if no graph service or no user evidence
-  if (!graphService || !state.userId || !state.userEvidence) {
-    logger.debug('A1: Skipping repetitive pattern detection (no graph service or user evidence)');
+  if (!state.userId || !state.userEvidence) {
+    logger.debug('A1: Skipping repetitive pattern detection (no user evidence)');
     return { progress: 18 };
   }
 
-  logger.info('A1: Detecting repetitive workflow patterns', { userId: state.userId });
+  logger.info('A1: Loading pre-computed repetitive patterns from stitched_context');
 
   try {
-    const patterns = await graphService.detectRepetitiveWorkflowPatterns(
-      state.userId,
-      {
-        lookbackDays: state.lookbackDays || 30,
-        minOccurrences: 3,
-        minSequenceLength: 2,
-        maxSequenceLength: 4,
-      }
-    );
+    // Read the most recent stitched_context for this user
+    const stitchedContext = await sessionMappingRepository.getLatestStitchedContext(state.userId);
 
-    if (patterns.length > 0) {
-      logger.info('A1: Found repetitive workflow patterns', {
+    if (!stitchedContext) {
+      logger.debug('A1: No pre-computed stitched context found');
+      return { progress: 18 };
+    }
+
+    const patterns = (stitchedContext as Record<string, unknown>).repetitivePatterns as RepetitiveWorkflowPattern[] | undefined;
+
+    if (patterns && patterns.length > 0) {
+      logger.info('A1: Loaded pre-computed repetitive patterns', {
         patternCount: patterns.length,
         topPattern: patterns[0]?.sequence.join(' → '),
-        topPatternOccurrences: patterns[0]?.occurrenceCount,
-        totalTimeInPatterns: patterns.reduce((sum, p) => sum + p.totalTimeSpentSeconds, 0),
       });
 
-      // Add patterns to user evidence
-      const updatedUserEvidence = {
-        ...state.userEvidence,
-        repetitivePatterns: patterns,
-      };
-
-      // Log detailed output for debugging
-      if (process.env.INSIGHT_DEBUG === 'true') {
-        logger.debug('=== A1 RETRIEVAL AGENT OUTPUT (Repetitive Patterns) ===');
-        logger.debug(JSON.stringify({
-          agent: 'A1_RETRIEVAL',
-          outputType: 'repetitivePatterns',
-          patterns: patterns.map(p => ({
-            type: p.patternType,
-            sequence: p.sequence.join(' → '),
-            occurrences: p.occurrenceCount,
-            totalTimeHours: Math.round(p.totalTimeSpentSeconds / 3600 * 10) / 10,
-            optimizationOpportunity: p.optimizationOpportunity,
-          })),
-        }));
-        logger.debug('=== END A1 REPETITIVE PATTERNS OUTPUT ===');
-      }
-
       return {
-        userEvidence: updatedUserEvidence,
+        userEvidence: {
+          ...state.userEvidence,
+          repetitivePatterns: patterns,
+        },
         progress: 18,
       };
     }
 
-    logger.debug('A1: No repetitive patterns found');
+    logger.debug('A1: No repetitive patterns in pre-computed context');
     return { progress: 18 };
   } catch (error) {
-    logger.error('A1: Failed to detect repetitive patterns', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    // Don't fail the pipeline, just continue without patterns
+    logger.error('A1: Failed to load pre-computed repetitive patterns',
+      error instanceof Error ? error : new Error(String(error))
+    );
     return { progress: 18 };
   }
 }
 
 /**
- * Node: Stitch context across sessions using two-tier system
- * Tier 1: Outcome-Based Stitching - Groups sessions by shared deliverable/goal
- * Tier 2: Tool-Mastery Stitching - Groups by tool usage patterns
+ * Node: Load pre-computed stitched context from session_mappings.stitched_context.
+ * Context is pre-computed during the desktop app's "analyzing" phase via
+ * POST /api/v2/sessions/stitch-context. No on-the-fly LLM stitching needed.
  */
 async function stitchContextAcrossSessions(
   state: InsightState,
   deps: RetrievalGraphDeps
 ): Promise<Partial<InsightState>> {
-  const { logger, llmProvider, embeddingService, enableContextStitching } = deps;
+  const { logger, sessionMappingRepository } = deps;
 
-  // Skip if stitching is disabled or no user evidence
-  if (!enableContextStitching || !state.userEvidence) {
-    logger.debug('A1: Skipping context stitching (disabled or no user evidence)');
+  if (!state.userEvidence) {
+    logger.debug('A1: Skipping context stitching (no user evidence)');
     return { progress: 19 };
   }
 
-  logger.info('A1: Starting two-tier context stitching', {
-    sessionCount: state.userEvidence.sessions.length,
-    workflowCount: state.userEvidence.workflows.length,
-  });
+  logger.info('A1: Loading pre-computed stitched context from DB');
 
   try {
-    // Create the context stitching service
-    const stitchingService = createContextStitchingService(
-      logger,
-      llmProvider,
-      embeddingService
-    );
+    // Extract session IDs from user evidence
+    const sessionIds = state.userEvidence.sessions.map(s => s.sessionId);
 
-    // Transform evidence to stitching format
-    const sessionsForStitching: SessionForStitching[] = transformEvidenceToStitchingFormat(
-      state.userEvidence,
-      logger
-    );
-
-    if (sessionsForStitching.length < 2) {
-      logger.debug('A1: Not enough sessions for stitching (need at least 2)');
+    if (sessionIds.length === 0) {
+      logger.debug('A1: No session IDs to load stitched context for');
       return { progress: 19 };
     }
 
-    // Detect workstream focus from query if present
-    const workstreamFocus = extractWorkstreamFocus(state.query);
+    // Bulk read stitched_context for all sessions in the evidence
+    const stitchedContextMap = await sessionMappingRepository.getPreComputedStitching(sessionIds);
 
-    // Perform two-tier stitching
-    const stitchedContext = await stitchingService.stitchContext(
-      sessionsForStitching,
-      {
-        minConfidence: 0.60,
-        focusWorkstream: workstreamFocus,
-      }
-    );
+    if (stitchedContextMap.size === 0) {
+      logger.debug('A1: No pre-computed stitched context found for sessions');
+      return { progress: 19 };
+    }
 
-    logger.info('A1: Context stitching complete', {
+    // Reconstruct StitchedContext from the most recent session's pre-computed data
+    // (the latest session has the cumulative context of all previous sessions)
+    const latestStitchedContext = Array.from(stitchedContextMap.values()).pop() as Record<string, unknown> | undefined;
+
+    if (!latestStitchedContext) {
+      return { progress: 19 };
+    }
+
+    // Build the StitchedContext shape expected by downstream nodes
+    const workstreamAssignment = latestStitchedContext.workstreamAssignment as Record<string, unknown> | null;
+    const toolMasteryGroups = (latestStitchedContext.toolMasteryGroups || []) as Array<{
+      toolName: string;
+      usagePatterns: Array<{ patternName: string; description: string; frequency: number; avgDurationSeconds: number; sessionIds: string[] }>;
+      sessionIds: string[];
+      totalTimeSeconds: number;
+      optimizationOpportunities: string[];
+    }>;
+
+    const stitchedContext = {
+      workstreams: workstreamAssignment ? [{
+        workstreamId: workstreamAssignment.workstreamId as string,
+        name: workstreamAssignment.workstreamName as string,
+        outcomeDescription: workstreamAssignment.outcomeDescription as string,
+        confidence: workstreamAssignment.confidence as number,
+        sessionIds: (workstreamAssignment.relatedSessionIds as string[]) || [],
+        topics: [] as string[],
+        toolsUsed: [] as string[],
+        firstActivity: '',
+        lastActivity: '',
+        totalDurationSeconds: 0,
+      }] : [],
+      toolMasteryGroups,
+      ungroupedSessionIds: [] as string[],
+      metadata: {
+        totalSessions: sessionIds.length,
+        sessionsStitched: stitchedContextMap.size,
+        workstreamCount: workstreamAssignment ? 1 : 0,
+        toolGroupCount: toolMasteryGroups.length,
+        processingTimeMs: 0,
+        stitchingVersion: (latestStitchedContext.stitchingVersion as string) || '1.0.0',
+      },
+    };
+
+    logger.info('A1: Loaded pre-computed stitched context', {
+      sessionsWithContext: stitchedContextMap.size,
       workstreamCount: stitchedContext.workstreams.length,
       toolGroupCount: stitchedContext.toolMasteryGroups.length,
-      ungroupedCount: stitchedContext.ungroupedSessionIds.length,
-      processingTimeMs: stitchedContext.metadata.processingTimeMs,
     });
-
-    // Log detailed output for debugging
-    if (process.env.INSIGHT_DEBUG === 'true') {
-      logger.debug('=== A1 RETRIEVAL AGENT OUTPUT (Stitched Context) ===');
-      logger.debug(JSON.stringify({
-        agent: 'A1_RETRIEVAL',
-        outputType: 'stitchedContext',
-        tier1_workstreams: stitchedContext.workstreams.map(ws => ({
-          name: ws.name,
-          sessionCount: ws.sessionIds.length,
-          confidence: ws.confidence,
-          topics: ws.topics,
-        })),
-        tier2_toolGroups: stitchedContext.toolMasteryGroups.map(tg => ({
-          toolName: tg.toolName,
-          patternCount: tg.usagePatterns.length,
-          totalTimeHours: Math.round(tg.totalTimeSeconds / 3600 * 10) / 10,
-        })),
-      }));
-      logger.debug('=== END A1 STITCHED CONTEXT OUTPUT ===');
-    }
 
     return {
       stitchedContext,
       progress: 19,
     };
   } catch (error) {
-    logger.error('A1: Failed to stitch context', {
-      error: error instanceof Error ? error.message : String(error),
-    });
-    // Don't fail the pipeline, just continue without stitching
+    logger.error('A1: Failed to load pre-computed stitched context',
+      error instanceof Error ? error : new Error(String(error))
+    );
     return { progress: 19 };
   }
 }
 
-/**
- * Transform EvidenceBundle to SessionForStitching format
- */
-function transformEvidenceToStitchingFormat(
-  evidence: EvidenceBundle,
-  logger: Logger
-): SessionForStitching[] {
-  const sessionsMap = new Map<string, SessionForStitching>();
-
-  // Group workflows by session
-  for (const workflow of evidence.workflows) {
-    const sessionId = workflow.sessionId || 'unknown';
-
-    if (!sessionsMap.has(sessionId)) {
-      // Find corresponding session info
-      const sessionInfo = evidence.sessions.find(s => s.sessionId === sessionId);
-
-      sessionsMap.set(sessionId, {
-        sessionId,
-        title: sessionInfo?.highLevelSummary || workflow.title || 'Untitled Session',
-        highLevelSummary: sessionInfo?.highLevelSummary || workflow.summary || '',
-        workflows: [],
-        toolsUsed: [],
-        totalDurationSeconds: 0,
-        timestamp: workflow.timeStart || new Date().toISOString(),
-      });
-    }
-
-    const session = sessionsMap.get(sessionId)!;
-    session.workflows.push({
-      intent: workflow.intent || workflow.title,
-      approach: workflow.approach || '',
-      tools: workflow.tools || [],
-      summary: workflow.summary || '',
-      durationSeconds: workflow.totalDurationSeconds || 0,
-    });
-    session.toolsUsed = [...new Set([...session.toolsUsed, ...(workflow.tools || [])])];
-    session.totalDurationSeconds += workflow.totalDurationSeconds || 0;
-  }
-
-  const result = Array.from(sessionsMap.values());
-  logger.debug('A1: Transformed evidence to stitching format', {
-    inputWorkflows: evidence.workflows.length,
-    outputSessions: result.length,
-  });
-
-  return result;
-}
-
-/**
- * Extract workstream focus from user query
- * Looks for explicit project/deliverable references
- */
-function extractWorkstreamFocus(query: string): string | undefined {
-  // Common patterns that indicate a specific workstream
-  const patterns = [
-    /(?:about|for|on|regarding)\s+(?:the\s+)?([a-z0-9\s]+(?:presentation|deck|document|report|project|feature|release))/i,
-    /(?:my|the)\s+([a-z0-9\s]+(?:work|task|effort))/i,
-    /working\s+on\s+(?:the\s+)?([a-z0-9\s]+)/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = query.match(pattern);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-  }
-
-  return undefined;
-}
 
 /**
  * Create the A1 Retrieval Agent graph
  */
 export function createRetrievalGraph(deps: RetrievalGraphDeps) {
-  const { logger, enableContextStitching } = deps;
+  const { logger } = deps;
 
-  logger.info('Creating A1 Retrieval Graph', {
-    enableContextStitching: !!enableContextStitching,
-  });
+  logger.info('Creating A1 Retrieval Graph');
 
   const graph = new StateGraph(InsightStateAnnotation)
     // Add nodes
@@ -1314,6 +1237,12 @@ interface SessionChapterData {
     category: string;
     isMeaningful?: boolean;
   }>;
+  /** Deep gap & improvement analysis from Gemini Vision (pre-computed by Desktop companion) */
+  gapAnalysis?: Record<string, unknown>;
+  /** Session insights from Gemini (at-a-glance, impressive things, issues, improvements) */
+  insights?: Record<string, unknown>;
+  /** Peer insights fetched from backend API for this session's journey node */
+  peerInsights?: Record<string, unknown>[] | null;
   // V1: Chapter-based structure
   chapters?: Array<{
     chapter_id: number;
@@ -1418,6 +1347,11 @@ async function fetchSessionChapters(
           isMeaningful?: boolean;
         }> | null;
 
+        // Extract enriched JSONB columns from session_mapping
+        const gapAnalysis = (sessionMapping as any).gapAnalysis as Record<string, unknown> | null;
+        const insights = (sessionMapping as any).insights as Record<string, unknown> | null;
+        const peerInsights = (sessionMapping as any).peerInsights as Record<string, unknown>[] | null;
+
         // First, try to get summary data from session_mapping.summary (new approach)
         // This contains the full AI-generated summary with chapters/workflows
         const summaryData = sessionMapping.summary as Record<string, any> | null;
@@ -1443,6 +1377,9 @@ async function fetchSessionChapters(
               highLevelSummary: summaryData.highLevelSummary || sessionMapping.highLevelSummary || undefined,
               workflows: summaryData.workflows,
               screenshotDescriptions: screenshotDescriptions || undefined,
+              gapAnalysis: gapAnalysis || undefined,
+              insights: insights || undefined,
+              peerInsights: peerInsights || undefined,
             });
 
             logger.debug('A1: Using workflows from session_mapping.summary (V2)', {
@@ -1458,6 +1395,9 @@ async function fetchSessionChapters(
               highLevelSummary: summaryData.highLevelSummary || sessionMapping.highLevelSummary || undefined,
               chapters: summaryData.chapters,
               screenshotDescriptions: screenshotDescriptions || undefined,
+              gapAnalysis: gapAnalysis || undefined,
+              insights: insights || undefined,
+              peerInsights: peerInsights || undefined,
             });
 
             logger.debug('A1: Using chapters from session_mapping.summary (V1)', {
@@ -1470,6 +1410,9 @@ async function fetchSessionChapters(
             chaptersMap.set(session.sessionId, {
               highLevelSummary: sessionMapping.highLevelSummary,
               screenshotDescriptions: screenshotDescriptions || undefined,
+              gapAnalysis: gapAnalysis || undefined,
+              insights: insights || undefined,
+              peerInsights: peerInsights || undefined,
             });
           }
         } else if (sessionMapping.nodeId) {
@@ -1496,6 +1439,9 @@ async function fetchSessionChapters(
               highLevelSummary: sessionMapping.highLevelSummary || undefined,
               workflows: nodeData.nodeMeta.workflows,
               screenshotDescriptions: screenshotDescriptions || undefined,
+              gapAnalysis: gapAnalysis || undefined,
+              insights: insights || undefined,
+              peerInsights: peerInsights || undefined,
             });
           } else if (nodeData.nodeMeta?.chapters) {
             chaptersMap.set(session.sessionId, {
@@ -1503,11 +1449,17 @@ async function fetchSessionChapters(
               highLevelSummary: sessionMapping.highLevelSummary || undefined,
               chapters: nodeData.nodeMeta.chapters,
               screenshotDescriptions: screenshotDescriptions || undefined,
+              gapAnalysis: gapAnalysis || undefined,
+              insights: insights || undefined,
+              peerInsights: peerInsights || undefined,
             });
           } else if (sessionMapping.highLevelSummary) {
             chaptersMap.set(session.sessionId, {
               highLevelSummary: sessionMapping.highLevelSummary,
               screenshotDescriptions: screenshotDescriptions || undefined,
+              gapAnalysis: gapAnalysis || undefined,
+              insights: insights || undefined,
+              peerInsights: peerInsights || undefined,
             });
           }
         } else if (sessionMapping.highLevelSummary) {
@@ -1515,6 +1467,9 @@ async function fetchSessionChapters(
           chaptersMap.set(session.sessionId, {
             highLevelSummary: sessionMapping.highLevelSummary,
             screenshotDescriptions: screenshotDescriptions || undefined,
+            gapAnalysis: gapAnalysis || undefined,
+            insights: insights || undefined,
+            peerInsights: peerInsights || undefined,
           });
         }
       }
@@ -1655,6 +1610,10 @@ function transformNLQToEvidence(
         appsUsed,
         // Include screenshot-level descriptions for granular insight generation
         screenshotDescriptions: sessionData?.screenshotDescriptions,
+        // Enriched JSONB from session_mappings (replaces A2/A5)
+        gapAnalysis: sessionData?.gapAnalysis,
+        insights: sessionData?.insights,
+        peerInsights: sessionData?.peerInsights,
       });
 
       // Ensure we have an entry for this session in screenshots map
@@ -2040,14 +1999,32 @@ function categorizeApp(app: string): string {
  * Transform attached session context to EvidenceBundle format
  * Used when user explicitly selects sessions via @mention (skips NLQ retrieval)
  */
-function transformAttachedSessionsToEvidence(
+async function transformAttachedSessionsToEvidence(
   attachedSessions: AttachedSessionContext[],
-  logger: Logger
-): EvidenceBundle {
+  logger: Logger,
+  sessionMappingRepository?: SessionMappingRepository
+): Promise<EvidenceBundle> {
   const workflows: UserWorkflow[] = [];
   const sessions: SessionInfo[] = [];
   let totalStepCount = 0;
   let totalDurationSeconds = 0;
+
+  // Batch-fetch enriched JSONB data (gapAnalysis, insights, peerInsights, screenshotDescriptions)
+  let enrichedMap = new Map<string, any>();
+  if (sessionMappingRepository) {
+    try {
+      const sessionIds = attachedSessions.map(s => s.sessionId);
+      enrichedMap = await sessionMappingRepository.getEnrichedByIds(sessionIds);
+      logger.info('A1: Fetched enriched data for attached sessions', {
+        requestedCount: sessionIds.length,
+        foundCount: enrichedMap.size,
+      });
+    } catch (error) {
+      logger.warn('A1: Failed to fetch enriched data for attached sessions, continuing without', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   for (const session of attachedSessions) {
     // Determine start/end activities from first/last semantic steps
@@ -2055,6 +2032,9 @@ function transformAttachedSessionsToEvidence(
     const lastWorkflow = session.workflows[session.workflows.length - 1];
     const firstStep = firstWorkflow?.semantic_steps?.[0];
     const lastStep = lastWorkflow?.semantic_steps?.[lastWorkflow?.semantic_steps?.length - 1];
+
+    // Get enriched JSONB data for this session (if available)
+    const enrichedData = enrichedMap.get(session.sessionId);
 
     // Create SessionInfo from attached session
     sessions.push({
@@ -2067,6 +2047,11 @@ function transformAttachedSessionsToEvidence(
       durationSeconds: session.totalDurationSeconds,
       workflowCount: session.workflows.length,
       appsUsed: session.appsUsed,
+      // Enriched JSONB from session_mappings (replaces A2/A5)
+      screenshotDescriptions: enrichedData?.screenshotDescriptions || undefined,
+      gapAnalysis: enrichedData?.gapAnalysis || undefined,
+      insights: enrichedData?.insights || undefined,
+      peerInsights: enrichedData?.peerInsights || undefined,
     });
 
     // Transform each workflow

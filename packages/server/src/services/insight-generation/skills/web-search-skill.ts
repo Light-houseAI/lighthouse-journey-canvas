@@ -52,7 +52,7 @@ This is typically used as a fallback when internal analysis (A2) produces insuff
 
   produces: ['webOptimizationPlan'],
 
-  requires: ['userDiagnostics'], // Needs diagnostics to generate relevant searches
+  requires: [], // No hard prerequisites — can run standalone for TOOL_INTEGRATION or with userEvidence for context
 
   // =========================================================================
   // EXECUTION (callable function)
@@ -71,7 +71,7 @@ This is typically used as a fallback when internal analysis (A2) produces insuff
     const hasUrlsToFetch = userUrls.length > 0 && !state.urlFetchedContent;
 
     logger.info('Web Search Skill: Starting execution', {
-      hasUserDiagnostics: !!state.userDiagnostics,
+      hasUserEvidence: !!state.userEvidence,
       hasPerplexityApiKey: !!perplexityApiKey,
       userId: state.userId,
       userUrlCount: userUrls.length,
@@ -136,16 +136,10 @@ This is typically used as a fallback when internal analysis (A2) produces insuff
     }
 
     // =========================================================================
-    // STANDARD MODE: Search for best practices based on diagnostics
+    // STANDARD MODE: Search for best practices based on user evidence
     // =========================================================================
-    if (!state.userDiagnostics) {
-      return {
-        success: false,
-        observation: 'Cannot search web best practices: No diagnostics available. Run analyze_workflow_efficiency first to identify what to search for.',
-        stateUpdates: {},
-        error: 'Missing prerequisite: userDiagnostics',
-        executionTimeMs: Date.now() - startTime,
-      };
+    if (!state.userEvidence) {
+      logger.info('Web Search Skill: No user evidence available, using query directly');
     }
 
     try {
