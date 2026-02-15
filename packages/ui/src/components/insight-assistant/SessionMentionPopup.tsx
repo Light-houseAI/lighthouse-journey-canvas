@@ -472,13 +472,13 @@ function WorkflowItem({
           <IntentIcon className={`h-4 w-4 ${isSelected ? 'text-emerald-600' : colors.text}`} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className={`line-clamp-2 text-sm font-medium ${isSelected ? 'text-emerald-900' : 'text-gray-900'}`}>
+          <p className={`line-clamp-1 text-sm font-medium ${isSelected ? 'text-emerald-900' : 'text-gray-900'}`}>
+            {workflow.intentCategory}
+          </p>
+          <p className={`mt-0.5 line-clamp-2 text-xs ${isSelected ? 'text-emerald-700' : 'text-gray-500'}`}>
             {workflow.workflowSummary}
           </p>
           <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-            <span className={`inline-flex items-center rounded px-1 py-0.5 ${colors.badge}`}>
-              {workflow.intentCategory}
-            </span>
             {workflow.durationMs > 0 && (
               <span className="inline-flex items-center gap-1">
                 <Clock className="h-3 w-3" />
@@ -527,9 +527,6 @@ function WorkflowDetailView({
   onAddWorkflow: () => void;
   onAddStep: (step: SessionWorkflowStep) => void;
 }) {
-  const IntentIcon = getIntentIcon(workflow.intentCategory);
-  const colors = getIntentColor(workflow.intentCategory);
-
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-2 border-b border-gray-100 bg-gray-50 px-3 py-2">
@@ -540,12 +537,9 @@ function WorkflowDetailView({
           <ArrowLeft className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 text-sm font-medium text-gray-900">{workflow.workflowSummary}</p>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <span className={`inline-flex items-center gap-1 rounded px-1 py-0.5 ${colors.badge}`}>
-              <IntentIcon className="h-3 w-3" />
-              {workflow.intentCategory}
-            </span>
+          <p className="line-clamp-1 text-sm font-medium text-gray-900">{workflow.intentCategory}</p>
+          <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{workflow.workflowSummary}</p>
+          <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
             {workflow.durationMs > 0 && <span>{formatDurationMs(workflow.durationMs)}</span>}
             <span className="text-gray-400">from {workflow.sessionTitle}</span>
           </div>
