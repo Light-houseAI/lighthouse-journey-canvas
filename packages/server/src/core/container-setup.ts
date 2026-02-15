@@ -111,6 +111,9 @@ import { CompanyDocumentSearchService } from '../services/company-document-searc
 import { UserPreferencesRepository } from '../repositories/user-preferences.repository';
 import { PeerPreferencesService } from '../services/peer-preferences.service';
 import { PeerInsightsService } from '../services/peer-insights.service';
+import { GroupRepository } from '../repositories/group.repository';
+import { GroupService } from '../services/group.service';
+import { GroupController } from '../controllers/group.controller';
 import { CONTAINER_TOKENS } from './container-tokens.js';
 import { createLLMProvider, getLLMConfig } from './llm-provider.js';
 import type { Logger } from './logger.js';
@@ -268,6 +271,10 @@ export class Container {
         // User Preferences Repository (peer insights opt-in)
         [CONTAINER_TOKENS.USER_PREFERENCES_REPOSITORY]: asClass(
           UserPreferencesRepository
+        ).singleton(),
+        // Group Repository
+        [CONTAINER_TOKENS.GROUP_REPOSITORY]: asClass(
+          GroupRepository
         ).singleton(),
       });
 
@@ -572,6 +579,8 @@ export class Container {
         [CONTAINER_TOKENS.PEER_INSIGHTS_SERVICE]: asClass(
           PeerInsightsService
         ).singleton(),
+        // Group Service
+        [CONTAINER_TOKENS.GROUP_SERVICE]: asClass(GroupService).singleton(),
       });
 
       // Register controllers as transient (new instance per request)
@@ -624,6 +633,10 @@ export class Container {
         // Company Documents Controller
         [CONTAINER_TOKENS.COMPANY_DOCUMENTS_CONTROLLER]: asClass(
           CompanyDocumentsController
+        ).transient(),
+        // Group Controller
+        [CONTAINER_TOKENS.GROUP_CONTROLLER]: asClass(
+          GroupController
         ).transient(),
       });
 

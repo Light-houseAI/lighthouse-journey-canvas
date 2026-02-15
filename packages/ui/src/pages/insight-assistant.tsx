@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   Check,
   FolderOpen,
+  Layers,
   Loader2,
   Mic,
   Paperclip,
@@ -52,6 +53,7 @@ import {
 import type { RetrievedSource } from '../services/workflow-api';
 import type { SessionWorkflow, SessionWorkflowStep } from '../components/insight-assistant/SessionMentionPopup';
 import type { StrategyProposal, InsightMessage } from '../types/insight-assistant.types';
+import { getGroupContext, type Group as GroupType } from '../services/groups-api';
 
 /**
  * Generate contextual follow-up suggestions based on query and response
@@ -153,6 +155,7 @@ export default function InsightAssistant() {
   // Selected workflows and blocks (displayed as tags in input area)
   const [selectedWorkflows, setSelectedWorkflows] = useState<SessionWorkflow[]>([]);
   const [selectedBlocks, setSelectedBlocks] = useState<Array<{ block: SessionWorkflowStep; parentWorkflow: SessionWorkflow }>>([]);
+  const [selectedGroups, setSelectedGroups] = useState<GroupType[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -261,7 +264,7 @@ export default function InsightAssistant() {
 
   // Handle sending a message
   const handleSendMessage = useCallback(async () => {
-    const hasContext = selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0;
+    const hasContext = selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0 || selectedGroups.length > 0;
     if ((!inputValue.trim() && !hasContext) || isGeneratingProposals) return;
 
     // Build query with selected session context
@@ -364,6 +367,47 @@ export default function InsightAssistant() {
       displayContent = `${contextNames.join(' ')} ${displayContent}`.trim();
     }
 
+    // Resolve group sessions and merge into session context
+    if (selectedGroups.length > 0) {
+      const groupNames = selectedGroups.map(g => g.name);
+      const groupContext = `[Analyzing group${groupNames.length > 1 ? 's' : ''}: ${groupNames.join(', ')}]`;
+      query = query ? `${groupContext} ${query}` : `${groupContext} Analyze the sessions in these groups and provide insights.`;
+      displayContent = `${groupNames.map(n => `#${n}`).join(' ')} ${displayContent}`.trim();
+
+      try {
+        const groupContextPromises = selectedGroups.map(g => getGroupContext(g.id));
+        const groupContexts = await Promise.all(groupContextPromises);
+
+        if (!sessionContextData) sessionContextData = [];
+        const existingSessionIds = new Set(sessionContextData.map(s => s.sessionId));
+
+        for (const sessions of groupContexts) {
+          for (const s of sessions) {
+            if (existingSessionIds.has(s.id)) continue; // Deduplicate
+            existingSessionIds.add(s.id);
+
+            // Build AttachedSessionContext from resolved group session data
+            const summary = s.summary as any;
+            sessionContextData.push({
+              sessionId: s.id,
+              title: s.generatedTitle || s.workflowName || 'Session',
+              highLevelSummary: s.highLevelSummary ?? undefined,
+              workflows: (summary?.workflows || []).map((w: any) => ({
+                workflow_summary: w.workflow_summary || w.workflow_name || '',
+                semantic_steps: w.semantic_steps || [],
+                classification: w.classification,
+                timestamps: w.timestamps,
+              })),
+              totalDurationSeconds: s.durationSeconds ?? 0,
+              appsUsed: [],
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to resolve group context:', err);
+      }
+    }
+
     const userMessage: InsightMessage = {
       id: Date.now().toString(),
       type: 'user',
@@ -391,6 +435,7 @@ export default function InsightAssistant() {
     setSelectedWorkSessions([]); // Clear selected sessions after sending
     setSelectedWorkflows([]); // Clear selected workflows after sending
     setSelectedBlocks([]); // Clear selected blocks after sending
+    setSelectedGroups([]); // Clear selected groups after sending
 
     track(AnalyticsEvents.BUTTON_CLICKED, {
       button_name: 'send_insight_query',
@@ -516,7 +561,7 @@ export default function InsightAssistant() {
       // Refresh sessions list to update title in sidebar
       setSessions(getChatSessions('global', 'insight-assistant'));
     }
-  }, [inputValue, isGeneratingProposals, currentSessionId, track, selectedWorkSessions, selectedWorkflows, selectedBlocks]);
+  }, [inputValue, isGeneratingProposals, currentSessionId, track, selectedWorkSessions, selectedWorkflows, selectedBlocks, selectedGroups]);
 
   // Handle follow-up question click
   const handleFollowUpClick = useCallback((followUp: string) => {
@@ -627,6 +672,33 @@ export default function InsightAssistant() {
   // Handle viewing work session details
   const handleViewWorkSession = useCallback((session: SessionMappingItem) => {
     setViewingWorkSession(session);
+  }, []);
+
+  // Handle group selection from mention popup
+  const handleGroupSelect = useCallback((group: GroupType) => {
+    setSelectedGroups((prev) => {
+      if (prev.some((g) => g.id === group.id)) {
+        return prev; // Already selected
+      }
+      return [...prev, group];
+    });
+
+    // Remove @ and search text from input if present
+    if (mentionStartIndex !== null) {
+      const beforeMention = inputValue.slice(0, mentionStartIndex);
+      const afterMention = inputValue.slice(mentionStartIndex + 1 + mentionSearchQuery.length);
+      setInputValue(`${beforeMention}${afterMention}`.trim());
+    }
+
+    setIsMentionPopupOpen(false);
+    setMentionStartIndex(null);
+    setMentionSearchQuery('');
+    inputRef.current?.focus();
+  }, [inputValue, mentionStartIndex, mentionSearchQuery]);
+
+  // Handle removing a selected group
+  const handleRemoveGroup = useCallback((groupId: string) => {
+    setSelectedGroups((prev) => prev.filter((g) => g.id !== groupId));
   }, []);
 
   // Handle closing work session details
@@ -905,7 +977,7 @@ export default function InsightAssistant() {
       setIsGeneratingProposals(false);
       setSessions(getChatSessions('global', 'insight-assistant'));
     }
-  }, [isGeneratingProposals, currentSessionId, track, selectedWorkSessions, selectedWorkflows, selectedBlocks]);
+  }, [isGeneratingProposals, currentSessionId, track, selectedWorkSessions, selectedWorkflows, selectedBlocks, selectedGroups]);
 
   // Handle workflow selection from @ popup (Workflows tab)
   const handleWorkflowSelect = useCallback((workflow: SessionWorkflow) => {
@@ -1144,6 +1216,7 @@ export default function InsightAssistant() {
                     onSelect={handleSessionSelect}
                     onSelectWorkflow={handleWorkflowSelect}
                     onSelectBlock={handleBlockSelect}
+                    onGroupSelect={handleGroupSelect}
                     searchQuery={mentionSearchQuery}
                   />
 
@@ -1245,6 +1318,31 @@ export default function InsightAssistant() {
                     </div>
                   )}
 
+                  {/* Selected Group Tags (violet) */}
+                  {selectedGroups.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pb-2">
+                      {selectedGroups.map((group) => (
+                        <div
+                          key={group.id}
+                          className="group flex items-center gap-1 rounded-lg bg-violet-100 px-2 py-1"
+                        >
+                          <span className="flex items-center gap-1.5 text-sm font-medium text-violet-700">
+                            <Layers className="h-3.5 w-3.5" />
+                            <span className="max-w-[200px] truncate">{group.name}</span>
+                            <span className="text-xs text-violet-500">({group.itemCount})</span>
+                          </span>
+                          <button
+                            onClick={() => handleRemoveGroup(group.id)}
+                            className="ml-1 rounded p-0.5 text-violet-400 hover:bg-violet-200 hover:text-violet-700"
+                            title="Remove"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2">
                     <Paperclip className="h-5 w-5" style={{ color: '#94A3B8' }} />
                     <input
@@ -1254,7 +1352,7 @@ export default function InsightAssistant() {
                       onChange={handleInputChange}
                       onKeyDown={handleKeyDown}
                       placeholder={
-                        (selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0)
+                        (selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0 || selectedGroups.length > 0)
                           ? "Ask about the selected context..."
                           : "@ add context first, then / to use templates"
                       }
@@ -1274,10 +1372,10 @@ export default function InsightAssistant() {
                     </button>
                     <button
                       onClick={handleSendMessage}
-                      disabled={(!inputValue.trim() && selectedWorkSessions.length === 0 && selectedWorkflows.length === 0 && selectedBlocks.length === 0) || isGeneratingProposals}
+                      disabled={(!inputValue.trim() && selectedWorkSessions.length === 0 && selectedWorkflows.length === 0 && selectedBlocks.length === 0 && selectedGroups.length === 0) || isGeneratingProposals}
                       className="flex items-center gap-2 rounded-lg px-4 py-2.5"
                       style={{
-                        background: (inputValue.trim() || selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0) && !isGeneratingProposals ? '#4F46E5' : '#A5B4FC',
+                        background: (inputValue.trim() || selectedWorkSessions.length > 0 || selectedWorkflows.length > 0 || selectedBlocks.length > 0 || selectedGroups.length > 0) && !isGeneratingProposals ? '#4F46E5' : '#A5B4FC',
                       }}
                     >
                       <span className="text-sm font-medium" style={{ color: '#FFFFFF' }}>

@@ -49,6 +49,8 @@ export const REPOSITORY_TOKENS = {
   INSIGHT_GENERATION_JOB_REPOSITORY: 'insightGenerationJobRepository',
   // User Preferences Repository (peer insights opt-in)
   USER_PREFERENCES_REPOSITORY: 'userPreferencesRepository',
+  // Group Repository
+  GROUP_REPOSITORY: 'groupRepository',
 } as const;
 
 /**
@@ -137,6 +139,8 @@ export const SERVICE_TOKENS = {
   // Peer Insights Services
   PEER_PREFERENCES_SERVICE: 'peerPreferencesService',
   PEER_INSIGHTS_SERVICE: 'peerInsightsService',
+  // Group Service
+  GROUP_SERVICE: 'groupService',
 } as const;
 
 /**
@@ -168,6 +172,8 @@ export const CONTROLLER_TOKENS = {
   INSIGHT_ASSISTANT_CONTROLLER: 'insightAssistantController',
   // Company Documents Controller
   COMPANY_DOCUMENTS_CONTROLLER: 'companyDocumentsController',
+  // Group Controller
+  GROUP_CONTROLLER: 'groupController',
 } as const;
 
 /**

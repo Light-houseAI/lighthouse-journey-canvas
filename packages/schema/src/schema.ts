@@ -12,6 +12,7 @@ import {
   serial,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
   vector,
@@ -565,6 +566,75 @@ export const sessionMappings = pgTable('session_mappings', {
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+// ============================================================================
+// GROUPS SYSTEM
+// ============================================================================
+
+// Group item type enum
+export const groupItemTypeEnum = pgEnum('group_item_type', [
+  'session',
+  'workflow',
+  'step',
+]);
+
+/**
+ * Groups Table
+ * User-created collections that can contain sessions, workflows, or steps.
+ * Optionally associated with a timeline node (track).
+ */
+export const groups = pgTable('groups', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  nodeId: uuid('node_id').references(() => timelineNodes.id, {
+    onDelete: 'set null',
+  }),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+/**
+ * Group Items Table
+ * Maps sessions/workflows/steps to groups.
+ * Same item CAN belong to multiple groups (no cross-group unique constraint).
+ * Duplicate within the SAME group is prevented via composite unique constraint.
+ */
+export const groupItems = pgTable(
+  'group_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    groupId: uuid('group_id')
+      .notNull()
+      .references(() => groups.id, { onDelete: 'cascade' }),
+    itemType: groupItemTypeEnum('item_type').notNull(),
+    sessionMappingId: uuid('session_mapping_id')
+      .notNull()
+      .references(() => sessionMappings.id, { onDelete: 'cascade' }),
+    workflowId: varchar('workflow_id', { length: 100 }),
+    stepId: varchar('step_id', { length: 100 }),
+    metadata: jsonb('metadata'),
+    addedAt: timestamp('added_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique('unique_item_per_group').on(
+      table.groupId,
+      table.sessionMappingId,
+      table.workflowId,
+      table.stepId
+    ),
+  ]
+);
 
 /**
  * Session Classification Feedback Table

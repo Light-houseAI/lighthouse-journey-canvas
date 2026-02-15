@@ -33,10 +33,12 @@ import {
   FlaskConical,
   RefreshCw,
   Hammer,
+  Group,
 } from 'lucide-react';
 import type { SessionMappingItem } from '@journey/schema';
 
 import { getUserSessions } from '../../services/session-api';
+import { getUserGroups, type Group as GroupType } from '../../services/groups-api';
 
 // ============================================================================
 // TYPES: Workflows & steps extracted from user sessions
@@ -101,6 +103,8 @@ interface SessionMentionPopupProps {
   onSelectWorkflow: (workflow: SessionWorkflow) => void;
   /** Callback when an individual step is selected */
   onSelectBlock: (step: SessionWorkflowStep, parentWorkflow: SessionWorkflow) => void;
+  /** Callback when a group is selected */
+  onGroupSelect?: (group: GroupType) => void;
   /** Search query (text after @) */
   searchQuery?: string;
   /** Position anchor element */
@@ -640,13 +644,16 @@ export function SessionMentionPopup({
   onSelect,
   onSelectWorkflow,
   onSelectBlock,
+  onGroupSelect,
   searchQuery = '',
 }: SessionMentionPopupProps) {
   const [sessions, setSessions] = useState<SessionMappingItem[]>([]);
+  const [groupsList, setGroupsList] = useState<GroupType[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState<'sessions' | 'workflows'>('sessions');
+  const [activeTab, setActiveTab] = useState<'sessions' | 'workflows' | 'groups'>('sessions');
 
   // Session-specific state
   const [viewingSession, setViewingSession] = useState<SessionMappingItem | null>(null);
@@ -677,6 +684,25 @@ export function SessionMentionPopup({
     };
 
     fetchSessions();
+  }, [isOpen]);
+
+  // Fetch groups on open (for the Groups tab)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchGroups = async () => {
+      setGroupsLoading(true);
+      try {
+        const groups = await getUserGroups();
+        setGroupsList(groups);
+      } catch (err) {
+        console.error('Failed to fetch groups:', err);
+      } finally {
+        setGroupsLoading(false);
+      }
+    };
+
+    fetchGroups();
   }, [isOpen]);
 
   // Extract workflows from sessions (for the Workflows tab)
@@ -710,6 +736,17 @@ export function SessionMentionPopup({
     });
   }, [workflows, searchQuery]);
 
+  // Filter groups
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery) return groupsList;
+    const query = searchQuery.toLowerCase();
+    return groupsList.filter((g) => {
+      const name = g.name.toLowerCase();
+      const desc = (g.description || '').toLowerCase();
+      return name.includes(query) || desc.includes(query);
+    });
+  }, [groupsList, searchQuery]);
+
   // Reset selected index when filtered results or tab changes
   useEffect(() => {
     setSelectedIndex(0);
@@ -735,7 +772,7 @@ export function SessionMentionPopup({
   }, [searchQuery]);
 
   // Handle tab switch
-  const handleTabSwitch = useCallback((tab: 'sessions' | 'workflows') => {
+  const handleTabSwitch = useCallback((tab: 'sessions' | 'workflows' | 'groups') => {
     setActiveTab(tab);
     setSelectedIndex(0);
     setViewingSession(null);
@@ -931,14 +968,34 @@ export function SessionMentionPopup({
             </span>
           )}
         </button>
+        <button
+          onClick={() => handleTabSwitch('groups')}
+          className={`flex flex-1 items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
+            activeTab === 'groups'
+              ? 'border-b-2 border-violet-600 text-violet-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Group className="h-3.5 w-3.5" />
+          Groups
+          {!groupsLoading && filteredGroups.length > 0 && (
+            <span className={`rounded-full px-1.5 py-0.5 text-xs ${
+              activeTab === 'groups' ? 'bg-violet-100 text-violet-600' : 'bg-gray-100 text-gray-500'
+            }`}>
+              {filteredGroups.length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Search hint */}
       {searchQuery && (
         <div className={`border-b border-gray-100 px-3 py-1.5 ${
-          activeTab === 'sessions' ? 'bg-indigo-50' : 'bg-emerald-50'
+          activeTab === 'sessions' ? 'bg-indigo-50' : activeTab === 'workflows' ? 'bg-emerald-50' : 'bg-violet-50'
         }`}>
-          <span className={`text-xs ${activeTab === 'sessions' ? 'text-indigo-600' : 'text-emerald-600'}`}>
+          <span className={`text-xs ${
+            activeTab === 'sessions' ? 'text-indigo-600' : activeTab === 'workflows' ? 'text-emerald-600' : 'text-violet-600'
+          }`}>
             Filtering by: <strong>{searchQuery}</strong>
           </span>
         </div>
@@ -1032,6 +1089,62 @@ export function SessionMentionPopup({
             )}
           </>
         )}
+
+        {/* Groups Tab */}
+        {activeTab === 'groups' && (
+          <>
+            {groupsLoading && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-5 w-5 animate-spin text-violet-600" />
+                <span className="ml-2 text-sm text-gray-500">Loading groups...</span>
+              </div>
+            )}
+            {!groupsLoading && filteredGroups.length === 0 && (
+              <div className="px-3 py-6 text-center">
+                <Group className="mx-auto h-8 w-8 text-gray-300" />
+                <p className="mt-2 text-sm text-gray-500">
+                  {searchQuery ? `No groups matching "${searchQuery}"` : 'No groups created yet'}
+                </p>
+              </div>
+            )}
+            {!groupsLoading && filteredGroups.length > 0 && (
+              <div className="py-1">
+                {filteredGroups.map((group) => (
+                  <div
+                    key={group.id}
+                    className="flex items-center justify-between px-3 py-2 hover:bg-violet-50 cursor-pointer"
+                    onClick={() => onGroupSelect?.(group)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Group className="h-4 w-4 text-violet-500 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-800 truncate">{group.name}</p>
+                        {group.description && (
+                          <p className="text-xs text-gray-500 truncate">{group.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <span className="rounded-full bg-violet-100 px-1.5 py-0.5 text-xs text-violet-600">
+                        {group.itemCount} item{group.itemCount !== 1 ? 's' : ''}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onGroupSelect?.(group);
+                        }}
+                        className="rounded bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-600 hover:bg-violet-200"
+                      >
+                        <Plus className="inline h-3 w-3 mr-0.5" />
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Footer hint */}
@@ -1039,7 +1152,9 @@ export function SessionMentionPopup({
         <span className="text-xs text-gray-500">
           {activeTab === 'sessions'
             ? 'Click session to view details, or Add to insert'
-            : 'Click workflow to view steps, or Add to insert'}
+            : activeTab === 'workflows'
+              ? 'Click workflow to view steps, or Add to insert'
+              : 'Click a group to add its sessions as context'}
         </span>
       </div>
     </div>
