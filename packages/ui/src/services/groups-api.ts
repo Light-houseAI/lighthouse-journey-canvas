@@ -78,29 +78,21 @@ export async function getUserGroups(
   const query = params.toString();
   const url = query ? `${BASE_URL}?${query}` : BASE_URL;
 
-  const response = await httpClient.request<{ success: boolean; data: Group[] }>(url);
-  return response.data;
+  return httpClient.request<Group[]>(url);
 }
 
 /**
  * Get a group with its items
  */
 export async function getGroup(groupId: string): Promise<GroupWithItems> {
-  const response = await httpClient.request<{ success: boolean; data: GroupWithItems }>(
-    `${BASE_URL}/${groupId}`
-  );
-  return response.data;
+  return httpClient.request<GroupWithItems>(`${BASE_URL}/${groupId}`);
 }
 
 /**
  * Create a new group
  */
 export async function createGroup(data: CreateGroupRequest): Promise<Group> {
-  const response = await httpClient.post<{ success: boolean; data: Group }>(
-    BASE_URL,
-    data
-  );
-  return response.data;
+  return httpClient.post<Group>(BASE_URL, data);
 }
 
 /**
@@ -110,11 +102,7 @@ export async function updateGroup(
   groupId: string,
   data: { name?: string; description?: string }
 ): Promise<Group> {
-  const response = await httpClient.patch<{ success: boolean; data: Group }>(
-    `${BASE_URL}/${groupId}`,
-    data
-  );
-  return response.data;
+  return httpClient.patch<Group>(`${BASE_URL}/${groupId}`, data);
 }
 
 /**
@@ -131,11 +119,7 @@ export async function addItemsToGroup(
   groupId: string,
   items: AddGroupItemsRequest['items']
 ): Promise<GroupItem[]> {
-  const response = await httpClient.post<{ success: boolean; data: GroupItem[] }>(
-    `${BASE_URL}/${groupId}/items`,
-    { items }
-  );
-  return response.data;
+  return httpClient.post<GroupItem[]>(`${BASE_URL}/${groupId}/items`, { items });
 }
 
 /**
@@ -155,8 +139,5 @@ export async function removeItemFromGroup(
 export async function getGroupContext(
   groupId: string
 ): Promise<GroupSessionContext[]> {
-  const response = await httpClient.request<{ success: boolean; data: GroupSessionContext[] }>(
-    `${BASE_URL}/${groupId}/context`
-  );
-  return response.data;
+  return httpClient.request<GroupSessionContext[]>(`${BASE_URL}/${groupId}/context`);
 }
