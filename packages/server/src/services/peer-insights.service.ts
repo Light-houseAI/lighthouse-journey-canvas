@@ -90,15 +90,19 @@ export class PeerInsightsService {
       ]);
 
       if (userSessions.length === 0) {
-        this.logger.info('No user sessions with embeddings found', {
+        this.logger.info('[PEER INSIGHTS EXIT] No user sessions with embeddings found — cannot search for peers without user session data to compare against', {
           userId,
           nodeId,
+          reason: 'no_user_sessions',
         });
         return [];
       }
 
       if (sharingUserIds.length === 0) {
-        this.logger.info('No users sharing peer data', { userId });
+        this.logger.info('[PEER INSIGHTS EXIT] No users sharing peer data — no other users have enabled share_peer_insights', {
+          userId,
+          reason: 'no_sharing_users',
+        });
         return [];
       }
 
@@ -106,12 +110,24 @@ export class PeerInsightsService {
         (e: any) => e.name
       );
 
-      this.logger.info('Starting peer insights search', {
+      // Log embedding availability for each user session to help debug empty results
+      const sessionEmbeddingInfo = userSessions.map((s) => ({
+        id: s.desktopSessionId,
+        workflowName: s.workflowName,
+        hasText: !!(s.highLevelSummary || s.workflowName),
+        hasSummaryEmb: !!s.summaryEmbedding,
+        hasHLSEmb: !!s.highLevelSummaryEmbedding,
+        hasScreenshotEmb: !!s.screenshotDescriptionsEmbedding,
+        hasGapEmb: !!s.gapAnalysisEmbedding,
+      }));
+
+      this.logger.info('[PEER INSIGHTS] Starting search', {
         userId,
         nodeId,
         userSessionCount: userSessions.length,
         sharingUserCount: sharingUserIds.length,
         entityCount: entityNames.length,
+        sessionEmbeddings: sessionEmbeddingInfo,
       });
 
       // 3. For each user session, run 2 search signals in parallel
@@ -122,7 +138,13 @@ export class PeerInsightsService {
           .filter(Boolean)
           .join(' ');
 
-        if (!queryText && !session.summaryEmbedding) continue;
+        if (!queryText && !session.summaryEmbedding) {
+          this.logger.info('[PEER INSIGHTS] Skipping session — no text and no embedding', {
+            sessionId: session.desktopSessionId,
+            workflowName: session.workflowName,
+          });
+          continue;
+        }
 
         const [pgvectorResults, graphResults] = await Promise.all([
           // Signal 1: pgvector + BM25 hybrid
@@ -160,6 +182,17 @@ export class PeerInsightsService {
         const filtered = fused.filter((m) => m.finalScore >= minSimilarity);
         const topMatches = filtered.slice(0, limit);
 
+        this.logger.info('[PEER INSIGHTS] Session search results', {
+          sessionId: session.desktopSessionId,
+          workflowName: session.workflowName,
+          pgvectorMatchCount: pgvectorResults.length,
+          graphMatchCount: graphResults.length,
+          fusedCount: fused.length,
+          topScores: fused.slice(0, 5).map((m) => ({ score: m.finalScore.toFixed(3), sources: m.matchSources })),
+          filteredCount: filtered.length,
+          minSimilarityThreshold: minSimilarity,
+        });
+
         if (topMatches.length === 0) continue;
 
         // 6. Generate learning points via Gemini
@@ -185,7 +218,7 @@ export class PeerInsightsService {
         });
       }
 
-      this.logger.info('Peer insights search complete', {
+      this.logger.info(`[PEER INSIGHTS] Search complete — ${results.length === 0 ? 'NO matches found' : results.length + ' session(s) with matches'}`, {
         userId,
         nodeId,
         resultCount: results.length,
