@@ -48,7 +48,7 @@ export function CompactSidebar() {
     },
     {
       icon: <Sparkles className="h-5 w-5" />,
-      label: 'Insight Assistant',
+      label: 'Alphatrace',
       path: '/insight-assistant',
       isActive: location === '/insight-assistant',
     },

@@ -164,7 +164,7 @@ export default function InsightAssistant() {
   const getInitialMessage = useCallback((): InsightMessage => ({
     id: '1',
     type: 'ai',
-    content: `Welcome to **Insight Assistant**! I'm here to analyze your workflows and provide AI-powered strategy recommendations.`,
+    content: `Hi, I'm **Alphatrace**! I help you analyze your workflows and provide AI-powered strategy recommendations.`,
     timestamp: new Date(),
   }), []);
 
@@ -1082,7 +1082,7 @@ export default function InsightAssistant() {
                 className="text-lg font-semibold"
                 style={{ color: '#1E293B', lineHeight: '24px' }}
               >
-                Insight Assistant
+                Alphatrace
               </h1>
               <p className="text-sm" style={{ color: '#64748B' }}>
                 AI-powered workflow analysis
