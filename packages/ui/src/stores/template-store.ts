@@ -115,6 +115,26 @@ Output: Downloadable SKILL.md with YAML frontmatter`,
     updatedAt: new Date().toISOString(),
   },
   {
+    id: 'improving-efficiency',
+    name: 'Improving Efficiency',
+    description: 'Analyze your workflows and get structured efficiency improvement recommendations',
+    iconKey: 'Zap',
+    query: 'Based on all of my workflows create insights which can improve my efficiency and output significantly',
+    promptPreview: `Prompt: Improving Efficiency
+
+Analyzes all your workflow data to identify:
+- Specific inefficiencies with time impact
+- Bottlenecks and patterns slowing you down
+- Actionable improvements with exact shortcuts/commands
+- Implementation priority ranked by impact
+
+Output: Structured efficiency report with data-backed recommendations`,
+    colorPreset: 'amber',
+    isBuiltIn: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
     id: 'founders',
     name: 'Founders',
     description: 'Analyze a session for a founder — predict outcomes, assess optimality, rank opportunities',
@@ -216,6 +236,19 @@ export const useTemplateStore = create<TemplateState>()(
         partialize: (state) => ({
           templates: state.templates,
         }),
+        merge: (persistedState, currentState) => {
+          const persisted = persistedState as Partial<TemplateState>;
+          if (persisted.templates) {
+            // Inject any new built-in defaults missing from localStorage
+            const existingIds = new Set(persisted.templates.map((t) => t.id));
+            const missingDefaults = DEFAULT_TEMPLATES.filter((t) => !existingIds.has(t.id));
+            return {
+              ...currentState,
+              templates: [...persisted.templates, ...missingDefaults],
+            };
+          }
+          return currentState;
+        },
       }
     ),
     { name: 'template-store' }

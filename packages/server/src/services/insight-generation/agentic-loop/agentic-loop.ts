@@ -44,6 +44,7 @@ import type { FactCheckIssue } from '../validators/fact-check-validator.js';
 import { BLOG_GENERATION_SYSTEM_PROMPT } from '../prompts/blog-system-prompt.js';
 import { PROGRESS_UPDATE_SYSTEM_PROMPT } from '../prompts/progressupdate-system-prompt.js';
 import { SKILL_FILE_GENERATION_SYSTEM_PROMPT } from '../prompts/skillfile-system-prompt.js';
+import { EFFICIENCY_OPTIMIZATION_SYSTEM_PROMPT } from '../prompts/efficiency-system-prompt.js';
 
 // ============================================================================
 // TYPES
@@ -1572,6 +1573,7 @@ Generate your response now. Remember:
   // BLOG_CREATION uses the specialized blog generation prompt
   // PROGRESS_UPDATE uses the specialized progress update prompt
   // SKILL_FILE_GENERATION uses the specialized skill file prompt
+  // OPTIMIZATION/DIAGNOSTIC use the efficiency optimization prompt
   // All other intents use the standard response agent prompt
   let systemPrompt: string;
   if (intent === 'BLOG_CREATION') {
@@ -1580,6 +1582,8 @@ Generate your response now. Remember:
     systemPrompt = PROGRESS_UPDATE_SYSTEM_PROMPT;
   } else if (intent === 'SKILL_FILE_GENERATION') {
     systemPrompt = SKILL_FILE_GENERATION_SYSTEM_PROMPT;
+  } else if (intent === 'OPTIMIZATION' || intent === 'DIAGNOSTIC') {
+    systemPrompt = EFFICIENCY_OPTIMIZATION_SYSTEM_PROMPT;
   } else {
     systemPrompt = RESPONSE_AGENT_SYSTEM_PROMPT;
   }
@@ -1599,6 +1603,7 @@ Generate your response now. Remember:
     usingBlogPrompt: intent === 'BLOG_CREATION',
     usingProgressUpdatePrompt: intent === 'PROGRESS_UPDATE',
     usingSkillFilePrompt: intent === 'SKILL_FILE_GENERATION',
+    usingEfficiencyPrompt: intent === 'OPTIMIZATION' || intent === 'DIAGNOSTIC',
   });
 
   const response = await llmProvider.generateText([
