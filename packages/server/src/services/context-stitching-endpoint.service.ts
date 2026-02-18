@@ -39,7 +39,17 @@ export interface StitchContextRequest {
   sessionId: string;
   workflowName: string;
   summary: Record<string, unknown>;
-  screenshotDescriptions?: Record<string, { description: string; app: string; category: string }>;
+  screenshotDescriptions?: Record<string, {
+    description: string;
+    app: string;
+    category: string;
+    isMeaningful: boolean;
+    ocrText: string | null;
+    hasOcr: boolean;
+    appName: string | null;
+    windowTitle: string | null;
+    browserUrl: string | null;
+  }>;
   gapAnalysis?: Record<string, unknown>;
   appsUsed: string[];
   startTime: number;

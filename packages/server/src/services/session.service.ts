@@ -384,7 +384,10 @@ export class SessionService {
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([ts, desc]: [string, any]) => {
             const app = desc.app ? ` [${desc.app}]` : '';
-            return { timestamp: Number(ts), text: `${ts}${app} ${desc.description || desc}` };
+            const windowCtx = desc.windowTitle ? ` (${desc.windowTitle})` : '';
+            const urlCtx = desc.browserUrl ? ` <${desc.browserUrl}>` : '';
+            const ocrSnippet = desc.ocrText ? ` OCR: ${desc.ocrText.substring(0, 300)}` : '';
+            return { timestamp: Number(ts), text: `${ts}${app}${windowCtx}${urlCtx} ${desc.description || desc}${ocrSnippet}` };
           });
 
         if (entries.length > 0) {

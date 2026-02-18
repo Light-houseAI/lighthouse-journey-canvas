@@ -361,6 +361,12 @@ export const screenshotDescriptionSchema = z.object({
   description: z.string(),
   app: z.string().optional(),
   category: z.string().optional(),
+  isMeaningful: z.boolean(),
+  ocrText: z.string().max(3000).nullable(),
+  hasOcr: z.boolean(),
+  appName: z.string().nullable(),
+  windowTitle: z.string().max(1000).nullable(),
+  browserUrl: z.string().max(2500).nullable(),
 });
 
 export type ScreenshotDescription = z.infer<typeof screenshotDescriptionSchema>;

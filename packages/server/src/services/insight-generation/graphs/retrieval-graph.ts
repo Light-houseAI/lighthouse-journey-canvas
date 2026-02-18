@@ -1235,7 +1235,12 @@ interface SessionChapterData {
     description: string;
     app: string;
     category: string;
-    isMeaningful?: boolean;
+    isMeaningful: boolean;
+    ocrText: string | null;
+    hasOcr: boolean;
+    appName: string | null;
+    windowTitle: string | null;
+    browserUrl: string | null;
   }>;
   /** Deep gap & improvement analysis from Gemini Vision (pre-computed by Desktop companion) */
   gapAnalysis?: Record<string, unknown>;
@@ -1344,7 +1349,12 @@ async function fetchSessionChapters(
           description: string;
           app: string;
           category: string;
-          isMeaningful?: boolean;
+          isMeaningful: boolean;
+          ocrText: string | null;
+          hasOcr: boolean;
+          appName: string | null;
+          windowTitle: string | null;
+          browserUrl: string | null;
         }> | null;
 
         // Extract enriched JSONB columns from session_mapping

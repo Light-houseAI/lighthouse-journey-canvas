@@ -68,8 +68,10 @@ function formatSessionContext(session: SessionInfo): string {
     if (entries.length > 0) {
       const screenshotSummary = entries.map(([ts, desc]) => {
         const d = typeof desc === 'string' ? desc : desc?.description || '';
-        const app = typeof desc === 'object' ? desc?.app || '' : '';
-        return `    - [${app}] ${truncate(d, 100)}`;
+        const app = typeof desc === 'object' ? (desc?.appName || desc?.app || '') : '';
+        const windowInfo = desc?.windowTitle ? ` "${truncate(desc.windowTitle, 60)}"` : '';
+        const urlInfo = desc?.browserUrl ? ` (${truncate(desc.browserUrl, 80)})` : '';
+        return `    - [${app}]${windowInfo}${urlInfo} ${truncate(d, 100)}`;
       }).join('\n');
       parts.push(`  Screenshots:\n${screenshotSummary}`);
     }
