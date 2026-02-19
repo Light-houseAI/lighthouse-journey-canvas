@@ -3,8 +3,7 @@
  *
  * LangGraph implementation of the Retrieval Agent (A1) that:
  * 1. Retrieves user's sessions/workflows/steps via Hybrid RAG
- * 2. Retrieves anonymized peer patterns from platform tables
- * 3. Runs critique loop to validate retrieval quality
+ * 2. Runs critique loop to validate retrieval quality
  *
  * Uses existing NaturalLanguageQueryService for Hybrid RAG.
  */
@@ -37,103 +36,13 @@ import type {
   CritiqueIssue,
   AttachedSessionContext,
   RepetitiveWorkflowPattern,
+  SessionKnowledgeEntry,
+  KnowledgeBaseWorkflow,
 } from '../types.js';
 import { z } from 'zod';
 import { NoiseFilterService } from '../filters/noise-filter.service.js';
 import { A1_RETRIEVAL_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
 import { classifyQuery, type QueryClassification } from '../classifiers/query-classifier.js';
-import {
-  getInsightCacheManager,
-  QueryEmbeddingCache,
-  PeerWorkflowCache,
-} from '../utils/insight-cache.js';
-
-// ============================================================================
-// LEVEL 3: PII ANONYMIZATION FOR PEER DATA
-// ============================================================================
-
-/**
- * PII patterns for anonymizing peer workflow data before showing to other users.
- * This prevents leaking sensitive information like emails, file paths, API keys, etc.
- */
-const PII_PATTERNS = {
-  email: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
-  urlWithPath: /https?:\/\/[^\s]+/g,
-  filePath: /(?:\/Users\/|\/home\/|C:\\Users\\)[^\s\/\\]+/gi,
-  phone: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g,
-  ipAddress: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g,
-  uuid: /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
-  apiKey: /(?:api[_-]?key|token|secret|password|auth)[=:]\s*[^\s,;]+/gi,
-};
-
-/**
- * Anonymize text by removing PII patterns.
- * Used to sanitize peer workflow data before showing to other users.
- */
-function anonymizeText(text: string): string {
-  if (!text) return text;
-
-  let anonymized = text;
-
-  // Remove emails
-  anonymized = anonymized.replace(PII_PATTERNS.email, '[email]');
-
-  // Remove URLs (keep domain only for context)
-  anonymized = anonymized.replace(PII_PATTERNS.urlWithPath, (url) => {
-    try {
-      const domain = new URL(url).hostname;
-      return `[${domain}]`;
-    } catch {
-      return '[url]';
-    }
-  });
-
-  // Remove file paths with usernames
-  anonymized = anonymized.replace(PII_PATTERNS.filePath, '[path]');
-
-  // Remove UUIDs
-  anonymized = anonymized.replace(PII_PATTERNS.uuid, '[id]');
-
-  // Remove API keys/tokens
-  anonymized = anonymized.replace(PII_PATTERNS.apiKey, '[credential]');
-
-  // Remove phone numbers
-  anonymized = anonymized.replace(PII_PATTERNS.phone, '[phone]');
-
-  // Remove IP addresses
-  anonymized = anonymized.replace(PII_PATTERNS.ipAddress, '[ip]');
-
-  return anonymized;
-}
-
-/**
- * Anonymize a peer workflow by sanitizing all text fields.
- * This is LEVEL 3 of the privacy fix - ensures no PII leaks to other users.
- */
-function anonymizePeerWorkflow(workflow: UserWorkflow): UserWorkflow {
-  return {
-    ...workflow,
-    title: anonymizeText(workflow.title || ''),
-    summary: anonymizeText(workflow.summary || ''),
-    intent: anonymizeText(workflow.intent || ''),
-    approach: anonymizeText(workflow.approach || ''),
-    context: workflow.context ? anonymizeText(workflow.context) : undefined,
-    steps: workflow.steps?.map(step => ({
-      ...step,
-      description: anonymizeText(step.description || ''),
-    })) || [],
-  };
-}
-
-/**
- * Anonymize an evidence bundle containing peer workflows.
- */
-function anonymizePeerEvidence(evidence: EvidenceBundle): EvidenceBundle {
-  return {
-    ...evidence,
-    workflows: evidence.workflows.map(anonymizePeerWorkflow),
-  };
-}
 
 // ============================================================================
 // DOMAIN RELEVANCE FILTERING
@@ -301,14 +210,6 @@ async function retrieveUserEvidence(
       sessionMappingRepository
     );
 
-    // Conditionally strip peerInsights if peer comparison is disabled
-    if (!state.includePeerComparison) {
-      for (const session of userEvidence.sessions) {
-        session.peerInsights = undefined;
-      }
-      logger.info('A1: peerInsights stripped (includePeerComparison=false)');
-    }
-
     logger.info('A1: Attached sessions transformed to evidence', {
       workflowCount: userEvidence.workflows.length,
       stepCount: userEvidence.totalStepCount,
@@ -443,7 +344,7 @@ async function retrieveUserEvidence(
     });
 
     // === DOWNSTREAM DATA LOGGING ===
-    // Log what session/workflow/step data is going downstream to A2/A3/A4 agents
+    // Log what session/workflow/step data is going downstream to A4 agents
     logger.info('=== A1 DOWNSTREAM DATA: Sessions ===');
     for (const session of userEvidence.sessions) {
       logger.info(`Session [${session.sessionId}]`, {
@@ -525,13 +426,7 @@ async function retrieveUserEvidence(
       logger.debug('=== END A1 USER EVIDENCE OUTPUT ===');
     }
 
-    // Conditionally strip peerInsights if peer comparison is disabled
-    if (!state.includePeerComparison) {
-      for (const session of userEvidence.sessions) {
-        session.peerInsights = undefined;
-      }
-      logger.info('A1: peerInsights stripped (includePeerComparison=false)');
-    }
+
 
     return {
       userEvidence,
@@ -546,352 +441,6 @@ async function retrieveUserEvidence(
       currentStage: 'a1_user_evidence_failed',
     };
   }
-}
-
-/**
- * Node: Retrieve anonymized peer evidence from platform tables or cross-user sessions
- *
- * Strategy:
- * 1. First try platform_workflow_patterns table (curated patterns)
- * 2. If empty, try cross-user session search via pgvector (semantic similarity)
- * 3. If still empty, try ArangoDB graph-based peer retrieval (structural similarity)
- */
-async function retrievePeerEvidence(
-  state: InsightState,
-  deps: RetrievalGraphDeps
-): Promise<Partial<InsightState>> {
-  const { logger, platformWorkflowRepository, sessionMappingRepository, graphService, embeddingService } = deps;
-
-  if (!state.includePeerComparison) {
-    logger.info('A1: Peer comparison disabled, skipping');
-    return {
-      peerEvidence: null,
-      currentStage: 'a1_peer_evidence_skipped',
-      progress: 25,
-    };
-  }
-
-  const peerEvidenceStartMs = Date.now();
-  logger.info('A1: Retrieving peer evidence from platform');
-
-  try {
-    // AI4 OPTIMIZATION: Cache query embeddings for repeated queries
-    const cacheManager = getInsightCacheManager();
-    const embeddingCacheKey = QueryEmbeddingCache.makeKey(state.query);
-    let queryEmbedding = cacheManager.queryEmbeddings.get(embeddingCacheKey);
-
-    if (queryEmbedding) {
-      logger.debug('A1: Using cached query embedding', { cacheKey: embeddingCacheKey.slice(0, 50) });
-    } else {
-      queryEmbedding = await embeddingService.generateEmbedding(state.query);
-      cacheManager.queryEmbeddings.set(embeddingCacheKey, queryEmbedding);
-      logger.debug('A1: Cached new query embedding', { cacheKey: embeddingCacheKey.slice(0, 50) });
-    }
-
-    // AI4 OPTIMIZATION: Check peer workflow cache before fetching
-    const embeddingHash = PeerWorkflowCache.hashEmbedding(queryEmbedding);
-    const peerCacheKey = PeerWorkflowCache.makeKey(state.userId, embeddingHash);
-    const cachedPeerEvidence = cacheManager.peerWorkflows.get(peerCacheKey);
-
-    if (cachedPeerEvidence) {
-      logger.info('A1: Using cached peer evidence', {
-        workflowCount: cachedPeerEvidence.workflows.length,
-        cacheHit: true,
-      });
-      return {
-        peerEvidence: cachedPeerEvidence,
-        currentStage: 'a1_peer_evidence_cached',
-        progress: 25,
-      };
-    }
-
-    // Determine workflow type from user's evidence (if available)
-    const workflowType = state.userEvidence?.workflows[0]?.title
-      ? inferWorkflowType(state.userEvidence.workflows[0].title)
-      : undefined;
-
-    // OPTIMIZATION MT2: Reduce peer workflow limit from 10 to 5
-    // A3-Comparator only uses 3 peer workflows, so fetching 10 was wasteful
-    const PEER_WORKFLOW_LIMIT = 5;
-
-    // Convert Float32Array to number[] for repository compatibility
-    const embeddingArray = Array.from(queryEmbedding);
-
-    // PARALLEL PEER RETRIEVAL: Run all 3 strategies concurrently for speed
-    // Pick the first strategy (by priority) that returns results
-    // Priority: Strategy 1 (curated patterns) > Strategy 2 (cross-user) > Strategy 3 (graph)
-
-    // Extract entities for Strategy 3 upfront
-    const userEntities = state.userEvidence?.entities?.map(e => e.name) ||
-      state.userEvidence?.workflows.flatMap(w => w.tools || []) || [];
-
-    // Helper: apply domain filtering to evidence
-    const applyDomainFilter = (evidence: EvidenceBundle, source: string): EvidenceBundle => {
-      if (!state.queryClassification?.routing.strictDomainMatching || evidence.workflows.length === 0) {
-        return evidence;
-      }
-      const filtered = filterWorkflowsByDomain(evidence.workflows, state.queryClassification, logger);
-      logger.info(`A1: Applied domain filtering to peer evidence (${source})`, {
-        originalCount: evidence.workflows.length,
-        filteredCount: filtered.length,
-      });
-      return {
-        ...evidence,
-        workflows: filtered,
-        totalStepCount: filtered.reduce((sum, w) => sum + (w.steps?.length || 0), 0),
-      };
-    };
-
-    // Strategy 1: Platform curated patterns
-    const strategy1Promise = platformWorkflowRepository.searchByEmbedding(
-      embeddingArray,
-      { workflowType, minEfficiencyScore: 50, limit: PEER_WORKFLOW_LIMIT }
-    ).then(patterns => {
-      if (patterns.length === 0) return null;
-      let evidence = transformPeerPatternsToEvidence(patterns, logger);
-      evidence = applyDomainFilter(evidence, 'platform_patterns');
-      return evidence.workflows.length > 0 ? evidence : null;
-    }).catch(() => null);
-
-    // Strategy 2: Cross-user session search
-    const strategy2Promise = (state.userId
-      ? sessionMappingRepository.searchPeerSessionsByEmbedding(
-          state.userId,
-          queryEmbedding,
-          { minSimilarity: 0.35, limit: PEER_WORKFLOW_LIMIT }
-        ).then(sessions => {
-          if (sessions.length === 0) return null;
-          let evidence = transformPeerSessionsToEvidence(sessions, logger);
-          evidence = applyDomainFilter(evidence, 'cross_user');
-          return evidence.workflows.length > 0 ? evidence : null;
-        }).catch(() => null)
-      : Promise.resolve(null)
-    );
-
-    // Strategy 3: Graph-based retrieval
-    const strategy3Promise = (graphService && state.userId
-      ? graphService.getPeerWorkflowPatterns(
-          state.userId,
-          { workflowType, entities: userEntities.slice(0, 10), minOccurrences: 2, limit: 10 }
-        ).then(patterns => {
-          if (patterns.length === 0) return null;
-          let evidence = transformGraphPeerPatternsToEvidence(patterns, logger);
-          evidence = applyDomainFilter(evidence, 'graph');
-          return evidence.workflows.length > 0 ? evidence : null;
-        }).catch(() => null)
-      : Promise.resolve(null)
-    );
-
-    // Run all strategies in parallel
-    const [s1Result, s2Result, s3Result] = await Promise.all([
-      strategy1Promise,
-      strategy2Promise,
-      strategy3Promise,
-    ]);
-
-    // Pick best result by priority order
-    const peerEvidence = s1Result || s2Result || s3Result;
-    const peerSource = s1Result ? 'platform_patterns' : s2Result ? 'cross_user_sessions' : s3Result ? 'arangodb_graph' : 'none';
-
-    const peerEvidenceElapsedMs = Date.now() - peerEvidenceStartMs;
-
-    if (!peerEvidence) {
-      logger.info(`A1 PROFILING: Peer evidence retrieval took ${peerEvidenceElapsedMs}ms (no results)`);
-      return {
-        peerEvidence: null,
-        currentStage: 'a1_peer_evidence_none_found',
-        progress: 25,
-      };
-    }
-
-    logger.info('A1: Peer evidence retrieved', {
-      workflowCount: peerEvidence.workflows.length,
-      source: peerSource,
-      elapsedMs: peerEvidenceElapsedMs,
-    });
-
-    // LEVEL 3: Anonymize peer evidence before returning (privacy protection)
-    const anonymizedPeerEvidence = anonymizePeerEvidence(peerEvidence);
-
-    // AI4 OPTIMIZATION: Cache anonymized peer evidence for future similar queries
-    cacheManager.peerWorkflows.set(peerCacheKey, anonymizedPeerEvidence);
-    logger.debug('A1: Cached peer evidence for future queries', { cacheKey: peerCacheKey });
-
-    return {
-      peerEvidence: anonymizedPeerEvidence,
-      currentStage: 'a1_peer_evidence_complete',
-      progress: 25,
-    };
-  } catch (error) {
-    logger.error('A1: Failed to retrieve peer evidence', { error });
-    return {
-      peerEvidence: null,
-      errors: [`A1 peer retrieval failed: ${error}`],
-      currentStage: 'a1_peer_evidence_failed',
-      progress: 25,
-    };
-  }
-}
-
-/**
- * Transform peer sessions from cross-user search to EvidenceBundle format
- */
-function transformPeerSessionsToEvidence(
-  peerSessions: Array<{
-    sessionId: string;
-    category: string;
-    workflowName: string | null;
-    durationSeconds: number | null;
-    highLevelSummary: string | null;
-    summary: Record<string, unknown> | null;
-    similarity: number;
-  }>,
-  logger: Logger
-): EvidenceBundle {
-  const workflows: UserWorkflow[] = [];
-  let totalStepCount = 0;
-
-  for (const session of peerSessions) {
-    // Extract workflows from session summary if available
-    const summaryData = session.summary as {
-      workflows?: Array<{
-        id?: string;
-        classification?: {
-          level_1_intent?: string;
-          level_2_problem?: string;
-          level_3_approach?: string;
-          level_4_tools?: string[];
-        };
-        workflow_summary?: string;
-        semantic_steps?: Array<{
-          step_name?: string;
-          description?: string;
-          tools_involved?: string[];
-          duration_seconds?: number;
-        }>;
-      }>;
-    } | null;
-
-    if (summaryData?.workflows && summaryData.workflows.length > 0) {
-      for (const wf of summaryData.workflows) {
-        const classification = wf.classification || {};
-        const steps: UserStep[] = (wf.semantic_steps || []).map((ss, index) => ({
-          stepId: `peer-step-${session.sessionId}-${index}`,
-          description: ss.step_name || ss.description || 'Peer step',
-          stepSummary: ss.description && ss.step_name ? ss.description : undefined,
-          app: ss.tools_involved?.[0] || 'Unknown',
-          toolCategory: categorizeApp(ss.tools_involved?.[0] || ''),
-          durationSeconds: ss.duration_seconds || 30,
-          timestamp: '',
-        }));
-
-        totalStepCount += steps.length;
-
-        workflows.push({
-          workflowId: `peer-wf-${session.sessionId}-${wf.id || 'unknown'}`,
-          title: classification.level_1_intent || session.workflowName || 'Peer Workflow',
-          summary: wf.workflow_summary || session.highLevelSummary || '',
-          intent: classification.level_1_intent || 'Peer workflow pattern',
-          approach: classification.level_3_approach || '',
-          primaryApp: classification.level_4_tools?.[0] || 'Unknown',
-          steps,
-          totalDurationSeconds: session.durationSeconds || 0,
-          tools: classification.level_4_tools || [],
-        });
-      }
-    } else if (session.highLevelSummary) {
-      // Create a simple workflow from high-level summary
-      workflows.push({
-        workflowId: `peer-wf-${session.sessionId}`,
-        title: session.workflowName || session.category || 'Peer Workflow',
-        summary: session.highLevelSummary,
-        intent: session.workflowName || 'Peer workflow pattern',
-        approach: '',
-        primaryApp: 'Unknown',
-        steps: [],
-        totalDurationSeconds: session.durationSeconds || 0,
-        tools: [],
-      });
-    }
-  }
-
-  logger.debug('Transformed peer sessions to evidence', {
-    inputSessions: peerSessions.length,
-    outputWorkflows: workflows.length,
-    totalStepCount,
-  });
-
-  return {
-    workflows,
-    sessions: [],
-    entities: [],
-    concepts: [],
-    totalStepCount,
-  };
-}
-
-/**
- * Transform graph-based peer patterns to EvidenceBundle format
- * Used when peer data comes from ArangoDB graph traversal
- */
-function transformGraphPeerPatternsToEvidence(
-  graphPatterns: Array<{
-    workflowType: string;
-    avgDurationSeconds: number;
-    occurrenceCount: number;
-    uniqueUserCount: number;
-    commonEntities: string[];
-    commonTransitions: Array<{ from: string; to: string; frequency: number }>;
-  }>,
-  logger: Logger
-): EvidenceBundle {
-  const workflows: UserWorkflow[] = [];
-  let totalStepCount = 0;
-
-  for (const pattern of graphPatterns) {
-    // Create steps from common entities (tools used)
-    const steps: UserStep[] = pattern.commonEntities.map((entity, index) => ({
-      stepId: `graph-step-${pattern.workflowType}-${index}`,
-      description: `Use ${entity}`,
-      app: entity,
-      toolCategory: categorizeApp(entity),
-      durationSeconds: Math.round(pattern.avgDurationSeconds / Math.max(pattern.commonEntities.length, 1)),
-      timestamp: '',
-    }));
-
-    totalStepCount += steps.length;
-
-    // Build workflow summary from transitions
-    const transitionSummary = pattern.commonTransitions.length > 0
-      ? `Common transitions: ${pattern.commonTransitions.map(t => `${t.from} → ${t.to}`).join(', ')}`
-      : '';
-
-    workflows.push({
-      workflowId: `graph-peer-wf-${pattern.workflowType}`,
-      title: pattern.workflowType || 'Peer Workflow Pattern',
-      summary: `Aggregated pattern from ${pattern.uniqueUserCount} users (${pattern.occurrenceCount} occurrences). ${transitionSummary}`,
-      intent: `Efficient ${pattern.workflowType} workflow pattern`,
-      approach: `Common tools: ${pattern.commonEntities.join(', ')}`,
-      primaryApp: pattern.commonEntities[0] || 'Unknown',
-      steps,
-      totalDurationSeconds: pattern.avgDurationSeconds,
-      tools: pattern.commonEntities,
-    });
-  }
-
-  logger.debug('Transformed graph peer patterns to evidence', {
-    inputPatterns: graphPatterns.length,
-    outputWorkflows: workflows.length,
-    totalStepCount,
-  });
-
-  return {
-    workflows,
-    sessions: [],
-    entities: [],
-    concepts: [],
-    totalStepCount,
-  };
 }
 
 /**
@@ -925,20 +474,7 @@ async function critiqueRetrieval(
     });
   }
 
-  // Check 3: Peer evidence has no PII (if present)
-  if (state.peerEvidence) {
-    const piiCheck = checkForPII(state.peerEvidence, logger);
-    if (piiCheck.hasPII) {
-      issues.push({
-        type: 'pii_detected',
-        description: `PII detected in peer evidence: ${piiCheck.details}`,
-        severity: 'error',
-        affectedIds: piiCheck.affectedIds,
-      });
-    }
-  }
-
-  // Check 4: Retrieval is relevant to query (use LLM for semantic check)
+  // Check 3: Retrieval is relevant to query (use LLM for semantic check)
   if (state.userEvidence && state.userEvidence.workflows.length > 0) {
     const relevanceCheck = await checkRelevance(
       state.query,
@@ -1198,17 +734,13 @@ export function createRetrievalGraph(deps: RetrievalGraphDeps) {
     .addNode('stitch_context', (state) =>
       stitchContextAcrossSessions(state, deps)
     )
-    .addNode('retrieve_peer_evidence', (state) =>
-      retrievePeerEvidence(state, deps)
-    )
     .addNode('critique_retrieval', (state) => critiqueRetrieval(state, deps))
 
     // Define edges
     .addEdge('__start__', 'retrieve_user_evidence')
     .addEdge('retrieve_user_evidence', 'detect_repetitive_patterns')
     .addEdge('detect_repetitive_patterns', 'stitch_context')
-    .addEdge('stitch_context', 'retrieve_peer_evidence')
-    .addEdge('retrieve_peer_evidence', 'critique_retrieval')
+    .addEdge('stitch_context', 'critique_retrieval')
 
     // Conditional routing after critique
     .addConditionalEdges('critique_retrieval', routeAfterCritique, {
@@ -1248,6 +780,10 @@ interface SessionChapterData {
   insights?: Record<string, unknown>;
   /** Peer insights fetched from backend API for this session's journey node */
   peerInsights?: Record<string, unknown>[] | null;
+  /** User-provided notes to improve summary accuracy */
+  userNotes?: string | null;
+  /** Pre-computed context stitching (workstreams, tool mastery, patterns) */
+  stitchedContext?: Record<string, unknown> | null;
   // V1: Chapter-based structure
   chapters?: Array<{
     chapter_id: number;
@@ -1361,6 +897,8 @@ async function fetchSessionChapters(
         const gapAnalysis = (sessionMapping as any).gapAnalysis as Record<string, unknown> | null;
         const insights = (sessionMapping as any).insights as Record<string, unknown> | null;
         const peerInsights = (sessionMapping as any).peerInsights as Record<string, unknown>[] | null;
+        const userNotes = (sessionMapping as any).userNotes as string | null;
+        const stitchedContext = (sessionMapping as any).stitchedContext as Record<string, unknown> | null;
 
         // First, try to get summary data from session_mapping.summary (new approach)
         // This contains the full AI-generated summary with chapters/workflows
@@ -1390,6 +928,8 @@ async function fetchSessionChapters(
               gapAnalysis: gapAnalysis || undefined,
               insights: insights || undefined,
               peerInsights: peerInsights || undefined,
+              userNotes: userNotes || undefined,
+              stitchedContext: stitchedContext || undefined,
             });
 
             logger.debug('A1: Using workflows from session_mapping.summary (V2)', {
@@ -1408,6 +948,8 @@ async function fetchSessionChapters(
               gapAnalysis: gapAnalysis || undefined,
               insights: insights || undefined,
               peerInsights: peerInsights || undefined,
+              userNotes: userNotes || undefined,
+              stitchedContext: stitchedContext || undefined,
             });
 
             logger.debug('A1: Using chapters from session_mapping.summary (V1)', {
@@ -1423,6 +965,8 @@ async function fetchSessionChapters(
               gapAnalysis: gapAnalysis || undefined,
               insights: insights || undefined,
               peerInsights: peerInsights || undefined,
+              userNotes: userNotes || undefined,
+              stitchedContext: stitchedContext || undefined,
             });
           }
         } else if (sessionMapping.nodeId) {
@@ -1452,6 +996,8 @@ async function fetchSessionChapters(
               gapAnalysis: gapAnalysis || undefined,
               insights: insights || undefined,
               peerInsights: peerInsights || undefined,
+              userNotes: userNotes || undefined,
+              stitchedContext: stitchedContext || undefined,
             });
           } else if (nodeData.nodeMeta?.chapters) {
             chaptersMap.set(session.sessionId, {
@@ -1462,6 +1008,8 @@ async function fetchSessionChapters(
               gapAnalysis: gapAnalysis || undefined,
               insights: insights || undefined,
               peerInsights: peerInsights || undefined,
+              userNotes: userNotes || undefined,
+              stitchedContext: stitchedContext || undefined,
             });
           } else if (sessionMapping.highLevelSummary) {
             chaptersMap.set(session.sessionId, {
@@ -1470,6 +1018,8 @@ async function fetchSessionChapters(
               gapAnalysis: gapAnalysis || undefined,
               insights: insights || undefined,
               peerInsights: peerInsights || undefined,
+              userNotes: userNotes || undefined,
+              stitchedContext: stitchedContext || undefined,
             });
           }
         } else if (sessionMapping.highLevelSummary) {
@@ -1480,6 +1030,8 @@ async function fetchSessionChapters(
             gapAnalysis: gapAnalysis || undefined,
             insights: insights || undefined,
             peerInsights: peerInsights || undefined,
+            userNotes: userNotes || undefined,
+            stitchedContext: stitchedContext || undefined,
           });
         }
       }
@@ -1624,6 +1176,7 @@ function transformNLQToEvidence(
         gapAnalysis: sessionData?.gapAnalysis,
         insights: sessionData?.insights,
         peerInsights: sessionData?.peerInsights,
+        userNotes: sessionData?.userNotes || undefined,
       });
 
       // Ensure we have an entry for this session in screenshots map
@@ -1924,11 +1477,71 @@ function transformNLQToEvidence(
     }
   }
 
+  // Build session knowledge base entries (complete data, no truncation)
+  const sessionKnowledgeBase: SessionKnowledgeEntry[] = sessions.map(session => {
+    const sessionData = sessionChaptersMap?.get(session.sessionId);
+    const v2Workflows = sessionData?.workflows || [];
+    const chapters = sessionData?.chapters || [];
+
+    // Build KB workflows from V2 or V1 data
+    const kbWorkflows: KnowledgeBaseWorkflow[] = [];
+    if (v2Workflows.length > 0) {
+      for (const wf of v2Workflows) {
+        kbWorkflows.push({
+          workflowSummary: wf.workflow_summary || '',
+          intent: wf.classification?.level_1_intent || '',
+          approach: wf.classification?.level_3_approach || '',
+          tools: wf.classification?.level_4_tools || [],
+          durationSeconds: wf.timestamps?.duration_ms ? Math.round(wf.timestamps.duration_ms / 1000) : 0,
+          steps: (wf.semantic_steps || []).map(s => ({
+            stepName: s.step_name || '',
+            description: s.description || '',
+            durationSeconds: s.duration_seconds || 0,
+            toolsInvolved: s.tools_involved || [],
+            agenticPattern: s.agentic_pattern,
+          })),
+        });
+      }
+    } else if (chapters.length > 0) {
+      for (const ch of chapters) {
+        kbWorkflows.push({
+          workflowSummary: ch.title || '',
+          intent: ch.title || '',
+          approach: ch.summary || '',
+          tools: ch.primary_app ? [ch.primary_app] : [],
+          durationSeconds: (ch.granular_steps || []).length * 30,
+          steps: (ch.granular_steps || []).map(s => ({
+            stepName: s.description || '',
+            description: s.description || '',
+            durationSeconds: 30,
+            toolsInvolved: s.app ? [s.app] : [],
+          })),
+        });
+      }
+    }
+
+    return {
+      sessionId: session.sessionId,
+      title: session.highLevelSummary || session.startActivity || 'Untitled Session',
+      highLevelSummary: session.highLevelSummary || '',
+      durationSeconds: session.durationSeconds,
+      appsUsed: session.appsUsed,
+      userNotes: session.userNotes || undefined,
+      workflows: kbWorkflows,
+      gapAnalysis: sessionData?.gapAnalysis || null,
+      insights: sessionData?.insights || null,
+      peerInsights: sessionData?.peerInsights || null,
+      screenshotDescriptions: sessionData?.screenshotDescriptions as Record<string, unknown> || null,
+      stitchedContext: sessionData?.stitchedContext || null,
+    };
+  });
+
   logger.info('Transformed NLQ to evidence', {
     workflowCount: workflows.length,
     sessionCount: sessions.length,
     entityCount: entities.length,
     totalStepCount,
+    knowledgeBaseEntries: sessionKnowledgeBase.length,
     // Include workflow summary samples for debugging
     workflowSamples: workflows.slice(0, 3).map(w => ({
       workflowId: w.workflowId,
@@ -1952,6 +1565,7 @@ function transformNLQToEvidence(
       retrievalMethod: 'hybrid',
       embeddingModel: 'text-embedding-3-small',
     },
+    sessionKnowledgeBase,
   };
 }
 
@@ -2062,6 +1676,7 @@ async function transformAttachedSessionsToEvidence(
       gapAnalysis: enrichedData?.gapAnalysis || undefined,
       insights: enrichedData?.insights || undefined,
       peerInsights: enrichedData?.peerInsights || undefined,
+      userNotes: enrichedData?.userNotes || undefined,
     });
 
     // Transform each workflow
@@ -2105,11 +1720,61 @@ async function transformAttachedSessionsToEvidence(
     }
   }
 
+  // Build session knowledge base entries (complete data, no truncation)
+  const sessionKnowledgeBase: SessionKnowledgeEntry[] = attachedSessions.map(session => {
+    const enrichedData = enrichedMap.get(session.sessionId);
+    const kbWorkflows: KnowledgeBaseWorkflow[] = (session.workflows || []).map(wf => {
+      const duration = wf.timestamps?.duration_ms
+        ? Math.round(wf.timestamps.duration_ms / 1000)
+        : (wf.semantic_steps || []).reduce((sum, s) => sum + (s.duration_seconds || 0), 0);
+      return {
+        workflowSummary: wf.workflow_summary || '',
+        intent: wf.classification?.level_1_intent || '',
+        approach: wf.classification?.level_3_approach || '',
+        tools: wf.classification?.level_4_tools || [],
+        durationSeconds: duration,
+        steps: (wf.semantic_steps || []).map(s => ({
+          stepName: s.step_name || '',
+          description: s.description || '',
+          durationSeconds: s.duration_seconds || 0,
+          toolsInvolved: s.tools_involved || [],
+          agenticPattern: s.agentic_pattern,
+        })),
+      };
+    });
+
+    // Safe date handling: enrichedData dates may be Date objects or strings
+    const startedAt = enrichedData?.startedAt instanceof Date
+      ? enrichedData.startedAt.toISOString()
+      : (typeof enrichedData?.startedAt === 'string' ? enrichedData.startedAt : undefined);
+    const endedAt = enrichedData?.endedAt instanceof Date
+      ? enrichedData.endedAt.toISOString()
+      : (typeof enrichedData?.endedAt === 'string' ? enrichedData.endedAt : undefined);
+
+    return {
+      sessionId: session.sessionId,
+      title: session.title || session.highLevelSummary || 'Untitled Session',
+      highLevelSummary: enrichedData?.highLevelSummary || session.highLevelSummary || session.title || '',
+      startedAt,
+      endedAt,
+      durationSeconds: session.totalDurationSeconds,
+      appsUsed: session.appsUsed,
+      userNotes: enrichedData?.userNotes || undefined,
+      workflows: kbWorkflows,
+      gapAnalysis: enrichedData?.gapAnalysis || null,
+      insights: enrichedData?.insights || null,
+      peerInsights: enrichedData?.peerInsights || null,
+      screenshotDescriptions: enrichedData?.screenshotDescriptions || null,
+      stitchedContext: enrichedData?.stitchedContext || null,
+    };
+  });
+
   logger.info('A1: Transformed attached sessions to evidence', {
     sessionCount: sessions.length,
     workflowCount: workflows.length,
     totalStepCount,
     totalDurationSeconds,
+    knowledgeBaseEntries: sessionKnowledgeBase.length,
   });
 
   return {
@@ -2125,105 +1790,7 @@ async function transformAttachedSessionsToEvidence(
       retrievalMethod: 'hybrid', // Using 'hybrid' for compatibility
       embeddingModel: 'n/a', // No embedding used for attached sessions
     },
-  };
-}
-
-/**
- * Transform peer patterns to EvidenceBundle format
- */
-function transformPeerPatternsToEvidence(
-  patterns: any[],
-  logger: Logger
-): EvidenceBundle {
-  const workflows: UserWorkflow[] = [];
-
-  for (const pattern of patterns) {
-    const steps: UserStep[] = (pattern.stepSequence || []).map(
-      (step: any, index: number) => ({
-        stepId: `peer-step-${pattern.workflowHash}-${index}`,
-        description: step.description || `${step.type} action`,
-        tool: step.toolCategory,
-        toolCategory: step.toolCategory,
-        durationSeconds: step.avgDuration,
-        timestamp: '',
-        workflowTag: pattern.workflowType,
-        order: step.order,
-      })
-    );
-
-    workflows.push({
-      workflowId: `peer-wf-${pattern.workflowHash}`,
-      name: `${pattern.workflowType} workflow pattern`,
-      intent: `Efficient ${pattern.workflowType} pattern`,
-      approach: 'Peer benchmark',
-      steps,
-      totalDurationSeconds: pattern.avgDurationSeconds,
-      tools: Object.keys(pattern.toolPatterns || {}),
-      sessionId: 'platform',
-      startTime: '',
-      endTime: '',
-    });
-  }
-
-  logger.debug('Transformed peer patterns to evidence', {
-    workflowCount: workflows.length,
-  });
-
-  return {
-    workflows,
-    sessions: [],
-    entities: [],
-    concepts: [],
-    totalStepCount: workflows.reduce((sum, w) => sum + w.steps.length, 0),
-    totalDurationSeconds: workflows.reduce(
-      (sum, w) => sum + w.totalDurationSeconds,
-      0
-    ),
-    retrievalMetadata: {
-      queryTimeMs: 0,
-      sourcesRetrieved: patterns.length,
-      retrievalMethod: 'vector',
-      embeddingModel: 'text-embedding-3-small',
-    },
-  };
-}
-
-/**
- * Check for PII in evidence bundle
- */
-function checkForPII(
-  evidence: EvidenceBundle,
-  logger: Logger
-): { hasPII: boolean; details: string; affectedIds: string[] } {
-  const piiPatterns = {
-    email: /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/,
-    phone: /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/,
-    name: /\b(Mr\.|Mrs\.|Ms\.|Dr\.)\s+[A-Z][a-z]+/,
-    ssn: /\b\d{3}-\d{2}-\d{4}\b/,
-  };
-
-  const affectedIds: string[] = [];
-  const issues: string[] = [];
-
-  for (const workflow of evidence.workflows) {
-    for (const step of workflow.steps) {
-      for (const [type, pattern] of Object.entries(piiPatterns)) {
-        if (pattern.test(step.description)) {
-          issues.push(`${type} in step ${step.stepId}`);
-          affectedIds.push(step.stepId);
-        }
-      }
-    }
-  }
-
-  if (issues.length > 0) {
-    logger.warn('PII detected in evidence', { issues });
-  }
-
-  return {
-    hasPII: issues.length > 0,
-    details: issues.join(', '),
-    affectedIds,
+    sessionKnowledgeBase,
   };
 }
 
@@ -2325,19 +1892,3 @@ function deduplicateEntities(entities: ExtractedEntity[]): ExtractedEntity[] {
   return Array.from(map.values());
 }
 
-/**
- * Infer workflow type from workflow name
- */
-function inferWorkflowType(name: string): string | undefined {
-  const lower = name.toLowerCase();
-
-  if (lower.includes('research') || lower.includes('search')) return 'research';
-  if (lower.includes('cod') || lower.includes('develop')) return 'coding';
-  if (lower.includes('doc') || lower.includes('writ')) return 'documentation';
-  if (lower.includes('debug') || lower.includes('fix')) return 'debugging';
-  if (lower.includes('test')) return 'testing';
-  if (lower.includes('design')) return 'design';
-  if (lower.includes('plan')) return 'planning';
-
-  return undefined;
-}

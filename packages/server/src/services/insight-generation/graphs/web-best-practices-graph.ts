@@ -23,7 +23,6 @@ import type {
   CurrentStep,
   OptimizedStep,
   Citation,
-  Inefficiency,
   UserToolbox,
   EnrichedWorkflowStep,
   EnrichedStepStatus,
@@ -43,6 +42,15 @@ const LLM_TIMEOUT_MS = 60000; // 60 seconds
 // ============================================================================
 // TYPES
 // ============================================================================
+
+/** @deprecated A2 Judge agent removed — this type is kept for internal function signatures */
+interface Inefficiency {
+  id: string;
+  type: string;
+  description: string;
+  stepIds: string[];
+  estimatedWastedSeconds: number;
+}
 
 export interface WebBestPracticesGraphDeps {
   logger: Logger;
@@ -122,7 +130,10 @@ async function generateSearchQueries(
 
   logger.info('A4-Web: Generating search queries');
 
-  if (!state.userDiagnostics || state.userDiagnostics.inefficiencies.length === 0) {
+  // A2 Judge removed — userDiagnostics is no longer populated
+  const userDiagnostics = (state as any).userDiagnostics as { inefficiencies: Inefficiency[] } | null;
+
+  if (!userDiagnostics || userDiagnostics.inefficiencies.length === 0) {
     logger.warn('A4-Web: No inefficiencies to search for');
     return {
       currentStage: 'a4_web_queries_skipped',
@@ -130,7 +141,7 @@ async function generateSearchQueries(
     };
   }
 
-  const inefficiencies = state.userDiagnostics.inefficiencies;
+  const inefficiencies = userDiagnostics.inefficiencies;
 
   try {
     const response = await withTimeout(
@@ -210,7 +221,10 @@ async function searchBestPractices(
     };
   }
 
-  const inefficiencies = state.userDiagnostics?.inefficiencies || [];
+  // A2 Judge removed — userDiagnostics is no longer populated
+  const userDiagnostics = (state as any).userDiagnostics as { inefficiencies: Inefficiency[] } | null;
+
+  const inefficiencies = userDiagnostics?.inefficiencies || [];
   if (inefficiencies.length === 0) {
     return {
       currentStage: 'a4_web_search_no_inefficiencies',
@@ -292,7 +306,10 @@ async function extractBestPractices(
 
   logger.info('A4-Web: Extracting best practices');
 
-  const inefficiencies = state.userDiagnostics?.inefficiencies || [];
+  // A2 Judge removed — userDiagnostics is no longer populated
+  const userDiagnostics = (state as any).userDiagnostics as { inefficiencies: Inefficiency[] } | null;
+
+  const inefficiencies = userDiagnostics?.inefficiencies || [];
   if (inefficiencies.length === 0) {
     return {
       webOptimizationPlan: null,
@@ -373,7 +390,7 @@ For each practice provide:
     const practices = response.content.practices || [];
     const optimizationPlan = createOptimizationPlanFromPractices(
       practices,
-      state.userDiagnostics!,
+      userDiagnostics!,
       state.userEvidence?.workflows[0],
       state.userToolbox
     );
@@ -494,7 +511,7 @@ Return JSON: {"practices": [{"title": "...", "description": "...", "applicableIn
         const repairedPractices = repairResult.data.practices;
         const optimizationPlan = createOptimizationPlanFromPractices(
           repairedPractices,
-          state.userDiagnostics!,
+          userDiagnostics!,
           state.userEvidence?.workflows[0],
           state.userToolbox
         );
@@ -515,7 +532,7 @@ Return JSON: {"practices": [{"title": "...", "description": "...", "applicableIn
     // This ensures we still provide value even when all LLM approaches fail
     const fallbackPlan = createFallbackOptimizationPlan(
       inefficiencies,
-      state.userDiagnostics!,
+      userDiagnostics!,
       state.userEvidence?.workflows[0],
       state.userToolbox
     );

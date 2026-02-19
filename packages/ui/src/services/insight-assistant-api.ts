@@ -200,10 +200,15 @@ export interface AttachedSessionContext {
       description: string;
       duration_seconds: number;
       tools_involved: string[];
+      agentic_pattern?: string;
     }[];
     classification?: {
       level_1_intent: string;
+      level_2_problem?: string;
+      level_3_approach?: string;
       level_4_tools: string[];
+      level_5_outcome?: string;
+      workflow_type?: string;
     };
     timestamps?: { duration_ms: number };
   }[];

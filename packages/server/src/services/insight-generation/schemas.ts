@@ -86,76 +86,7 @@ export const evidenceBundleSchema = z.object({
 });
 
 // ============================================================================
-// DIAGNOSTICS SCHEMAS (A2 Output)
-// ============================================================================
-
-export const inefficiencyTypeSchema = z.enum([
-  'repetitive_search',
-  'context_switching',
-  'rework_loop',
-  'manual_automation',
-  'idle_time',
-  'tool_fragmentation',
-  'information_gathering',
-  'other',
-]);
-
-export const inefficiencySchema = z.object({
-  id: z.string(),
-  workflowId: z.string(),
-  stepIds: z.array(z.string()),
-  type: inefficiencyTypeSchema,
-  description: z.string(),
-  estimatedWastedSeconds: z.number(),
-  confidence: z.number().min(0).max(1),
-  evidence: z.array(z.string()),
-});
-
-export const opportunityTypeSchema = z.enum([
-  'automation',
-  'consolidation',
-  'tool_switch',
-  'workflow_reorder',
-  'elimination',
-  'claude_code_integration',
-]);
-
-export const opportunitySchema = z.object({
-  id: z.string(),
-  inefficiencyId: z.string(),
-  type: opportunityTypeSchema,
-  description: z.string(),
-  estimatedSavingsSeconds: z.number(),
-  suggestedTool: z.string().optional(),
-  claudeCodeApplicable: z.boolean(),
-  confidence: z.number().min(0).max(1),
-});
-
-export const workflowMetricsSchema = z.object({
-  totalWorkflowTime: z.number(),
-  activeTime: z.number(),
-  idleTime: z.number(),
-  contextSwitches: z.number(),
-  reworkLoops: z.number(),
-  uniqueToolsUsed: z.number(),
-  toolDistribution: z.record(z.number()),
-  workflowTagDistribution: z.record(z.number()),
-  averageStepDuration: z.number(),
-});
-
-export const diagnosticsSchema = z.object({
-  workflowId: z.string(),
-  workflowName: z.string(),
-  metrics: workflowMetricsSchema,
-  inefficiencies: z.array(inefficiencySchema),
-  opportunities: z.array(opportunitySchema),
-  overallEfficiencyScore: z.number().min(0).max(100),
-  confidence: z.number().min(0).max(1),
-  analysisTimestamp: z.string(),
-});
-
-// ============================================================================
-// STEP OPTIMIZATION SCHEMAS (A3/A4 Output)
+// STEP OPTIMIZATION SCHEMAS (A4 Output)
 // ============================================================================
 
 export const currentStepSchema = z.object({
@@ -325,8 +256,6 @@ export const critiqueResultSchema = z.object({
 
 export const agentIdSchema = z.enum([
   'A1_RETRIEVAL',
-  'A2_JUDGE',
-  'A3_COMPARATOR',
   'A4_WEB',
   'A4_COMPANY',
 ]);
@@ -334,7 +263,6 @@ export const agentIdSchema = z.enum([
 export const routingDecisionSchema = z.object({
   agentsToRun: z.array(agentIdSchema),
   reason: z.string(),
-  peerDataUsable: z.boolean(),
   companyDocsAvailable: z.boolean(),
 });
 
@@ -363,7 +291,6 @@ export const insightGenerationOptionsSchema = z.object({
   nodeId: z.string().uuid().optional(),
   lookbackDays: z.number().int().min(7).max(90).default(30),
   includeWebSearch: z.boolean().default(true),
-  includePeerComparison: z.boolean().default(true),
   includeCompanyDocs: z.boolean().default(true),
   maxOptimizationBlocks: z.number().int().min(1).max(20).default(5),
 });
@@ -482,12 +409,6 @@ export type SessionInfo = z.infer<typeof sessionInfoSchema>;
 export type ExtractedEntity = z.infer<typeof extractedEntitySchema>;
 export type ExtractedConcept = z.infer<typeof extractedConceptSchema>;
 export type EvidenceBundle = z.infer<typeof evidenceBundleSchema>;
-export type InefficiencyType = z.infer<typeof inefficiencyTypeSchema>;
-export type Inefficiency = z.infer<typeof inefficiencySchema>;
-export type OpportunityType = z.infer<typeof opportunityTypeSchema>;
-export type Opportunity = z.infer<typeof opportunitySchema>;
-export type WorkflowMetrics = z.infer<typeof workflowMetricsSchema>;
-export type Diagnostics = z.infer<typeof diagnosticsSchema>;
 export type CurrentStep = z.infer<typeof currentStepSchema>;
 export type OptimizedStep = z.infer<typeof optimizedStepSchema>;
 export type StepTransformation = z.infer<typeof stepTransformationSchema>;

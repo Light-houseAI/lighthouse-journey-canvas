@@ -189,11 +189,11 @@ export function createInitialAgenticState(params: {
   nodeId?: string | null;
   lookbackDays?: number;
   includeWebSearch?: boolean;
-  includePeerComparison?: boolean;
   includeCompanyDocs?: boolean;
   filterNoise?: boolean;
   attachedSessionContext?: InsightState['attachedSessionContext'];
   conversationMemory?: InsightState['conversationMemory'];
+  sessionKnowledgeBase?: InsightState['sessionKnowledgeBase'];
   _traceId?: string | null;
 }): AgenticState {
   // Extract URLs from the query
@@ -206,7 +206,6 @@ export function createInitialAgenticState(params: {
     nodeId: params.nodeId || null,
     lookbackDays: params.lookbackDays || 30,
     includeWebSearch: params.includeWebSearch ?? false,
-    includePeerComparison: params.includePeerComparison ?? true,
     includeCompanyDocs: params.includeCompanyDocs ?? true,
     filterNoise: params.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable
     attachedSessionContext: params.attachedSessionContext || null,
@@ -218,45 +217,26 @@ export function createInitialAgenticState(params: {
 
     // A1 output
     userEvidence: null,
-    peerEvidence: null,
     stitchedContext: null, // Two-tier context stitching result
+    sessionKnowledgeBase: params.sessionKnowledgeBase || null, // Complete session data cache for prompt injection
     a1CritiqueResult: null,
     a1RetryCount: 0,
 
     // User toolbox
     userToolbox: null,
 
-    // @deprecated A3 — peer data now in session_mappings peerInsights
-    workflowAlignments: null,
-
-    // @deprecated A2 — gap analysis now in session_mappings gapAnalysis/insights
-    userDiagnostics: null,
-    peerDiagnostics: null,
-    a2CritiqueResult: null,
-    a2RetryCount: 0,
-
     // Orchestrator output
     routingDecision: null,
 
     // Downstream outputs
-    peerOptimizationPlan: null, // @deprecated A3
     webOptimizationPlan: null,
     companyOptimizationPlan: null,
-    featureAdoptionTips: null, // @deprecated A5
     cachedWebSearchResult: null,
 
     // Final output
     mergedPlan: null,
     userQueryAnswer: null,
     finalResult: null,
-
-    // @deprecated A6 — replaced by fact-check validator
-    generatedAnswer: null,
-    identifiedGaps: null,
-    validationPassed: false,
-    validationIterationCount: 0,
-    validationResult: null,
-    userWorkflows: null,
 
     // Control flow
     currentStage: 'agentic_initializing',

@@ -19,11 +19,8 @@ import {
  */
 const AGENT_CONFIG_MAP: Record<AgentId, keyof InsightModelConfiguration> = {
   A1_RETRIEVAL: 'a1Retrieval',
-  A2_JUDGE: 'a2Judge',
-  A3_COMPARATOR: 'a3Comparator',
   A4_WEB: 'a4Web',
   A4_COMPANY: 'a4Company',
-  A5_FEATURE_ADOPTION: 'a5FeatureAdoption',
 };
 
 /**
@@ -130,11 +127,8 @@ export function createAllAgentProviders(
 
   const agentIds: AgentId[] = [
     'A1_RETRIEVAL',
-    'A2_JUDGE',
-    'A3_COMPARATOR',
     'A4_WEB',
     'A4_COMPANY',
-    'A5_FEATURE_ADOPTION',
   ];
 
   for (const agentId of agentIds) {
@@ -152,11 +146,8 @@ export function getModelConfigDescription(
 ): Record<AgentId, string> {
   const agentIds: AgentId[] = [
     'A1_RETRIEVAL',
-    'A2_JUDGE',
-    'A3_COMPARATOR',
     'A4_WEB',
     'A4_COMPANY',
-    'A5_FEATURE_ADOPTION',
   ];
 
   const descriptions: Partial<Record<AgentId, string>> = {};

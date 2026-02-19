@@ -27,14 +27,14 @@ export type QueryScope =
  * Intent determines WHICH AGENTS to run
  */
 export type QueryIntent =
-  | 'DIAGNOSTIC'        // Finding problems/inefficiencies → A1→A2→A4
-  | 'OPTIMIZATION'      // How to improve → A1→A2→A5→A4
-  | 'COMPARISON'        // Compare with peers → A1→A2→A3→A4
+  | 'DIAGNOSTIC'        // Finding problems/inefficiencies → A1→A4
+  | 'OPTIMIZATION'      // How to improve → A1→A4
+  | 'COMPARISON'        // Compare with peers → A1
   | 'EXPLORATION'       // Show me what I did → A1 only
   | 'LEARNING'          // Best practices → A1→A4-Web
-  | 'PATTERN'           // Find patterns/trends → A1→A2
-  | 'FEATURE_DISCOVERY' // Discover underused features → A1→A2→A5
-  | 'TOOL_MASTERY'      // Master specific tool → A1→A2→A5
+  | 'PATTERN'           // Find patterns/trends → A1
+  | 'FEATURE_DISCOVERY' // Discover underused features → A1
+  | 'TOOL_MASTERY'      // Master specific tool → A1→A4
   | 'TOOL_INTEGRATION'  // Integrate/use/add a tool → A4-Web priority (web search first)
   | 'BLOG_CREATION'     // Create blog/article from workflow → A1 only, uses blog prompt
   | 'PROGRESS_UPDATE'   // Create weekly progress update report → A1 only, uses progress update prompt
@@ -74,10 +74,7 @@ export interface QueryClassification {
   routing: {
     maxResults: number;      // How many to retrieve
     agentsToRun: AgentId[];  // Which agents to invoke
-    includePeerComparison: boolean;
     includeWebSearch: boolean;
-    /** @deprecated A5 removed — feature data now in session_mappings insights JSONB */
-    includeFeatureAdoption: boolean;
     useSemanticSearch: boolean;  // vs pure filtering
     strictDomainMatching: boolean;  // Require domain keyword match for workflows
   };
@@ -705,9 +702,7 @@ function determineRouting(
 
   // Determine agents based on intent
   let agentsToRun: AgentId[];
-  let includePeerComparison = false;
   let includeWebSearch = false;
-  let includeFeatureAdoption = false;
 
   switch (intent) {
     case 'DIAGNOSTIC':
@@ -771,9 +766,7 @@ function determineRouting(
   return {
     maxResults,
     agentsToRun,
-    includePeerComparison: false, // A3 removed — peerInsights now in session_mappings JSONB
     includeWebSearch,
-    includeFeatureAdoption: false, // A5 removed — feature data now in session_mappings insights JSONB
     useSemanticSearch,
     strictDomainMatching,
   };

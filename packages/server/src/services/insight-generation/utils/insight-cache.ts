@@ -9,7 +9,7 @@
  * Uses LRU eviction with TTL-based expiration.
  */
 
-import type { EvidenceBundle } from '../types.js';
+import type { EvidenceBundle, SessionKnowledgeBase } from '../types.js';
 
 // ============================================================================
 // CACHE CONFIGURATION
@@ -34,6 +34,10 @@ const DEFAULT_CONFIGS: Record<string, CacheConfig> = {
   similarQueryResults: {
     maxSize: 200,
     ttlMs: 2 * 60 * 1000, // 2 minutes - results may need refreshing
+  },
+  sessionKnowledgeBase: {
+    maxSize: 100,
+    ttlMs: 30 * 60 * 1000, // 30 minutes - session data changes infrequently
   },
 };
 
@@ -314,6 +318,53 @@ export class SimilarQueryCache extends InsightCache<CachedQueryResult> {
 }
 
 // ============================================================================
+// SESSION KNOWLEDGE BASE CACHE (per-user, 30-min TTL)
+// ============================================================================
+
+/**
+ * Cache for complete session knowledge base data.
+ * Keyed by userId (string), persists across queries within the TTL window.
+ * Contains ALL session_mappings JSONB data without truncation.
+ */
+export class SessionKnowledgeBaseCache extends InsightCache<SessionKnowledgeBase> {
+  constructor() {
+    super(DEFAULT_CONFIGS.sessionKnowledgeBase);
+  }
+
+  /**
+   * Merge new session entries with existing cached entries for a user.
+   * Deduplicates by sessionId, preferring newer entries.
+   */
+  mergeAndSet(userId: string, newKB: SessionKnowledgeBase): SessionKnowledgeBase {
+    const existing = this.get(userId);
+
+    if (!existing) {
+      this.set(userId, newKB);
+      return newKB;
+    }
+
+    // Merge: deduplicate by sessionId, prefer entries from newKB
+    const mergedMap = new Map(
+      existing.sessionEntries.map(e => [e.sessionId, e])
+    );
+    for (const entry of newKB.sessionEntries) {
+      mergedMap.set(entry.sessionId, entry);
+    }
+
+    const merged: SessionKnowledgeBase = {
+      userId: newKB.userId,
+      sessionEntries: Array.from(mergedMap.values()),
+      createdAt: newKB.createdAt,
+      sessionIds: Array.from(mergedMap.keys()),
+      stitchedContext: newKB.stitchedContext ?? existing.stitchedContext,
+    };
+
+    this.set(userId, merged);
+    return merged;
+  }
+}
+
+// ============================================================================
 // GLOBAL CACHE MANAGER
 // ============================================================================
 
@@ -325,6 +376,7 @@ export class InsightCacheManager {
   readonly queryEmbeddings: QueryEmbeddingCache;
   readonly peerWorkflows: PeerWorkflowCache;
   readonly similarQueries: SimilarQueryCache;
+  readonly sessionKnowledgeBase: SessionKnowledgeBaseCache;
 
   private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -332,6 +384,7 @@ export class InsightCacheManager {
     this.queryEmbeddings = new QueryEmbeddingCache();
     this.peerWorkflows = new PeerWorkflowCache();
     this.similarQueries = new SimilarQueryCache();
+    this.sessionKnowledgeBase = new SessionKnowledgeBaseCache();
   }
 
   /**
@@ -346,6 +399,7 @@ export class InsightCacheManager {
       this.queryEmbeddings.cleanup();
       this.peerWorkflows.cleanup();
       this.similarQueries.cleanup();
+      this.sessionKnowledgeBase.cleanup();
     }, intervalMs);
   }
 
@@ -366,6 +420,7 @@ export class InsightCacheManager {
     this.queryEmbeddings.clear();
     this.peerWorkflows.clear();
     this.similarQueries.clear();
+    this.sessionKnowledgeBase.clear();
   }
 
   /**
@@ -376,6 +431,7 @@ export class InsightCacheManager {
       queryEmbeddings: this.queryEmbeddings.getStats(),
       peerWorkflows: this.peerWorkflows.getStats(),
       similarQueries: this.similarQueries.getStats(),
+      sessionKnowledgeBase: this.sessionKnowledgeBase.getStats(),
     };
   }
 }

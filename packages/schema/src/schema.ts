@@ -1160,9 +1160,7 @@ export const queryTraces = pgTable('query_traces', {
     routing: {
       maxResults: number;
       agentsToRun: string[];
-      includePeerComparison: boolean;
       includeWebSearch: boolean;
-      includeFeatureAdoption: boolean;
       useSemanticSearch: boolean;
     };
     confidence: number;
@@ -1173,10 +1171,9 @@ export const queryTraces = pgTable('query_traces', {
   routingDecision: json('routing_decision').$type<{
     agentsToRun: string[];
     reason: string;
-    peerDataUsable: boolean;
     companyDocsAvailable: boolean;
   }>(),
-  agentPath: varchar('agent_path', { length: 255 }), // e.g., "A1→A2→A3→A5"
+  agentPath: varchar('agent_path', { length: 255 }), // e.g., "A1→A4_WEB→A4_COMPANY"
 
   // Timing
   totalProcessingTimeMs: integer('total_processing_time_ms'),

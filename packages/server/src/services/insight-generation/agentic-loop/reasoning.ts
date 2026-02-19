@@ -242,9 +242,7 @@ CURRENT DECISION CONTEXT
 - Iteration: {iteration}
 - Skills already used: [{usedSkills}]
 - hasUserEvidence: {hasUserEvidence}
-- hasDiagnostics: {hasDiagnostics}
 - hasOptimizationPlans: {hasOptimizationPlans}
-- hasFeatureTips: {hasFeatureTips}
 - hasConversationMemory: {hasConversationMemory}
 
 ## LAST OBSERVATION (result from previous skill)
@@ -614,14 +612,9 @@ async function llmBasedReasoning(
       .replace('{iteration}', String(state.currentIteration))
       .replace('{usedSkills}', state.usedSkills.join(', ') || 'none')
       .replace('{hasUserEvidence}', String(!!state.userEvidence))
-      .replace('{hasDiagnostics}', String(!!state.userDiagnostics))
       .replace('{hasOptimizationPlans}', String(
-        !!state.peerOptimizationPlan ||
         !!state.webOptimizationPlan ||
         !!state.companyOptimizationPlan
-      ))
-      .replace('{hasFeatureTips}', String(
-        !!(state.featureAdoptionTips && state.featureAdoptionTips.length > 0)
       ))
       .replace('{hasConversationMemory}', String(!!state.conversationMemory))
       .replace('{lastObservation}', lastObservation)
@@ -693,9 +686,7 @@ export function buildPromptsForTest(params: {
   iteration: number;
   usedSkills: string[];
   hasUserEvidence: boolean;
-  hasDiagnostics: boolean;
   hasOptimizationPlans: boolean;
-  hasFeatureTips: boolean;
   hasConversationMemory: boolean;
   lastObservation: string;
   availableSkills: string[];
@@ -710,9 +701,7 @@ export function buildPromptsForTest(params: {
     .replace('{iteration}', String(params.iteration))
     .replace('{usedSkills}', params.usedSkills.join(', ') || 'none')
     .replace('{hasUserEvidence}', String(params.hasUserEvidence))
-    .replace('{hasDiagnostics}', String(params.hasDiagnostics))
     .replace('{hasOptimizationPlans}', String(params.hasOptimizationPlans))
-    .replace('{hasFeatureTips}', String(params.hasFeatureTips))
     .replace('{hasConversationMemory}', String(params.hasConversationMemory))
     .replace('{lastObservation}', params.lastObservation)
     .replace('{availableSkills}', params.availableSkills.join(', ') || 'none');

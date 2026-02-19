@@ -319,189 +319,12 @@ export interface EvidenceBundle {
     screenshotDescriptionsEmbedding?: number[] | null;
     gapAnalysisEmbedding?: number[] | null;
   }>;
+  /** Complete session knowledge base entries for prompt injection (no truncation) */
+  sessionKnowledgeBase?: SessionKnowledgeEntry[];
 }
 
 // ============================================================================
-// DIAGNOSTICS TYPES (A2 Output)
-// ============================================================================
-
-/**
- * Types of workflow inefficiencies
- */
-export type InefficiencyType =
-  | 'repetitive_search'
-  | 'context_switching'
-  | 'rework_loop'
-  | 'manual_automation'
-  | 'idle_time'
-  | 'tool_fragmentation'
-  | 'information_gathering'
-  | 'longcut_path'
-  | 'repetitive_workflow'  // Cross-session repetitive patterns (e.g., research → summarize → email 10x/week)
-  | 'other';
-
-/**
- * Identified inefficiency in a workflow
- */
-export interface Inefficiency {
-  id: string;
-  workflowId: string;
-  stepIds: string[];
-  type: InefficiencyType;
-  description: string;
-  estimatedWastedSeconds: number;
-  confidence: number;
-  evidence: string[]; // Step descriptions that support this finding
-  /** For longcut_path: the shorter alternative that exists within user's current tools */
-  shorterAlternative?: string;
-}
-
-/**
- * Types of improvement opportunities
- */
-export type OpportunityType =
-  | 'automation'
-  | 'consolidation'
-  | 'tool_switch'
-  | 'workflow_reorder'
-  | 'elimination'
-  | 'claude_code_integration'
-  | 'tool_feature_optimization'
-  | 'shortcut_available';
-
-/**
- * Improvement opportunity mapped to inefficiency
- */
-export interface Opportunity {
-  id: string;
-  inefficiencyId: string;
-  type: OpportunityType;
-  description: string;
-  estimatedSavingsSeconds: number;
-  suggestedTool?: string;
-  claudeCodeApplicable: boolean;
-  confidence: number;
-  /** For tool_feature_optimization: the specific feature to use (e.g., "Plan Mode", "Composer") */
-  featureSuggestion?: string;
-  /** For shortcut_available: the exact shortcut/command that replaces multiple steps */
-  shortcutCommand?: string;
-}
-
-/**
- * Workflow metrics
- */
-export interface WorkflowMetrics {
-  totalWorkflowTime: number;
-  activeTime: number;
-  idleTime: number;
-  contextSwitches: number;
-  reworkLoops: number;
-  uniqueToolsUsed: number;
-  toolDistribution: Record<string, number>;
-  workflowTagDistribution: Record<string, number>;
-  averageStepDuration: number;
-}
-
-/**
- * Diagnostics output from A2 Judge Agent
- */
-export interface Diagnostics {
-  workflowId: string;
-  workflowName: string;
-  metrics: WorkflowMetrics;
-  inefficiencies: Inefficiency[];
-  opportunities: Opportunity[];
-  overallEfficiencyScore: number; // 0-100
-  confidence: number;
-  analysisTimestamp: string;
-  /** Effectiveness analysis: step-by-step quality critique (optional, added when requested) */
-  effectivenessAnalysis?: EffectivenessAnalysis;
-}
-
-// ============================================================================
-// EFFECTIVENESS ANALYSIS TYPES (A2 Extension)
-// ============================================================================
-
-/**
- * Step-level effectiveness analysis
- * Evaluates the QUALITY and OUTCOME of what the user did at each step
- */
-export interface StepEffectivenessAnalysis {
-  /** Reference to the original step */
-  stepId: string;
-  /** What the user actually did (factual description) */
-  whatUserDid: string;
-  /** Quality assessment of this step (poor/fair/good/excellent) */
-  qualityRating: 'poor' | 'fair' | 'good' | 'excellent';
-  /** What the user could have done differently for better outcome */
-  couldHaveDoneDifferently: string;
-  /** Why the alternative would have been better */
-  whyBetter: string;
-  /** Confidence in this assessment (0-1) */
-  confidence: number;
-}
-
-/**
- * Activity the user should have done but didn't
- * Identifies gaps in the workflow based on best practices
- */
-export interface MissedActivity {
-  /** Unique identifier */
-  id: string;
-  /** What activity was missed */
-  activity: string;
-  /** Where in the workflow it should have occurred (after which stepId, or "before_start", "at_end") */
-  shouldOccurAfter: string;
-  /** Why this activity matters */
-  whyImportant: string;
-  /** Impact of missing this activity (low/medium/high) */
-  impactLevel: 'low' | 'medium' | 'high';
-  /** Concrete recommendation for what to do */
-  recommendation: string;
-  /** Confidence in this assessment (0-1) */
-  confidence: number;
-}
-
-/**
- * Content quality critique
- * Evaluates the quality of outputs/decisions made during the workflow
- */
-export interface ContentQualityCritique {
-  /** Aspect being critiqued (e.g., "research depth", "decision quality", "output completeness") */
-  aspect: string;
-  /** Current state/quality observed */
-  observation: string;
-  /** Rating (poor/fair/good/excellent) */
-  rating: 'poor' | 'fair' | 'good' | 'excellent';
-  /** Specific improvement suggestion */
-  improvementSuggestion: string;
-  /** Evidence supporting this critique */
-  evidence: string[];
-}
-
-/**
- * Overall effectiveness analysis
- * Combines step-by-step quality analysis, missed activities, and content critique
- */
-export interface EffectivenessAnalysis {
-  /** Step-by-step quality analysis */
-  stepAnalysis: StepEffectivenessAnalysis[];
-  /** Activities the user should have done but didn't */
-  missedActivities: MissedActivity[];
-  /** Content/output quality critique */
-  contentCritiques: ContentQualityCritique[];
-  /** Overall effectiveness score (0-100) - distinct from efficiency score */
-  overallEffectivenessScore: number;
-  /** Summary of key effectiveness insights */
-  effectivenessSummary: string;
-  /** Top 3 priorities for improving effectiveness */
-  topPriorities: string[];
-  /** Analysis timestamp */
-  analysisTimestamp: string;
-}
-
-// ============================================================================
-// STEP OPTIMIZATION TYPES (A3/A4 Output)
+// STEP OPTIMIZATION TYPES (A4 Output)
 // ============================================================================
 
 /**
@@ -636,33 +459,6 @@ export type OptimizationSource =
   | 'heuristic';
 
 // ============================================================================
-// @deprecated FEATURE ADOPTION TYPES (A5 Output) — A5 removed, insights now in session_mappings
-// ============================================================================
-
-/**
- * @deprecated A5 removed — feature insights now in session_mappings insights JSONB
- */
-export interface FeatureAdoptionTip {
-  /** Unique identifier for the tip */
-  tipId: string;
-  /** Tool name (must be from user's toolbox) */
-  toolName: string;
-  /** Specific feature name within the tool */
-  featureName: string;
-  /** How to activate the feature (shortcut, command, etc.) */
-  triggerOrShortcut: string;
-  /** User-friendly, non-intrusive message explaining the suggestion */
-  message: string;
-  /** What workflow pattern/behavior this addresses */
-  addressesPattern: string;
-  /** Estimated time saved per use in seconds */
-  estimatedSavingsSeconds: number;
-  /** Confidence score (0-1) */
-  confidence: number;
-  /** IDs of workflows that would benefit from this feature */
-  affectedWorkflowIds: string[];
-}
-
 /**
  * Optimization block (group of related transformations)
  */
@@ -843,9 +639,6 @@ export interface InsightGenerationResult {
   /** LLM-generated follow-up questions based on the analysis context */
   suggestedFollowUps?: string[];
 
-  /** @deprecated A5 removed — feature insights now in session_mappings insights JSONB */
-  featureAdoptionTips?: FeatureAdoptionTip[];
-
   /**
    * Repetitive workflow patterns detected across user's sessions
    * (e.g., "research → summarize → email" 10 times/week)
@@ -921,11 +714,7 @@ export interface CritiqueIssue {
 export type AgentId =
   | 'A1_RETRIEVAL'
   | 'A4_WEB'
-  | 'A4_COMPANY'
-  // Deprecated: kept for legacy orchestrator-graph.ts compatibility
-  | 'A2_JUDGE'
-  | 'A3_COMPARATOR'
-  | 'A5_FEATURE_ADOPTION';
+  | 'A4_COMPANY';
 
 /**
  * Routing decision from orchestrator
@@ -933,7 +722,6 @@ export type AgentId =
 export interface RoutingDecision {
   agentsToRun: AgentId[];
   reason: string;
-  peerDataUsable: boolean;
   companyDocsAvailable: boolean;
 }
 
@@ -976,23 +764,15 @@ export interface AgentModelConfig {
 /**
  * Model configuration for the entire insight generation system
  *
- * Default configuration:
- * - A1, A3, A4-Web, A4-Company: Gemini 2.5 Flash (fast, cost-effective)
- * - A2 Judge: GPT-4 (high quality for LLM-as-judge evaluation)
+ * Default configuration: Gemini models for all agents
  */
 export interface InsightModelConfiguration {
-  /** A1 Retrieval Agent - Gemini 2.5 Flash by default */
+  /** A1 Retrieval Agent */
   a1Retrieval: AgentModelConfig;
-  /** @deprecated A2 removed — gapAnalysis now in session_mappings JSONB */
-  a2Judge: AgentModelConfig;
-  /** @deprecated A3 removed — peer data now in session_mappings peerInsights JSONB */
-  a3Comparator: AgentModelConfig;
-  /** A4 Web Best Practices Agent - Gemini 2.5 Flash by default */
+  /** A4 Web Best Practices Agent */
   a4Web: AgentModelConfig;
-  /** A4 Company Docs Agent - Gemini 2.5 Flash by default */
+  /** A4 Company Docs Agent */
   a4Company: AgentModelConfig;
-  /** @deprecated A5 removed — feature insights now in session_mappings insights JSONB */
-  a5FeatureAdoption: AgentModelConfig;
 }
 
 /**
@@ -1005,18 +785,6 @@ export const DEFAULT_MODEL_CONFIG: InsightModelConfiguration = {
     temperature: 0.3,
     maxTokens: 8000,
   },
-  a2Judge: {
-    provider: 'google',
-    model: 'gemini-3-flash-preview',
-    temperature: 0.1, // Lower temperature for consistent judgments
-    maxTokens: 4000,
-  },
-  a3Comparator: {
-    provider: 'google',
-    model: 'gemini-2.5-flash',
-    temperature: 0.3,
-    maxTokens: 8000,
-  },
   a4Web: {
     provider: 'google',
     model: 'gemini-2.5-flash',
@@ -1024,12 +792,6 @@ export const DEFAULT_MODEL_CONFIG: InsightModelConfiguration = {
     maxTokens: 8000,
   },
   a4Company: {
-    provider: 'google',
-    model: 'gemini-2.5-flash',
-    temperature: 0.3,
-    maxTokens: 8000,
-  },
-  a5FeatureAdoption: {
     provider: 'google',
     model: 'gemini-2.5-flash',
     temperature: 0.3,
@@ -1048,7 +810,6 @@ export interface InsightGenerationOptions {
   nodeId?: string;
   lookbackDays?: number;
   includeWebSearch?: boolean;
-  includePeerComparison?: boolean;
   includeCompanyDocs?: boolean;
   /** Filter Slack/communication apps from evidence (default: true) */
   filterNoise?: boolean;
@@ -1065,6 +826,7 @@ export interface AttachedSemanticStep {
   description: string;
   duration_seconds: number;
   tools_involved: string[];
+  agentic_pattern?: string;
 }
 
 /**
@@ -1075,7 +837,11 @@ export interface AttachedWorkflow {
   semantic_steps: AttachedSemanticStep[];
   classification?: {
     level_1_intent: string;
+    level_2_problem?: string;
+    level_3_approach?: string;
     level_4_tools: string[];
+    level_5_outcome?: string;
+    workflow_type?: string;
   };
   timestamps?: { duration_ms: number };
 }
@@ -1354,7 +1120,7 @@ export interface AgenticLoopConfig {
  */
 export const DEFAULT_AGENTIC_CONFIG: AgenticLoopConfig = {
   maxIterations: AGENTIC_MAX_ITERATIONS,
-  skillTimeoutMs: 120000, // 2 minutes to match LLM total timeout in judge-graph
+  skillTimeoutMs: 120000, // 2 minutes for LLM total timeout
   reasoningModel: {
     provider: 'google',
     model: 'gemini-3-flash-preview',
@@ -1376,16 +1142,6 @@ export const DEFAULT_AGENTIC_CONFIG: AgenticLoopConfig = {
   verbose: false,
   maxFactCheckRetries: 2,
 };
-
-/**
- * Extended insight generation options with agentic loop support
- */
-export interface InsightGenerationOptionsWithAgentic extends InsightGenerationOptions {
-  /** Whether to use the agentic loop instead of legacy orchestrator */
-  useAgenticLoop?: boolean;
-  /** Custom agentic loop configuration */
-  agenticConfig?: Partial<AgenticLoopConfig>;
-}
 
 // ============================================================================
 // CONTEXT STITCHING TYPES (Two-Tier System)
@@ -1490,4 +1246,71 @@ export interface StitchedContext {
     processingTimeMs: number;
     stitchingVersion: string;
   };
+}
+
+// ============================================================================
+// SESSION KNOWLEDGE BASE TYPES
+// Complete session data cache for LLM prompt injection (no truncation)
+// ============================================================================
+
+/**
+ * Workflow entry within a session knowledge base entry
+ */
+export interface KnowledgeBaseWorkflow {
+  workflowSummary: string;
+  intent: string;
+  approach: string;
+  tools: string[];
+  durationSeconds: number;
+  steps: Array<{
+    stepName: string;
+    description: string;
+    durationSeconds: number;
+    toolsInvolved: string[];
+    agenticPattern?: string;
+  }>;
+}
+
+/**
+ * Complete session data entry for the knowledge base.
+ * Contains ALL information from session_mappings without truncation,
+ * structured as a reusable JSON object for LLM prompt injection.
+ */
+export interface SessionKnowledgeEntry {
+  sessionId: string;
+  title: string;
+  highLevelSummary: string;
+  startedAt?: string;
+  endedAt?: string;
+  durationSeconds: number;
+  appsUsed: string[];
+  userNotes?: string;
+
+  /** Full workflow data (from summary JSONB — V2 workflows or V1 chapters) */
+  workflows: KnowledgeBaseWorkflow[];
+
+  /** Complete gap analysis (from session_mappings.gapAnalysis JSONB — NO truncation) */
+  gapAnalysis: Record<string, unknown> | null;
+  /** Complete session insights (from session_mappings.insights JSONB — NO truncation) */
+  insights: Record<string, unknown> | null;
+  /** Complete peer insights (from session_mappings.peerInsights JSONB — NO truncation) */
+  peerInsights: Record<string, unknown>[] | null;
+  /** Complete screenshot descriptions (from session_mappings.screenshotDescriptions JSONB) */
+  screenshotDescriptions: Record<string, unknown> | null;
+  /** Per-session stitched context (from session_mappings.stitchedContext JSONB) */
+  stitchedContext: Record<string, unknown> | null;
+}
+
+/**
+ * Session knowledge base — cached per-user, reusable across queries.
+ * Built by A1 retrieval from session_mappings, cached with 30-min TTL.
+ */
+export interface SessionKnowledgeBase {
+  userId: number;
+  sessionEntries: SessionKnowledgeEntry[];
+  createdAt: string;
+  /** Session IDs included in this knowledge base */
+  sessionIds: string[];
+  /** Cross-session stitched context (workstream assignments, tool mastery groups, repetitive patterns) */
+  stitchedContext?: StitchedContext | null;
 }

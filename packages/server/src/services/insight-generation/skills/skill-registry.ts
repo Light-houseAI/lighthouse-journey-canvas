@@ -27,7 +27,7 @@ import { memorySearchSkill } from './memory-search-skill.js';
 export function createSkillRegistry(): SkillRegistry {
   const registry: SkillRegistry = new Map();
 
-  // Register all skills (A2 Judge, A3 Comparator, A5 Feature Adoption removed — data now in session_mappings JSONB)
+  // Register all skills
   registry.set('retrieve_user_workflows', retrievalSkill);
   registry.set('search_web_best_practices', webSearchSkill);
   registry.set('search_company_docs', companyDocsSkill);

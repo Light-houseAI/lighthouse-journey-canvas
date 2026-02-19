@@ -5,7 +5,6 @@
  * INIT → GUARDRAIL → [ REASON → ACT → OBSERVE ] → TERMINATE
  *
  * Active skills: A1 (enriched retrieval), A4-Web, A4-Company, Memory
- * Deprecated agents: A2 (Judge), A3 (Comparator), A5 (Feature Adoption), A6 (Validator)
  *
  * Uses LangGraph's Annotation system for type-safe state management.
  */
@@ -13,7 +12,6 @@
 import { Annotation } from '@langchain/langgraph';
 import type {
   EvidenceBundle,
-  Diagnostics,
   StepOptimizationPlan,
   InsightGenerationResult,
   CritiqueResult,
@@ -22,8 +20,8 @@ import type {
   AttachedSessionContext,
   RetrievedMemories,
   UserToolbox,
-  FeatureAdoptionTip,
   StitchedContext,
+  SessionKnowledgeBase,
 } from '../types.js';
 import type { QueryClassification } from '../classifiers/query-classifier.js';
 
@@ -73,12 +71,6 @@ export const InsightStateAnnotation = Annotation.Root({
   includeWebSearch: Annotation<boolean>({
     reducer: (_, b) => b,
     default: () => false,
-  }),
-
-  /** Whether to include peer comparison (A3) */
-  includePeerComparison: Annotation<boolean>({
-    reducer: (_, b) => b,
-    default: () => true,
   }),
 
   /** Whether to include company docs (A4-Company) */
@@ -166,18 +158,18 @@ export const InsightStateAnnotation = Annotation.Root({
     default: () => null,
   }),
 
-  /** Evidence bundle from anonymized platform data (peer workflows) */
-  peerEvidence: Annotation<EvidenceBundle | null>({
-    reducer: (_, b) => b,
-    default: () => null,
-  }),
-
   /**
    * Two-tier stitched context for cross-session analysis
    * Tier 1: Outcome-based workstreams (project-level grouping)
    * Tier 2: Tool-mastery groups (skill-level analysis)
    */
   stitchedContext: Annotation<StitchedContext | null>({
+    reducer: (_, b) => b,
+    default: () => null,
+  }),
+
+  /** Complete session knowledge base — cached per-user, reusable across queries */
+  sessionKnowledgeBase: Annotation<SessionKnowledgeBase | null>({
     reducer: (_, b) => b,
     default: () => null,
   }),
@@ -211,48 +203,6 @@ export const InsightStateAnnotation = Annotation.Root({
   }),
 
   // -------------------------------------------------------------------------
-  // @deprecated A3 WORKFLOW ALIGNMENTS — replaced by peerInsights in session_mappings
-  // -------------------------------------------------------------------------
-
-  /** @deprecated A3 removed — peer data now in session_mappings peerInsights JSONB */
-  workflowAlignments: Annotation<Array<{
-    userWorkflowId: string;
-    peerWorkflowId: string;
-    alignmentScore: number;
-  }> | null>({
-    reducer: (_, b) => b,
-    default: () => null,
-  }),
-
-  // -------------------------------------------------------------------------
-  // @deprecated A2 JUDGE OUTPUT — replaced by gapAnalysis/insights in session_mappings
-  // -------------------------------------------------------------------------
-
-  /** @deprecated A2 removed — gap analysis now in session_mappings gapAnalysis JSONB */
-  userDiagnostics: Annotation<Diagnostics | null>({
-    reducer: (_, b) => b,
-    default: () => null,
-  }),
-
-  /** @deprecated A2 removed — peer diagnostics replaced by peerInsights JSONB */
-  peerDiagnostics: Annotation<Diagnostics | null>({
-    reducer: (_, b) => b,
-    default: () => null,
-  }),
-
-  /** @deprecated A2 removed */
-  a2CritiqueResult: Annotation<CritiqueResult | null>({
-    reducer: (_, b) => b,
-    default: () => null,
-  }),
-
-  /** @deprecated A2 removed */
-  a2RetryCount: Annotation<number>({
-    reducer: (a, b) => Math.max(a, b),
-    default: () => 0,
-  }),
-
-  // -------------------------------------------------------------------------
   // ORCHESTRATOR OUTPUT
   // -------------------------------------------------------------------------
 
@@ -266,12 +216,6 @@ export const InsightStateAnnotation = Annotation.Root({
   // DOWNSTREAM AGENT OUTPUTS
   // -------------------------------------------------------------------------
 
-  /** @deprecated A3 removed — peer data now in session_mappings peerInsights JSONB */
-  peerOptimizationPlan: Annotation<StepOptimizationPlan | null>({
-    reducer: (_, b) => b,
-    default: () => null,
-  }),
-
   /** Optimization plan from A4-Web (Perplexity search) */
   webOptimizationPlan: Annotation<StepOptimizationPlan | null>({
     reducer: (_, b) => b,
@@ -280,12 +224,6 @@ export const InsightStateAnnotation = Annotation.Root({
 
   /** Optimization plan from A4-Company (company docs) */
   companyOptimizationPlan: Annotation<StepOptimizationPlan | null>({
-    reducer: (_, b) => b,
-    default: () => null,
-  }),
-
-  /** @deprecated A5 removed — feature insights now in session_mappings insights JSONB */
-  featureAdoptionTips: Annotation<FeatureAdoptionTip[] | null>({
     reducer: (_, b) => b,
     default: () => null,
   }),
@@ -317,57 +255,6 @@ export const InsightStateAnnotation = Annotation.Root({
 
   /** Final result ready for API response */
   finalResult: Annotation<InsightGenerationResult | null>({
-    reducer: (_, b) => b,
-    default: () => null,
-  }),
-
-  // -------------------------------------------------------------------------
-  // @deprecated A6 VALIDATOR OUTPUT — replaced by fact-check validator in terminateNode
-  // -------------------------------------------------------------------------
-
-  /** @deprecated A6 removed — replaced by fact-check validator */
-  generatedAnswer: Annotation<string | null>({
-    reducer: (_, b) => b,
-    default: () => null,
-  }),
-
-  /** @deprecated A6 removed — replaced by fact-check validator */
-  identifiedGaps: Annotation<Array<{
-    id: string;
-    type: string;
-    location: string;
-    description: string;
-    severity: string;
-    evidence: string;
-  }> | null>({
-    reducer: (_, b) => b,
-    default: () => null,
-  }),
-
-  /** @deprecated A6 removed — replaced by fact-check validator */
-  validationPassed: Annotation<boolean>({
-    reducer: (_, b) => b,
-    default: () => false,
-  }),
-
-  /** @deprecated A6 removed — replaced by fact-check validator */
-  validationIterationCount: Annotation<number>({
-    reducer: (_, b) => b,
-    default: () => 0,
-  }),
-
-  /** @deprecated A6 removed — replaced by fact-check validator */
-  validationResult: Annotation<{
-    gaps: Array<{ id: string; type: string; location: string; description: string; severity: string; evidence: string }>;
-    passed: boolean;
-    iterationCount: number;
-  } | null>({
-    reducer: (_, b) => b,
-    default: () => null,
-  }),
-
-  /** @deprecated A6 removed — replaced by fact-check validator */
-  userWorkflows: Annotation<unknown[] | null>({
     reducer: (_, b) => b,
     default: () => null,
   }),
@@ -462,7 +349,6 @@ export function createInitialState(params: {
   nodeId?: string | null;
   lookbackDays?: number;
   includeWebSearch?: boolean;
-  includePeerComparison?: boolean;
   includeCompanyDocs?: boolean;
   filterNoise?: boolean;
   /** User-attached sessions for analysis (bypasses NLQ retrieval in A1) */
@@ -478,7 +364,6 @@ export function createInitialState(params: {
     nodeId: params.nodeId || null,
     lookbackDays: params.lookbackDays || 30,
     includeWebSearch: params.includeWebSearch ?? false,
-    includePeerComparison: params.includePeerComparison ?? true,
     includeCompanyDocs: params.includeCompanyDocs ?? true,
     filterNoise: params.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable
 
@@ -498,46 +383,27 @@ export function createInitialState(params: {
 
     // A1 output
     userEvidence: null,
-    peerEvidence: null,
-    stitchedContext: null, // Two-tier context stitching result
+    stitchedContext: null,
+    sessionKnowledgeBase: null,
     a1CritiqueResult: null,
-    queryClassification: null, // Stored for peer evidence domain filtering
+    queryClassification: null,
     a1RetryCount: 0,
 
     // User toolbox (historical tools)
     userToolbox: null,
 
-    // @deprecated A3 — peer data now in session_mappings peerInsights
-    workflowAlignments: null,
-
-    // @deprecated A2 — gap analysis now in session_mappings gapAnalysis/insights
-    userDiagnostics: null,
-    peerDiagnostics: null,
-    a2CritiqueResult: null,
-    a2RetryCount: 0,
-
     // Orchestrator output
     routingDecision: null,
 
     // Downstream outputs
-    peerOptimizationPlan: null, // @deprecated A3
     webOptimizationPlan: null,
     companyOptimizationPlan: null,
-    featureAdoptionTips: null, // @deprecated A5
     cachedWebSearchResult: null,
 
     // Final output
     mergedPlan: null,
     userQueryAnswer: null,
     finalResult: null,
-
-    // @deprecated A6 — replaced by fact-check validator
-    generatedAnswer: null,
-    identifiedGaps: null,
-    validationPassed: false,
-    validationIterationCount: 0,
-    validationResult: null,
-    userWorkflows: null,
 
     // Control flow
     currentStage: 'initializing',
@@ -563,22 +429,3 @@ export function hasA1Output(state: InsightState): boolean {
   return state.userEvidence !== null && state.a1CritiqueResult?.passed === true;
 }
 
-/**
- * @deprecated A2 removed — gapAnalysis now in session_mappings JSONB
- */
-export function hasA2Output(state: InsightState): boolean {
-  return state.userDiagnostics !== null && state.a2CritiqueResult?.passed === true;
-}
-
-/**
- * @deprecated A3 removed — peer data now in session_mappings peerInsights JSONB
- */
-export function canRunPeerComparison(state: InsightState): boolean {
-  return (
-    state.includePeerComparison &&
-    state.peerEvidence !== null &&
-    state.peerDiagnostics !== null &&
-    state.peerDiagnostics.overallEfficiencyScore >
-      (state.userDiagnostics?.overallEfficiencyScore || 0)
-  );
-}

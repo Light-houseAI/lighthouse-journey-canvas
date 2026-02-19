@@ -29,7 +29,6 @@ import type {
   CurrentStep,
   OptimizedStep,
   Citation,
-  Inefficiency,
 } from '../types.js';
 import { getValidatedStepIdsWithFallback } from '../utils/stepid-validator.js';
 import { z } from 'zod';
@@ -38,6 +37,15 @@ import { A4_COMPANY_DOCS_SYSTEM_PROMPT } from '../prompts/system-prompts.js';
 // ============================================================================
 // TYPES
 // ============================================================================
+
+/** @deprecated A2 Judge agent removed — this type is kept for internal function signatures */
+interface Inefficiency {
+  id: string;
+  type: string;
+  description: string;
+  stepIds: string[];
+  estimatedWastedSeconds: number;
+}
 
 export interface CompanyDocsGraphDeps {
   logger: Logger;
@@ -114,7 +122,10 @@ async function generateDocumentQueries(
 
   logger.info('A4-Company: Generating document queries');
 
-  if (!state.userDiagnostics || state.userDiagnostics.inefficiencies.length === 0) {
+  // A2 Judge removed — userDiagnostics is no longer populated
+  const userDiagnostics = (state as any).userDiagnostics as { inefficiencies: Inefficiency[] } | null;
+
+  if (!userDiagnostics || userDiagnostics.inefficiencies.length === 0) {
     logger.warn('A4-Company: No inefficiencies to search for');
     return {
       currentStage: 'a4_company_queries_skipped',
@@ -122,7 +133,7 @@ async function generateDocumentQueries(
     };
   }
 
-  const inefficiencies = state.userDiagnostics.inefficiencies;
+  const inefficiencies = userDiagnostics.inefficiencies;
 
   try {
     const response = await withTimeout(
@@ -202,7 +213,9 @@ async function retrieveCompanyDocs(
     hasNlqService: !!nlqService,
   });
 
-  const inefficiencies = state.userDiagnostics?.inefficiencies || [];
+  // A2 Judge removed — userDiagnostics is no longer populated
+  const userDiagnostics = (state as any).userDiagnostics as { inefficiencies: Inefficiency[] } | null;
+  const inefficiencies = userDiagnostics?.inefficiencies || [];
   if (inefficiencies.length === 0) {
     return {
       currentStage: 'a4_company_retrieval_no_inefficiencies',
@@ -302,7 +315,9 @@ async function extractGuidance(
 
   logger.info('A4-Company: Extracting guidance from documents');
 
-  const inefficiencies = state.userDiagnostics?.inefficiencies || [];
+  // A2 Judge removed — userDiagnostics is no longer populated
+  const userDiagnostics = (state as any).userDiagnostics as { inefficiencies: Inefficiency[] } | null;
+  const inefficiencies = userDiagnostics?.inefficiencies || [];
   if (inefficiencies.length === 0) {
     return {
       companyOptimizationPlan: null,
@@ -402,7 +417,7 @@ For each guidance provide:
     const optimizationPlan = createOptimizationPlanFromGuidance(
       extractedGuidance,
       documents,
-      state.userDiagnostics!,
+      userDiagnostics!,
       state.userEvidence?.workflows[0]
     );
 
@@ -530,7 +545,7 @@ Return JSON: {"guidance": [{"documentId": "${documents[0]?.id || 'doc-1'}", "gui
         const optimizationPlan = createOptimizationPlanFromGuidance(
           repairedGuidance,
           documents,
-          state.userDiagnostics!,
+          userDiagnostics!,
           state.userEvidence?.workflows[0]
         );
 

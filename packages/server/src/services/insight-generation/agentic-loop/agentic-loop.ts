@@ -1069,7 +1069,6 @@ function sanitizeDescriptionForUser(description: string): string {
 
 /**
  * Build rich, source-attributed context from all gathered data
- * Ported from orchestrator-graph.ts for consistent output quality
  */
 function buildStructuredContext(state: AgenticState): string {
   const sections: string[] = [];
@@ -1092,9 +1091,163 @@ function buildStructuredContext(state: AgenticState): string {
   }
 
   // -------------------------------------------------------------------------
-  // USER-ATTACHED SESSIONS (user explicitly selected these)
+  // SESSION KNOWLEDGE BASE (unified, complete session data — no truncation)
+  // Replaces: USER-ATTACHED SESSIONS, SESSION SUMMARIES, SESSION ANALYSIS
   // -------------------------------------------------------------------------
-  if (state.attachedSessionContext && state.attachedSessionContext.length > 0) {
+  if (state.sessionKnowledgeBase && state.sessionKnowledgeBase.sessionEntries.length > 0) {
+    const kbEntries = state.sessionKnowledgeBase.sessionEntries;
+    const kbParts: string[] = [];
+
+    for (const entry of kbEntries) {
+      const duration = entry.durationSeconds
+        ? `${Math.round(entry.durationSeconds / 60)}m`
+        : 'unknown duration';
+      const apps = entry.appsUsed?.length > 0 ? entry.appsUsed.join(', ') : 'unknown';
+      const entryParts: string[] = [];
+
+      entryParts.push(`=== Session: "${entry.title}" (${duration}, apps: ${apps}) ===`);
+      if (entry.highLevelSummary) {
+        entryParts.push(`Summary: ${entry.highLevelSummary}`);
+      }
+      if (entry.userNotes) {
+        entryParts.push(`User Notes: ${entry.userNotes}`);
+      }
+
+      // Workflows with full step details
+      if (entry.workflows.length > 0) {
+        const wfLines = entry.workflows.map((wf, idx) => {
+          const wfDuration = wf.durationSeconds
+            ? `${Math.round(wf.durationSeconds / 60)}m`
+            : '';
+          const wfTools = wf.tools?.length > 0 ? wf.tools.join(', ') : '';
+          let line = `  ${idx + 1}. "${wf.workflowSummary}"${wfDuration ? ` (${wfDuration})` : ''}${wfTools ? ` [tools: ${wfTools}]` : ''}`;
+          if (wf.intent) line += `\n     Intent: ${wf.intent}`;
+          if (wf.approach) line += ` | Approach: ${wf.approach}`;
+          if (wf.steps?.length > 0) {
+            const stepLines = wf.steps.map(s => {
+              const sDur = s.durationSeconds ? `${Math.round(s.durationSeconds / 60)}m` : '';
+              const sTools = s.toolsInvolved?.length > 0 ? s.toolsInvolved.join(', ') : '';
+              return `       - ${s.stepName}: ${s.description}${sDur ? ` (${sDur})` : ''}${sTools ? ` [${sTools}]` : ''}`;
+            }).join('\n');
+            line += `\n     Steps:\n${stepLines}`;
+          }
+          return line;
+        }).join('\n');
+        entryParts.push(`Workflows:\n${wfLines}`);
+      }
+
+      // Gap Analysis (complete — no truncation)
+      if (entry.gapAnalysis) {
+        const ga = entry.gapAnalysis as Record<string, unknown>;
+        const gaParts: string[] = [];
+        if (ga.overallEfficiencyScore != null) {
+          gaParts.push(`  Efficiency Score: ${ga.overallEfficiencyScore}/100`);
+        }
+        if (Array.isArray(ga.stepByStepRecommendations) && ga.stepByStepRecommendations.length > 0) {
+          const recs = ga.stepByStepRecommendations.map((r: any) =>
+            `    - ${typeof r === 'string' ? r : r?.recommendation || JSON.stringify(r)}`
+          ).join('\n');
+          gaParts.push(`  Recommendations:\n${recs}`);
+        }
+        if (Array.isArray(ga.significantImprovements) && ga.significantImprovements.length > 0) {
+          const improv = ga.significantImprovements.map((i: any) =>
+            `    - ${typeof i === 'string' ? i : JSON.stringify(i)}`
+          ).join('\n');
+          gaParts.push(`  Key Improvements:\n${improv}`);
+        }
+        if (gaParts.length > 0) {
+          entryParts.push(`Gap Analysis:\n${gaParts.join('\n')}`);
+        }
+      }
+
+      // Insights (complete — no truncation)
+      if (entry.insights) {
+        const ins = entry.insights as Record<string, unknown>;
+        const insParts: string[] = [];
+        if (ins.at_a_glance) {
+          insParts.push(`  At a Glance: ${String(ins.at_a_glance)}`);
+        }
+        if (Array.isArray(ins.issues) && ins.issues.length > 0) {
+          insParts.push(`  Issues: ${ins.issues.map((i: any) => typeof i === 'string' ? i : JSON.stringify(i)).join('; ')}`);
+        }
+        if (Array.isArray(ins.improvements) && ins.improvements.length > 0) {
+          insParts.push(`  Improvements: ${ins.improvements.map((i: any) => typeof i === 'string' ? i : JSON.stringify(i)).join('; ')}`);
+        }
+        if (insParts.length > 0) {
+          entryParts.push(`Insights:\n${insParts.join('\n')}`);
+        }
+      }
+
+      // Peer Insights (complete — no truncation)
+      if (entry.peerInsights && entry.peerInsights.length > 0) {
+        const peerLines = entry.peerInsights.map((p: any) =>
+          `  - ${typeof p === 'string' ? p : (p?.summary || p?.learningPoint || JSON.stringify(p))}`
+        ).join('\n');
+        entryParts.push(`Peer Insights:\n${peerLines}`);
+      }
+
+      // Screenshot Descriptions (previously missing from prompt)
+      // DB format: Record<timestamp, { description, app, category, appName, windowTitle, browserUrl, ... }>
+      if (entry.screenshotDescriptions && typeof entry.screenshotDescriptions === 'object') {
+        const sd = entry.screenshotDescriptions as Record<string, any>;
+        const entries = Object.values(sd);
+        if (entries.length > 0) {
+          // Show up to 15 meaningful screenshots to avoid prompt bloat
+          const meaningful = entries.filter((s: any) => s.isMeaningful !== false);
+          const toShow = (meaningful.length > 0 ? meaningful : entries).slice(0, 15);
+          const screenshotLines = toShow.map((s: any) => {
+            const app = s.appName || s.app || '';
+            const title = s.windowTitle || '';
+            const url = s.browserUrl || s.url || '';
+            const desc = s.description || '';
+            return `  - [${app}] "${title}"${url ? ` (${url})` : ''}: ${desc}`;
+          }).join('\n');
+          entryParts.push(`Screenshot Activity (${entries.length} total, showing ${toShow.length}):\n${screenshotLines}`);
+        }
+      }
+
+      kbParts.push(entryParts.join('\n'));
+    }
+
+    // Cross-session stitched context
+    if (state.sessionKnowledgeBase.stitchedContext) {
+      const sc = state.sessionKnowledgeBase.stitchedContext;
+      const crossParts: string[] = [];
+
+      if (sc.workstreams && sc.workstreams.length > 0) {
+        const wsLines = sc.workstreams.map(ws =>
+          `  - "${ws.name}": ${ws.outcomeDescription} (${ws.sessionIds?.length || 0} sessions, tools: ${ws.toolsUsed?.join(', ') || 'none'})`
+        ).join('\n');
+        crossParts.push(`Workstreams:\n${wsLines}`);
+      }
+
+      if (sc.toolMasteryGroups && sc.toolMasteryGroups.length > 0) {
+        const tmLines = sc.toolMasteryGroups.map(tm => {
+          const timeHrs = Math.round(tm.totalTimeSeconds / 3600 * 10) / 10;
+          const patterns = tm.usagePatterns?.map(p => p.patternName || p.description).join(', ') || '';
+          const opps = tm.optimizationOpportunities?.join('; ') || '';
+          return `  - ${tm.toolName} (${timeHrs}h, ${tm.sessionIds?.length || 0} sessions)${patterns ? `: ${patterns}` : ''}${opps ? `\n    Opportunities: ${opps}` : ''}`;
+        }).join('\n');
+        crossParts.push(`Tool Mastery:\n${tmLines}`);
+      }
+
+      // Repetitive patterns may exist on the stitched context from DB (not typed)
+      const scAny = sc as unknown as Record<string, unknown>;
+      if (Array.isArray(scAny.repetitivePatterns) && scAny.repetitivePatterns.length > 0) {
+        const rpLines = scAny.repetitivePatterns.map((rp: any) =>
+          `  - "${rp.sequence || rp.pattern}" - ${rp.occurrenceCount || rp.count}x (${rp.totalHours || Math.round((rp.totalTimeSpentSeconds || 0) / 3600)}h total)`
+        ).join('\n');
+        crossParts.push(`Repetitive Patterns:\n${rpLines}`);
+      }
+
+      if (crossParts.length > 0) {
+        kbParts.push(`=== Cross-Session Context ===\n${crossParts.join('\n')}`);
+      }
+    }
+
+    sections.push(`SESSION KNOWLEDGE BASE (${kbEntries.length} session(s) — COMPLETE DATA):\n\n${kbParts.join('\n\n')}`);
+  } else if (state.attachedSessionContext && state.attachedSessionContext.length > 0) {
+    // Fallback: use attached session context directly if KB not available
     const attachedDetails = state.attachedSessionContext.map(session => {
       const workflowDetails = session.workflows.map(w => {
         const steps = w.semantic_steps
@@ -1129,23 +1282,7 @@ ${workflowDetails}`;
   }
 
   // -------------------------------------------------------------------------
-  // SESSION SUMMARIES from retrieval
-  // -------------------------------------------------------------------------
-  if (state.userEvidence?.sessions && state.userEvidence.sessions.length > 0) {
-    const sessionSummaries = state.userEvidence.sessions
-      .slice(0, 5)
-      .map(s => {
-        const summary = s.highLevelSummary || s.startActivity;
-        const intent = s.intent ? ` | Intent: ${s.intent}` : '';
-        const approach = s.approach ? ` | Approach: ${s.approach}` : '';
-        return `- ${summary}${intent}${approach}`;
-      })
-      .join('\n');
-    sections.push(`USER'S RECENT ACTIVITY SUMMARIES:\n${sessionSummaries}`);
-  }
-
-  // -------------------------------------------------------------------------
-  // USER WORKFLOWS with step-level details
+  // USER WORKFLOWS with step-level details (complementary workflow-centric view)
   // -------------------------------------------------------------------------
   if (state.userEvidence?.workflows && state.userEvidence.workflows.length > 0) {
     const workflowDetails = state.userEvidence.workflows
@@ -1170,74 +1307,6 @@ ${workflowDetails}`;
       })
       .join('\n');
     sections.push(`USER'S RECENT WORKFLOWS (from captured sessions):\n${workflowDetails}`);
-  }
-
-  // =========================================================================
-  // SESSION ANALYSIS [Source: session_mappings] — enriched JSONB per session
-  // Replaces A2 (Judge), A3 (Comparator), A5 (Feature Adoption) sections
-  // =========================================================================
-
-  if (state.userEvidence?.sessions && state.userEvidence.sessions.length > 0) {
-    const sessionsWithEnrichedData = state.userEvidence.sessions.filter(
-      s => s.gapAnalysis || s.insights || s.peerInsights
-    );
-
-    if (sessionsWithEnrichedData.length > 0) {
-      const enrichedParts: string[] = [];
-
-      for (const session of sessionsWithEnrichedData) {
-        const sessionParts: string[] = [];
-        const duration = session.durationSeconds
-          ? `${Math.round(session.durationSeconds / 60)}m`
-          : 'unknown';
-        const apps = session.appsUsed?.join(', ') || 'unknown';
-
-        sessionParts.push(`--- Session: "${session.highLevelSummary || session.startActivity || session.sessionId}" (${duration}, ${apps}) ---`);
-
-        if (session.gapAnalysis) {
-          const ga = session.gapAnalysis as Record<string, unknown>;
-          const score = ga.overallEfficiencyScore != null ? `Efficiency Score: ${ga.overallEfficiencyScore}/100` : '';
-          if (score) sessionParts.push(`  ${score}`);
-          if (Array.isArray(ga.stepByStepRecommendations)) {
-            const recs = ga.stepByStepRecommendations.slice(0, 3).map((r: any) =>
-              `    - ${typeof r === 'string' ? r : r?.recommendation || JSON.stringify(r)}`
-            ).join('\n');
-            if (recs) sessionParts.push(`  Recommendations:\n${recs}`);
-          }
-          if (Array.isArray(ga.significantImprovements)) {
-            const improv = ga.significantImprovements.slice(0, 2).map((i: any) =>
-              `    - ${typeof i === 'string' ? i : JSON.stringify(i)}`
-            ).join('\n');
-            if (improv) sessionParts.push(`  Key Improvements:\n${improv}`);
-          }
-        }
-
-        if (session.insights) {
-          const ins = session.insights as Record<string, unknown>;
-          if (ins.at_a_glance) {
-            const glance = String(ins.at_a_glance);
-            sessionParts.push(`  At a Glance: ${glance.length > 200 ? glance.slice(0, 200) + '...' : glance}`);
-          }
-          if (Array.isArray(ins.issues) && ins.issues.length > 0) {
-            sessionParts.push(`  Issues: ${ins.issues.slice(0, 3).map((i: any) => typeof i === 'string' ? i : JSON.stringify(i)).join('; ')}`);
-          }
-          if (Array.isArray(ins.improvements) && ins.improvements.length > 0) {
-            sessionParts.push(`  Improvements: ${ins.improvements.slice(0, 3).map((i: any) => typeof i === 'string' ? i : JSON.stringify(i)).join('; ')}`);
-          }
-        }
-
-        if (session.peerInsights && Array.isArray(session.peerInsights) && session.peerInsights.length > 0) {
-          const peerSummary = session.peerInsights.slice(0, 2).map((p: any) =>
-            typeof p === 'string' ? p : (p?.summary || p?.learningPoint || JSON.stringify(p))
-          ).join('; ');
-          sessionParts.push(`  Peer Insights: ${peerSummary.length > 200 ? peerSummary.slice(0, 200) + '...' : peerSummary}`);
-        }
-
-        enrichedParts.push(sessionParts.join('\n'));
-      }
-
-      sections.push(`SESSION ANALYSIS [Source: session_mappings]:\nPre-computed analysis for ${sessionsWithEnrichedData.length} session(s):\n\n${enrichedParts.join('\n\n')}`);
-    }
   }
 
   // Repetitive patterns
@@ -1291,8 +1360,9 @@ ${workflowDetails}`;
 function buildEvidenceBoundary(state: AgenticState): string {
   const sessions = state.userEvidence?.sessions || [];
   const workflows = state.userEvidence?.workflows || [];
+  const kbEntries = state.sessionKnowledgeBase?.sessionEntries || [];
 
-  // Collect all unique tools/apps from sessions and workflows
+  // Collect all unique tools/apps from sessions, workflows, AND knowledge base
   const toolSet = new Set<string>();
   for (const s of sessions) {
     if (s.appsUsed) s.appsUsed.forEach(app => toolSet.add(app));
@@ -1300,19 +1370,37 @@ function buildEvidenceBoundary(state: AgenticState): string {
   for (const w of workflows) {
     if (w.tools) w.tools.forEach(tool => toolSet.add(tool));
   }
+  for (const kb of kbEntries) {
+    if (kb.appsUsed) kb.appsUsed.forEach(app => toolSet.add(app));
+    for (const wf of kb.workflows) {
+      if (wf.tools) wf.tools.forEach(tool => toolSet.add(tool));
+    }
+  }
   const toolsList = toolSet.size > 0
     ? Array.from(toolSet).join(', ')
     : 'No tool data available — do NOT mention any specific tools';
 
-  // List sessions with exact names and durations
-  const sessionsList = sessions.length > 0
-    ? sessions.slice(0, 10).map(s => {
-        const name = s.highLevelSummary || s.startActivity || s.sessionId;
-        const duration = s.durationSeconds ? `${Math.round(s.durationSeconds / 60)}min` : 'unknown duration';
-        const date = s.startTime ? new Date(s.startTime).toLocaleDateString() : '';
-        return `- "${name}" (${duration}${date ? `, ${date}` : ''})`;
-      }).join('\n')
-    : 'No session data available — do NOT reference any sessions';
+  // List sessions with exact names and durations (prefer KB data which is more complete)
+  let sessionsList: string;
+  if (kbEntries.length > 0) {
+    sessionsList = kbEntries.slice(0, 10).map(kb => {
+      const duration = kb.durationSeconds ? `${Math.round(kb.durationSeconds / 60)}min` : 'unknown duration';
+      const hasGapAnalysis = !!kb.gapAnalysis;
+      const hasInsights = !!kb.insights;
+      const hasPeerInsights = kb.peerInsights && kb.peerInsights.length > 0;
+      const enrichment = [hasGapAnalysis && 'gap-analysis', hasInsights && 'insights', hasPeerInsights && 'peer-insights'].filter(Boolean).join(', ');
+      return `- "${kb.title}" (${duration}${enrichment ? `, enriched: ${enrichment}` : ''})`;
+    }).join('\n');
+  } else if (sessions.length > 0) {
+    sessionsList = sessions.slice(0, 10).map(s => {
+      const name = s.highLevelSummary || s.startActivity || s.sessionId;
+      const duration = s.durationSeconds ? `${Math.round(s.durationSeconds / 60)}min` : 'unknown duration';
+      const date = s.startTime ? new Date(s.startTime).toLocaleDateString() : '';
+      return `- "${name}" (${duration}${date ? `, ${date}` : ''})`;
+    }).join('\n');
+  } else {
+    sessionsList = 'No session data available — do NOT reference any sessions';
+  }
 
   // List workflows with exact names, step counts, and durations
   const workflowsList = workflows.length > 0
@@ -1322,14 +1410,27 @@ function buildEvidenceBoundary(state: AgenticState): string {
       }).join('\n')
     : 'No workflow data available — do NOT reference any workflows';
 
-  // Extract only metrics that actually exist in the data
+  // Extract metrics from KB entries (complete data) or fallback to sessions
   const metricParts: string[] = [];
-  for (const s of sessions) {
-    if (s.gapAnalysis) {
-      const ga = s.gapAnalysis as Record<string, unknown>;
+  const metricsSource = kbEntries.length > 0 ? kbEntries : sessions;
+  for (const entry of metricsSource) {
+    if (entry.gapAnalysis) {
+      const ga = entry.gapAnalysis as Record<string, unknown>;
       if (ga.overallEfficiencyScore != null) {
-        const name = s.highLevelSummary || s.startActivity || s.sessionId;
+        const name = 'title' in entry
+          ? (entry as any).title
+          : ((entry as any).highLevelSummary || (entry as any).startActivity || (entry as any).sessionId);
         metricParts.push(`- "${name}": Efficiency Score = ${ga.overallEfficiencyScore}/100`);
+      }
+    }
+    // Include insight counts from KB
+    if ('insights' in entry && entry.insights) {
+      const ins = entry.insights as Record<string, unknown>;
+      const issueCount = Array.isArray(ins.issues) ? ins.issues.length : 0;
+      const improvCount = Array.isArray(ins.improvements) ? ins.improvements.length : 0;
+      if (issueCount > 0 || improvCount > 0) {
+        const name = 'title' in entry ? (entry as any).title : ((entry as any).highLevelSummary || (entry as any).sessionId);
+        metricParts.push(`- "${name}": ${issueCount} issues, ${improvCount} improvements identified`);
       }
     }
   }
@@ -1592,9 +1693,8 @@ Generate your response now. Remember:
     intent,
     contextLength: aggregatedContext.length,
     sessionCount: state.userEvidence?.sessions?.length || 0,
-    hasInefficiencies: (state.userDiagnostics?.inefficiencies?.length || 0) > 0,
-    hasPeerInsights: (state.peerOptimizationPlan?.blocks?.length || 0) > 0,
-    hasFeatureTips: (state.featureAdoptionTips?.length || 0) > 0,
+    hasWebInsights: (state.webOptimizationPlan?.blocks?.length || 0) > 0,
+    hasCompanyInsights: (state.companyOptimizationPlan?.blocks?.length || 0) > 0,
     hasUrlContent,
     hasEvidenceBoundary: evidenceBoundary.length > 0,
     isFactCheckRetry: !!previousFactCheckIssues && previousFactCheckIssues.length > 0,
@@ -1613,18 +1713,14 @@ Generate your response now. Remember:
 
   // Build executive summary
   const totalTimeSaved = [
-    state.peerOptimizationPlan?.totalTimeSaved || 0,
     state.webOptimizationPlan?.totalTimeSaved || 0,
     state.companyOptimizationPlan?.totalTimeSaved || 0,
   ].reduce((a, b) => a + b, 0);
 
-  const topInefficiencies = state.userDiagnostics?.inefficiencies
-    ?.slice(0, 3)
-    .map(i => i.description) || [];
+  const topInefficiencies: string[] = [];
 
   // Merge optimization plans if available
   const mergedBlocks = [
-    ...(state.peerOptimizationPlan?.blocks || []),
     ...(state.webOptimizationPlan?.blocks || []),
     ...(state.companyOptimizationPlan?.blocks || []),
   ];
@@ -1649,7 +1745,6 @@ Generate your response now. Remember:
       totalRelativeImprovement: mergedBlocks.reduce((sum, b) => sum + b.relativeImprovement, 0) / mergedBlocks.length,
       passesThreshold: true,
     } : undefined,
-    featureAdoptionTips: state.featureAdoptionTips || undefined,
     createdAt: state.startedAt || new Date().toISOString(),
     completedAt: new Date().toISOString(),
     suggestedFollowUps: await generateLLMFollowUpQuestions(state, response.content, mergedBlocks, llmProvider, logger),
@@ -1658,7 +1753,6 @@ Generate your response now. Remember:
 
 /**
  * Generate contextually relevant follow-up questions using LLM
- * Ported from orchestrator-graph.ts for consistent quality
  */
 async function generateLLMFollowUpQuestions(
   state: AgenticState,
@@ -1670,9 +1764,7 @@ async function generateLLMFollowUpQuestions(
   logger.info('Generating LLM follow-up questions');
 
   // Detect if this is a knowledge/technical question vs workflow analysis
-  const hasWorkflowContext = mergedBlocks.length > 0 ||
-    (state.userDiagnostics?.inefficiencies?.length ?? 0) > 0 ||
-    (state.userDiagnostics?.opportunities?.length ?? 0) > 0;
+  const hasWorkflowContext = mergedBlocks.length > 0;
 
   const queryLower = state.query.toLowerCase();
   const isKnowledgeQuery = !hasWorkflowContext && (
@@ -1695,14 +1787,6 @@ async function generateLLMFollowUpQuestions(
     contextParts.push('\nKey Optimizations Found:');
     mergedBlocks.slice(0, 3).forEach((block, i) => {
       contextParts.push(`${i + 1}. ${block.whyThisMatters} (saves ${Math.round(block.timeSaved / 60)} min)`);
-    });
-  }
-
-  const inefficiencies = state.userDiagnostics?.inefficiencies ?? [];
-  if (inefficiencies.length > 0) {
-    contextParts.push('\nInefficiencies Detected:');
-    inefficiencies.slice(0, 3).forEach((ineff, i) => {
-      contextParts.push(`${i + 1}. ${ineff.type}: ${ineff.description}`);
     });
   }
 
@@ -1796,18 +1880,11 @@ function generateFallbackFollowUps(state: AgenticState, hasWorkflowContext: bool
       followUps.push('What did I work on yesterday?');
     }
 
-    if (state.userDiagnostics?.inefficiencies?.length) {
-      followUps.push('How can I reduce context switching?');
-      followUps.push('What tools could help me automate repetitive tasks?');
-    }
+    followUps.push('How can I reduce context switching?');
+    followUps.push('What tools could help me automate repetitive tasks?');
 
-    if (!state.featureAdoptionTips?.length && state.userEvidence) {
-      followUps.push('What features am I not using in my current tools?');
-    }
-
-    // Additional contextual fallbacks
     if (followUps.length < 3) {
-      followUps.push('How do my workflows compare to peers?');
+      followUps.push('What features am I not using in my current tools?');
     }
   }
 

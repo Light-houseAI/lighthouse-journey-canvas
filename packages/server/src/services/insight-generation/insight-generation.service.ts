@@ -15,14 +15,12 @@ import type { SessionMappingRepository } from '../../repositories/session-mappin
 import type { InsightGenerationJobRepository, InsightGenerationJobRecord } from '../../repositories/insight-generation-job.repository.js';
 import type { EmbeddingService } from '../interfaces/index.js';
 import type { PersonaService } from '../persona.service.js';
-import { createOrchestratorGraph } from './graphs/orchestrator-graph.js';
 import type { InsightState } from './state/insight-state.js';
 import type {
   InsightGenerationResult,
   JobStatus,
   JobProgress,
   InsightGenerationOptions,
-  InsightGenerationOptionsWithAgentic,
   AttachedSessionContext,
   AttachedSlashContext,
   RetrievedMemories,
@@ -367,207 +365,100 @@ export class InsightGenerationService {
     });
 
     try {
-      // Check if agentic loop should be used
-      const agenticOptions = options as InsightGenerationOptionsWithAgentic | undefined;
-      const useAgenticLoop = agenticOptions?.useAgenticLoop ?? true;
+      // Human-readable stage descriptions for frontend display
+      const stageDescriptions: Record<string, string> = {
+        'agentic_initializing': 'Initializing analysis...',
+        'agentic_guardrail': 'Classifying query...',
+        'agentic_guardrail_passed': 'Query classified, planning...',
+        'agentic_reasoning': 'Reasoning about next action...',
+        'agentic_reasoning_complete': 'Planning next step...',
+        'agentic_action_started': 'Executing skill...',
+        'agentic_action_complete': 'Skill completed, analyzing...',
+        'agentic_action_failed': 'Retrying skill...',
+        'agentic_action_skipped': 'Skipping, continuing...',
+        'agentic_terminating': 'Generating final response...',
+        'agentic_fact_check_retry': 'Re-checking answer quality...',
+        'agentic_complete': 'Finalizing results...',
+        'agentic_failed': 'Processing failed',
+      };
 
-      let result: Partial<InsightState>;
-      let graphElapsedMs = 0;
+      // Skill-specific descriptions for agentic_executing:<skillId> stages
+      const skillStageDescriptions: Record<string, string> = {
+        'retrieve_user_workflows': 'Retrieving your workflow history...',
+        'search_web_best_practices': 'Searching web best practices...',
+        'search_company_docs': 'Searching company documentation...',
+        'search_conversation_memory': 'Searching conversation history...',
+      };
 
-      if (useAgenticLoop) {
-        // =====================================================================
-        // AGENTIC LOOP (skill-based dynamic routing)
-        // =====================================================================
-        this.logger.info('Using agentic loop for job processing', {
-          jobId,
-          userId: record.userId,
-        });
-
-        // Human-readable stage descriptions for frontend display
-        const stageDescriptions: Record<string, string> = {
-          'agentic_initializing': 'Initializing analysis...',
-          'agentic_guardrail': 'Classifying query...',
-          'agentic_guardrail_passed': 'Query classified, planning...',
-          'agentic_reasoning': 'Reasoning about next action...',
-          'agentic_reasoning_complete': 'Planning next step...',
-          'agentic_action_started': 'Executing skill...',
-          'agentic_action_complete': 'Skill completed, analyzing...',
-          'agentic_action_failed': 'Retrying skill...',
-          'agentic_action_skipped': 'Skipping, continuing...',
-          'agentic_terminating': 'Generating final response...',
-          'agentic_fact_check_retry': 'Re-checking answer quality...',
-          'agentic_complete': 'Finalizing results...',
-          'agentic_failed': 'Processing failed',
-        };
-
-        // Skill-specific descriptions for agentic_executing:<skillId> stages
-        const skillStageDescriptions: Record<string, string> = {
-          'retrieve_user_workflows': 'Retrieving your workflow history...',
-          'search_web_best_practices': 'Searching web best practices...',
-          'search_company_docs': 'Searching company documentation...',
-          'search_conversation_memory': 'Searching conversation history...',
-        };
-
-        const agenticDeps: AgenticLoopDeps = {
-          logger: this.logger,
-          llmProvider: this.llmProvider,
-          nlqService: this.nlqService,
-          platformWorkflowRepository: this.platformWorkflowRepository,
-          sessionMappingRepository: this.sessionMappingRepository,
-          embeddingService: this.embeddingService,
-          memoryService: this.memoryService,
-          personaService: this.personaService,
-          noiseFilterService: this.noiseFilterService,
-          graphService: this.graphService,
-          companyDocsEnabled: this.companyDocsEnabled,
-          perplexityApiKey: this.perplexityApiKey,
-          modelConfig: options?.modelConfig,
-          agenticConfig: agenticOptions?.agenticConfig,
-          // Write progress to DB so frontend polling can read it
-          onProgressUpdate: async (progress: number, stage: string) => {
-            let readableStage: string;
-            if (stage.startsWith('agentic_executing:')) {
-              const skillId = stage.split(':')[1];
-              readableStage = skillStageDescriptions[skillId] || `Running ${skillId}...`;
-            } else {
-              readableStage = stageDescriptions[stage] || stage;
-            }
-            await this.updateJobInDb(jobId, { progress, currentStage: readableStage });
-          },
-        };
-
-        const agenticGraph = createAgenticLoopGraph(agenticDeps);
-
-        // Create initial agentic state
-        const initialAgenticState = createInitialAgenticState({
-          query: record.query,
-          userId: record.userId,
-          nodeId: options?.nodeId,
-          lookbackDays: options?.lookbackDays || 30,
-          includeWebSearch: options?.includeWebSearch ?? true,
-          includePeerComparison: options?.includePeerComparison ?? true,
-          includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
-          filterNoise: options?.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable
-          attachedSessionContext: sessionContext || null,
-          conversationMemory: memoryContext || null,
-          _traceId: traceId,
-        });
-
-        // Run the agentic loop graph (progress written to DB via onProgressUpdate callback)
-        const graphStartTime = Date.now();
-        result = await agenticGraph.invoke(initialAgenticState);
-        graphElapsedMs = Date.now() - graphStartTime;
-
-        this.logger.info('Agentic loop completed', {
-          jobId,
-          graphElapsedMs,
-          skillsUsed: (result as any).usedSkills || [],
-          iterations: (result as any).currentIteration || 0,
-        });
-      } else {
-        // =====================================================================
-        // LEGACY ORCHESTRATOR (fixed sequential pipeline)
-        // =====================================================================
-        // Create orchestrator graph with model configuration
-        // Default: Gemini 2.5 Flash for A1/A3/A4, GPT-4 for A2 Judge
-        const graph = createOrchestratorGraph({
-          logger: this.logger,
-          llmProvider: this.llmProvider,
-          nlqService: this.nlqService,
-          platformWorkflowRepository: this.platformWorkflowRepository,
-          sessionMappingRepository: this.sessionMappingRepository,
-          embeddingService: this.embeddingService,
-          companyDocsEnabled: this.companyDocsEnabled,
-          perplexityApiKey: this.perplexityApiKey,
-          modelConfig: options?.modelConfig,
-          personaService: this.personaService,
-          // Company docs retrieved via nlqService.searchCompanyDocuments()
-        });
-
-        // Initial state with conversation memory for follow-up context
-        const initialState: Partial<InsightState> = {
-          query: record.query,
-          userId: record.userId,
-          nodeId: options?.nodeId || null,
-          lookbackDays: options?.lookbackDays || 30,
-          includePeerComparison: options?.includePeerComparison ?? true,
-          includeWebSearch: options?.includeWebSearch ?? true,
-          includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
-          filterNoise: options?.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable // Filter Slack/communication by default
-          attachedSessionContext: sessionContext || null, // User-attached sessions (bypasses NLQ in A1)
-          conversationMemory: memoryContext || null, // Previous conversation context for follow-ups
-          status: 'processing',
-          progress: 0,
-          currentStage: 'starting',
-          errors: [],
-          a1RetryCount: 0,
-          a2RetryCount: 0,
-          // Tracing context
-          _traceId: traceId,
-          _executionOrder: 0,
-        };
-
-        // MT3: Stream progress with faster polling interval (500ms) for more responsive SSE updates
-        // Also add human-readable stage descriptions
-        let lastProgress = 0;
-        let lastStage = '';
-        const progressInterval = setInterval(async () => {
-          const currentRecord = await this.jobRepository.findById(jobId);
-          if (currentRecord && currentRecord.status === 'processing') {
-            // Only notify if progress or stage changed (reduces noise)
-            const progress = currentRecord.progress ?? 0;
-            const stage = currentRecord.currentStage ?? 'processing';
-
-            if (progress !== lastProgress || stage !== lastStage) {
-              lastProgress = progress;
-              lastStage = stage;
-
-              // Map internal stage names to human-readable descriptions
-              const stageDescriptions: Record<string, string> = {
-                'initializing': 'Initializing analysis...',
-                'starting': 'Starting insight generation...',
-                'a1_user_evidence_complete': 'Retrieved your workflow history',
-                'a1_peer_evidence_complete': 'Found peer workflow patterns',
-                'a1_critique_passed': 'Validated evidence quality',
-                'orchestrator_a1_complete': 'Analyzing your workflows...',
-                'a2_diagnostics_started': 'Identifying inefficiencies...',
-                'a2_critique_passed': 'Validating diagnoses...',
-                'orchestrator_routing': 'Selecting optimization strategies...',
-                'a3_alignment_complete': 'Comparing with peer patterns...',
-                'a3_transformations_complete': 'Generated peer-based recommendations',
-                'a4_web_extraction_complete': 'Found web best practices',
-                'a4_company_extraction_complete': 'Retrieved company guidelines',
-                'a5_feature_adoption_complete': 'Identified feature adoption tips',
-                'orchestrator_merge_complete': 'Compiling optimization plan...',
-                'orchestrator_executive_complete': 'Generating executive summary...',
-                'orchestrator_answer_complete': 'Formulating your answer...',
-                'orchestrator_followups_complete': 'Preparing follow-up questions...',
-                'orchestrator_complete': 'Finalizing results...',
-                'complete': 'Analysis complete!',
-              };
-
-              const readableStage = stageDescriptions[stage] || stage;
-
-              this.notifyListeners(jobId, {
-                jobId,
-                status: currentRecord.status as JobStatus,
-                progress,
-                currentStage: readableStage,
-              });
-            }
+      const agenticDeps: AgenticLoopDeps = {
+        logger: this.logger,
+        llmProvider: this.llmProvider,
+        nlqService: this.nlqService,
+        platformWorkflowRepository: this.platformWorkflowRepository,
+        sessionMappingRepository: this.sessionMappingRepository,
+        embeddingService: this.embeddingService,
+        memoryService: this.memoryService,
+        personaService: this.personaService,
+        noiseFilterService: this.noiseFilterService,
+        graphService: this.graphService,
+        companyDocsEnabled: this.companyDocsEnabled,
+        perplexityApiKey: this.perplexityApiKey,
+        modelConfig: options?.modelConfig,
+        agenticConfig: (options as any)?.agenticConfig,
+        // Write progress to DB so frontend polling can read it
+        onProgressUpdate: async (progress: number, stage: string) => {
+          let readableStage: string;
+          if (stage.startsWith('agentic_executing:')) {
+            const skillId = stage.split(':')[1];
+            readableStage = skillStageDescriptions[skillId] || `Running ${skillId}...`;
+          } else {
+            readableStage = stageDescriptions[stage] || stage;
           }
-        }, 500); // Reduced from 1000ms to 500ms for faster updates
+          await this.updateJobInDb(jobId, { progress, currentStage: readableStage });
+        },
+      };
 
-        // Run the graph
-        const graphStartTime = Date.now();
-        result = await graph.invoke(initialState);
-        graphElapsedMs = Date.now() - graphStartTime;
+      const agenticGraph = createAgenticLoopGraph(agenticDeps);
 
-        clearInterval(progressInterval);
+      // Check for cached session knowledge base (per-user, persists across queries)
+      const cacheManager = getInsightCacheManager();
+      const cachedKB = cacheManager.sessionKnowledgeBase.get(String(record.userId));
 
-        this.logger.info('Legacy orchestrator completed', {
+      // Create initial agentic state
+      const initialAgenticState = createInitialAgenticState({
+        query: record.query,
+        userId: record.userId,
+        nodeId: options?.nodeId,
+        lookbackDays: options?.lookbackDays || 30,
+        includeWebSearch: options?.includeWebSearch ?? true,
+        includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
+        filterNoise: options?.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable
+        attachedSessionContext: sessionContext || null,
+        conversationMemory: memoryContext || null,
+        sessionKnowledgeBase: cachedKB || null,
+        _traceId: traceId,
+      });
+
+      // Run the agentic loop graph (progress written to DB via onProgressUpdate callback)
+      const graphStartTime = Date.now();
+      const result = await agenticGraph.invoke(initialAgenticState);
+      const graphElapsedMs = Date.now() - graphStartTime;
+
+      this.logger.info('Agentic loop completed', {
+        jobId,
+        graphElapsedMs,
+        skillsUsed: (result as any).usedSkills || [],
+        iterations: (result as any).currentIteration || 0,
+      });
+
+      // Merge session knowledge base into per-user cache (persists across queries)
+      const resultKB = (result as any).sessionKnowledgeBase;
+      if (resultKB && resultKB.sessionEntries?.length > 0) {
+        cacheManager.sessionKnowledgeBase.mergeAndSet(String(record.userId), resultKB);
+        this.logger.info('Session knowledge base cached', {
           jobId,
-          graphElapsedMs,
+          userId: record.userId,
+          entries: resultKB.sessionEntries.length,
         });
       }
 
@@ -793,7 +684,7 @@ export class InsightGenerationService {
 
   /**
    * Build agent path string from graph result state
-   * e.g., "A1→A2→A3→A5" or "A1→A2→A4_WEB→A5"
+   * e.g., "A1→A4_WEB→A4_COMPANY"
    */
   private buildAgentPath(result: Partial<InsightState>): string {
     const path: string[] = [];
@@ -803,23 +694,12 @@ export class InsightGenerationService {
       path.push('A1');
     }
 
-    // A2 always runs after A1
-    if (result.userDiagnostics) {
-      path.push('A2');
-    }
-
     // Downstream agents (based on what produced output)
-    if (result.peerOptimizationPlan) {
-      path.push('A3');
-    }
     if (result.webOptimizationPlan) {
       path.push('A4_WEB');
     }
     if (result.companyOptimizationPlan) {
       path.push('A4_COMPANY');
-    }
-    if (result.featureAdoptionTips && result.featureAdoptionTips.length > 0) {
-      path.push('A5');
     }
 
     return path.length > 0 ? path.join('→') : 'unknown';
@@ -839,80 +719,36 @@ export class InsightGenerationService {
     });
 
     try {
-      // Check if agentic loop should be used
-      const agenticOptions = options as InsightGenerationOptionsWithAgentic | undefined;
-      const useAgenticLoop = agenticOptions?.useAgenticLoop ?? true;
-
-      if (useAgenticLoop) {
-        // Use agentic loop
-        const agenticDeps: AgenticLoopDeps = {
-          logger: this.logger,
-          llmProvider: this.llmProvider,
-          nlqService: this.nlqService,
-          platformWorkflowRepository: this.platformWorkflowRepository,
-          sessionMappingRepository: this.sessionMappingRepository,
-          embeddingService: this.embeddingService,
-          memoryService: this.memoryService,
-          personaService: this.personaService,
-          noiseFilterService: this.noiseFilterService,
-          graphService: this.graphService,
-          companyDocsEnabled: this.companyDocsEnabled,
-          perplexityApiKey: this.perplexityApiKey,
-          modelConfig: options?.modelConfig,
-          agenticConfig: agenticOptions?.agenticConfig,
-        };
-
-        const agenticGraph = createAgenticLoopGraph(agenticDeps);
-
-        const initialAgenticState = createInitialAgenticState({
-          query,
-          userId,
-          nodeId: options?.nodeId,
-          lookbackDays: options?.lookbackDays || 30,
-          includeWebSearch: options?.includeWebSearch ?? true,
-          includePeerComparison: options?.includePeerComparison ?? true,
-          includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
-          filterNoise: options?.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable
-        });
-
-        const result = await agenticGraph.invoke(initialAgenticState);
-        return result.finalResult as InsightGenerationResult | null;
-      }
-
-      // Legacy: Create orchestrator graph with model configuration
-      // Default: Gemini 2.5 Flash for A1/A3/A4, GPT-4 for A2 Judge
-      const graph = createOrchestratorGraph({
+      const agenticDeps: AgenticLoopDeps = {
         logger: this.logger,
         llmProvider: this.llmProvider,
         nlqService: this.nlqService,
         platformWorkflowRepository: this.platformWorkflowRepository,
         sessionMappingRepository: this.sessionMappingRepository,
         embeddingService: this.embeddingService,
+        memoryService: this.memoryService,
+        personaService: this.personaService,
+        noiseFilterService: this.noiseFilterService,
+        graphService: this.graphService,
         companyDocsEnabled: this.companyDocsEnabled,
         perplexityApiKey: this.perplexityApiKey,
         modelConfig: options?.modelConfig,
-        personaService: this.personaService,
-        // Company docs retrieved via nlqService.searchCompanyDocuments()
-      });
-
-      const initialState: Partial<InsightState> = {
-        query,
-        userId,
-        nodeId: options?.nodeId || null,
-        lookbackDays: options?.lookbackDays || 30,
-        includePeerComparison: options?.includePeerComparison ?? true,
-        includeWebSearch: options?.includeWebSearch ?? true,
-        includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
-        filterNoise: options?.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable // Filter Slack/communication by default
-        status: 'processing',
-        progress: 0,
-        currentStage: 'starting',
-        errors: [],
-        a1RetryCount: 0,
-        a2RetryCount: 0,
+        agenticConfig: (options as any)?.agenticConfig,
       };
 
-      const result = await graph.invoke(initialState);
+      const agenticGraph = createAgenticLoopGraph(agenticDeps);
+
+      const initialAgenticState = createInitialAgenticState({
+        query,
+        userId,
+        nodeId: options?.nodeId,
+        lookbackDays: options?.lookbackDays || 30,
+        includeWebSearch: options?.includeWebSearch ?? true,
+        includeCompanyDocs: options?.includeCompanyDocs ?? this.companyDocsEnabled,
+        filterNoise: options?.filterNoise ?? false, // Include Slack/communication apps - project discussions are valuable
+      });
+
+      const result = await agenticGraph.invoke(initialAgenticState);
       return result.finalResult as InsightGenerationResult | null;
     } catch (error) {
       this.logger.error(`Quick insights generation failed for user ${userId}`, error instanceof Error ? error : new Error(String(error)));

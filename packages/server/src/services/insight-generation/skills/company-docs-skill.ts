@@ -166,6 +166,6 @@ This skill requires company docs to be enabled and indexed for the user's organi
   // =========================================================================
 
   wrapsAgent: 'A4_COMPANY',
-  canRunInParallel: true, // Can run in parallel with A3, A4-Web, A5
+  canRunInParallel: true, // Can run in parallel with A4-Web
   estimatedExecutionMs: 6000,
 };

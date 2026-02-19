@@ -95,7 +95,7 @@ export interface Skill {
 
   /**
    * State fields this skill produces (outputs).
-   * Examples: ['userEvidence', 'peerEvidence']
+   * Examples: ['userEvidence', 'webOptimizationPlan']
    */
   produces: string[];
 
@@ -131,7 +131,7 @@ export interface Skill {
 
   /**
    * Which agent this skill wraps (for tracing/debugging)
-   * Examples: 'A1_RETRIEVAL', 'A2_JUDGE', 'MEMORY_SERVICE'
+   * Examples: 'A1_RETRIEVAL', 'A4_WEB', 'MEMORY_SERVICE'
    */
   wrapsAgent: string;
 

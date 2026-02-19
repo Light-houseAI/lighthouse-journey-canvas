@@ -8,7 +8,7 @@
 import { createRetrievalGraph, type RetrievalGraphDeps } from '../graphs/retrieval-graph.js';
 import { createAgentLLMProvider } from '../utils/model-provider-factory.js';
 import type { Skill, SkillDependencies } from './skill-types.js';
-import type { SkillInput, SkillExecutionResult } from '../types.js';
+import type { SkillInput, SkillExecutionResult, SessionKnowledgeBase } from '../types.js';
 import type { InsightState } from '../state/insight-state.js';
 
 // ============================================================================
@@ -48,11 +48,10 @@ This is typically the FIRST skill to invoke when you need to understand what the
     'Extracts entities (technologies, tools, people, organizations)',
     'Identifies concepts and topics from workflow content',
     'Can filter out noise (Slack, communication apps) if requested',
-    'Retrieves anonymized peer patterns for comparison (if available)',
     'Supports attached sessions via @mention (bypasses NLQ retrieval)',
   ],
 
-  produces: ['userEvidence', 'peerEvidence', 'a1CritiqueResult'],
+  produces: ['userEvidence', 'a1CritiqueResult'],
 
   requires: [], // No prerequisites - this is typically the first skill
 
@@ -114,17 +113,12 @@ This is typically the FIRST skill to invoke when you need to understand what the
       const workflowCount = result.userEvidence?.workflows?.length ?? 0;
       const stepCount = result.userEvidence?.totalStepCount ?? 0;
       const sessionCount = result.userEvidence?.sessions?.length ?? 0;
-      const peerWorkflowCount = result.peerEvidence?.workflows?.length ?? 0;
       const entityCount = result.userEvidence?.entities?.length ?? 0;
 
       let observation = `Retrieved ${workflowCount} workflows with ${stepCount} steps from ${sessionCount} sessions.`;
 
       if (entityCount > 0) {
         observation += ` Identified ${entityCount} entities (technologies, tools, people).`;
-      }
-
-      if (peerWorkflowCount > 0) {
-        observation += ` Also retrieved ${peerWorkflowCount} anonymized peer workflow patterns for comparison.`;
       }
 
       if (workflowCount === 0) {
@@ -135,17 +129,28 @@ This is typically the FIRST skill to invoke when you need to understand what the
         workflowCount,
         stepCount,
         sessionCount,
-        peerWorkflowCount,
         executionTimeMs,
       });
+
+      // Build top-level sessionKnowledgeBase from evidence bundle entries
+      let sessionKnowledgeBase: SessionKnowledgeBase | null = null;
+      if (result.userEvidence?.sessionKnowledgeBase && result.userEvidence.sessionKnowledgeBase.length > 0) {
+        sessionKnowledgeBase = {
+          userId: state.userId,
+          sessionEntries: result.userEvidence.sessionKnowledgeBase,
+          createdAt: new Date().toISOString(),
+          sessionIds: result.userEvidence.sessionKnowledgeBase.map(e => e.sessionId),
+          stitchedContext: result.stitchedContext ?? null,
+        };
+      }
 
       return {
         success: workflowCount > 0,
         observation,
         stateUpdates: {
           userEvidence: result.userEvidence,
-          peerEvidence: result.peerEvidence,
           a1CritiqueResult: result.a1CritiqueResult,
+          ...(sessionKnowledgeBase ? { sessionKnowledgeBase } : {}),
         },
         executionTimeMs,
       };

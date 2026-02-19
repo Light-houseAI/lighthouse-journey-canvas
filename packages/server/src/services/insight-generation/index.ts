@@ -3,8 +3,6 @@
  *
  * This module implements the insight generation pipeline with:
  * - A1: Retrieval Agent (Hybrid RAG)
- * - A2: Judge Agent (LLM-as-judge)
- * - A3: Comparator Agent (Peer comparison)
  * - A4-Web: Web Best Practices Agent (Perplexity)
  * - A4-Company: Company Docs Agent (PyMUPDF + RAG)
  *
@@ -25,13 +23,6 @@ export {
   extractedEntitySchema,
   extractedConceptSchema,
   evidenceBundleSchema,
-  // Diagnostics schemas
-  inefficiencyTypeSchema,
-  inefficiencySchema,
-  opportunityTypeSchema,
-  opportunitySchema,
-  workflowMetricsSchema,
-  diagnosticsSchema,
   // Optimization schemas
   currentStepSchema,
   optimizedStepSchema,
@@ -94,12 +85,6 @@ export type {
 // Graphs (LangGraph implementations)
 export { createRetrievalGraph } from './graphs/retrieval-graph.js';
 export type { RetrievalGraphDeps } from './graphs/retrieval-graph.js';
-export { createJudgeGraph } from './graphs/judge-graph.js';
-export type { JudgeGraphDeps } from './graphs/judge-graph.js';
-export { createOrchestratorGraph } from './graphs/orchestrator-graph.js';
-export type { OrchestratorGraphDeps } from './graphs/orchestrator-graph.js';
-export { createComparatorGraph } from './graphs/comparator-graph.js';
-export type { ComparatorGraphDeps } from './graphs/comparator-graph.js';
 export { createWebBestPracticesGraph } from './graphs/web-best-practices-graph.js';
 export type { WebBestPracticesGraphDeps } from './graphs/web-best-practices-graph.js';
 export { createCompanyDocsGraph } from './graphs/company-docs-graph.js';

@@ -28,12 +28,11 @@ export const webSearchSkill: Skill = {
 
 The skill generates targeted search queries from identified inefficiencies, extracts actionable recommendations with source citations, and maps best practices to the user's specific workflow steps.
 
-This is typically used as a fallback when internal analysis (A2) produces insufficient results, or when the user explicitly asks for industry best practices.`,
+This is typically used when the user asks for industry best practices or external knowledge.`,
 
   whenToUse: [
     'User explicitly asks for industry best practices',
-    'Internal analysis (A2) produced insufficient results (< 3 findings)',
-    'Looking for tool-specific tips not covered by peer data',
+    'Looking for tool-specific tips',
     'Need external validation for recommendations',
     'User mentions unfamiliar tools or techniques',
     'User asks "what do experts recommend?"',
@@ -216,7 +215,7 @@ This is typically used as a fallback when internal analysis (A2) produces insuff
   // =========================================================================
 
   wrapsAgent: 'A4_WEB',
-  canRunInParallel: true, // Can run in parallel with A3, A4-Company, A5
+  canRunInParallel: true, // Can run in parallel with A4-Company
   estimatedExecutionMs: 10000, // Web search can be slow
 };
 
